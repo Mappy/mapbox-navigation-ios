@@ -85,6 +85,11 @@ extension CLLocation {
     }
 }
 
+public protocol GPSMappyDirectionDebugDelegate: AnyObject {
+	func directionWillRequest(urlRequest: URLRequest)
+	func directionDidReceive(data: Data?, response: URLResponse?, error: Error?)
+}
+
 /**
  A `Directions` object provides you with optimal directions between different locations, or waypoints. The directions object passes your request to the [Mapbox Directions API](https://www.mapbox.com/api-documentation/?language=Swift#directions) and returns the requested information to a closure (block) that you provide. A directions object can handle multiple simultaneous requests. A `RouteOptions` object specifies criteria for the results, such as intermediate waypoints, a mode of transportation, or the level of detail to be returned.
  
@@ -92,6 +97,9 @@ extension CLLocation {
  */
 @objc(MBDirections)
 open class Directions: NSObject {
+	/// Mappy GPS debug interface url
+	public weak var mappyGPSDebugDelegate: GPSMappyDirectionDebugDelegate?
+
     /**
      A closure (block) to be called when a directions request is complete.
      
@@ -260,8 +268,11 @@ open class Directions: NSObject {
             request.httpMethod = "POST"
             request.httpBody = data
         }
-        
-        return URLSession.shared.dataTask(with: request as URLRequest) { (data, response, error) in
+
+		mappyGPSDebugDelegate?.directionWillRequest(urlRequest: request)
+
+        return URLSession.shared.dataTask(with: request as URLRequest) { [weak mappyGPSDebugDelegate] (data, response, error) in
+			mappyGPSDebugDelegate?.directionDidReceive(data: data, response: response, error: error)
             var json: JSONDictionary = [:]
             if let data = data, response?.mimeType == "application/json" {
                 do {
