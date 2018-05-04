@@ -1,4 +1,4 @@
-typealias JSONDictionary = [String: Any]
+public typealias JSONDictionary = [String: Any]
 
 /// Indicates that an error occurred in MapboxDirections.
 public let MBDirectionsErrorDomain = "MBDirectionsErrorDomain"
