@@ -34,7 +34,7 @@ open class VisualInstructionBanner: NSObject, NSSecureCoding {
      */
     @objc(initWithJSON:drivingSide:)
     public convenience init(json: [String: Any], drivingSide: DrivingSide) {
-        let distanceAlongStep = json["distanceAlongGeometry"] as! CLLocationDistance
+		let distanceAlongStep = (json["distanceAlongGeometry"] ?? json["distanceAlong"]) as! CLLocationDistance
         
         let primary = json["primary"] as! JSONDictionary
         let secondary = json["secondary"] as? JSONDictionary
