@@ -5,7 +5,7 @@ import Mapbox
 
 // A Mapbox access token is required to use the Directions API.
 // https://www.mapbox.com/help/create-api-access-token/
-let MapboxAccessToken = "<# your Mapbox access token #>"
+let MapboxAccessToken = "sk.eyJ1IjoieGF2aWVyY291dGluIiwiYSI6IldfdlRPVlkifQ.Kdk-xoV7zPNAcD_FJtA-UQ"
 
 class ViewController: UIViewController, MBDrawingViewDelegate {
     @IBOutlet var mapView: MGLMapView!
@@ -70,13 +70,25 @@ class ViewController: UIViewController, MBDrawingViewDelegate {
     }
     
     func setupDirections() {
-        let options = RouteOptions(waypoints: [
-            Waypoint(coordinate: CLLocationCoordinate2D(latitude: 38.9131752, longitude: -77.0324047), name: "Mapbox"),
-            Waypoint(coordinate: CLLocationCoordinate2D(latitude: 38.8977, longitude: -77.0365), name: "White House"),
-            ])
-        options.includesSteps = true
-        
-        Directions(accessToken: MapboxAccessToken).calculate(options) { (waypoints, routes, error) in
+//        let options = RouteOptions(waypoints: [
+//            Waypoint(coordinate: CLLocationCoordinate2D(latitude: 48.8502559801871, longitude: 2.30837619054591), name: "Mapbox"),
+//            Waypoint(coordinate: CLLocationCoordinate2D(latitude: 48.8448336928138, longitude: 2.3193625185628), name: "White House"),
+//            ])
+//        options.includesSteps = true
+
+		let options = MappyNavigationRouteOptions(waypoints: [
+			Waypoint(coordinate: CLLocationCoordinate2D(latitude: 48.8502559801871, longitude: 2.30837619054591), name: "Mapbox"),
+			Waypoint(coordinate: CLLocationCoordinate2D(latitude: 48.8448336928138, longitude: 2.3193625185628), name: "Maine - Vaugirard"),
+			], provider: "car", qid: "1ad02a47-0e87-48f4-d190-a794fbbb6aac")
+		options.destinationAddress = "Maine - Vaugirard"
+		options.shapeFormat = .polyline
+		options.routeType = "fastest"
+		options.vehicle = "comcar"
+		options.walkSpeed = "normal"
+
+		Directions(accessToken: "dummy", host: "routemm.mappysnap.net")
+//        Directions(accessToken: MapboxAccessToken)
+			.calculate(options) { (waypoints, routes, error) in
             guard error == nil else {
                 print("Error calculating directions: \(error!)")
                 return

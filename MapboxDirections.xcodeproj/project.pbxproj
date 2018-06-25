@@ -29,6 +29,7 @@
 		8D381B6B1FDB3D8A008D5A58 /* String.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D381B691FDB101F008D5A58 /* String.swift */; };
 		8D381B6C1FDB3D8B008D5A58 /* String.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D381B691FDB101F008D5A58 /* String.swift */; };
 		8D381B6D1FDB3D8B008D5A58 /* String.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D381B691FDB101F008D5A58 /* String.swift */; };
+		A3BAAC9720E0DEC4007B5D9A /* MappyNavigationRouteOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3BAAC9620E0DEC4007B5D9A /* MappyNavigationRouteOptions.swift */; };
 		C51538CC1E807FF00093FF3E /* MBAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = C51538CB1E807FF00093FF3E /* MBAttribute.swift */; };
 		C5247D711E818A24004B6154 /* AnnotationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5247D701E818A24004B6154 /* AnnotationTests.swift */; };
 		C52552B91FA15D5900B1545C /* MBVisualInstructionBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = C52552B81FA15D5900B1545C /* MBVisualInstructionBanner.swift */; };
@@ -264,6 +265,7 @@
 		8D381B601FD9F5B1008D5A58 /* noDestinationName.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = noDestinationName.json; sourceTree = "<group>"; };
 		8D381B621FDB01D1008D5A58 /* apiDestinationName.json */ = {isa = PBXFileReference; explicitFileType = text.json; path = apiDestinationName.json; sourceTree = "<group>"; };
 		8D381B691FDB101F008D5A58 /* String.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = String.swift; sourceTree = "<group>"; };
+		A3BAAC9620E0DEC4007B5D9A /* MappyNavigationRouteOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MappyNavigationRouteOptions.swift; sourceTree = "<group>"; };
 		C51538CB1E807FF00093FF3E /* MBAttribute.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MBAttribute.swift; sourceTree = "<group>"; };
 		C5247D701E818A24004B6154 /* AnnotationTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AnnotationTests.swift; sourceTree = "<group>"; };
 		C52552B81FA15D5900B1545C /* MBVisualInstructionBanner.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MBVisualInstructionBanner.swift; sourceTree = "<group>"; };
@@ -538,6 +540,7 @@
 				C52552BF1FA1628A00B1545C /* MBVisualInstructionComponent.swift */,
 				C56516831FE1A2DD00A0AD18 /* MBVisualInstructionType.swift */,
 				35EFD00A207DFACA00BF3873 /* MBVisualInstruction.swift */,
+				A3BAAC9620E0DEC4007B5D9A /* MappyNavigationRouteOptions.swift */,
 			);
 			path = MapboxDirections;
 			sourceTree = "<group>";
@@ -1259,6 +1262,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C51538CC1E807FF00093FF3E /* MBAttribute.swift in Sources */,
+				A3BAAC9720E0DEC4007B5D9A /* MappyNavigationRouteOptions.swift in Sources */,
 				DA2E03EB1CB0E13D00D1269A /* MBRouteOptions.swift in Sources */,
 				C582BA2E2073ED6300647DAA /* Array.swift in Sources */,
 				C52552B91FA15D5900B1545C /* MBVisualInstructionBanner.swift in Sources */,
