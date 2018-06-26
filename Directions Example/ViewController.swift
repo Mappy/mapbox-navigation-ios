@@ -82,11 +82,11 @@ class ViewController: UIViewController, MBDrawingViewDelegate {
 			], provider: "car", qid: "1ad02a47-0e87-48f4-d190-a794fbbb6aac")
 		options.destinationAddress = "Maine - Vaugirard"
 		options.shapeFormat = .polyline
-		options.routeType = "fastest"
+		options.routeCalculation = .fastest
 		options.vehicle = "comcar"
-		options.walkSpeed = "normal"
+		options.walkSpeed = .normal
 
-		Directions(accessToken: "dummy", host: "routemm.mappysnap.net")
+		Directions(accessToken: "dummy", host: "routemm.mappyrecette.net")
 //        Directions(accessToken: MapboxAccessToken)
 			.calculate(options) { (waypoints, routes, error) in
             guard error == nil else {

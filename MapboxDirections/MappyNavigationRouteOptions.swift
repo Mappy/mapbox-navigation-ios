@@ -1,5 +1,57 @@
 import Foundation
 
+/**
+A `MappyRouteCalculation` specifies what kind of metric should be used to calculate the itinerary.
+*/
+public enum MappyRouteCalculation: String
+{
+	/**
+	Only for car itineraries.
+	*/
+	case fastest = "fastest"
+	/**
+	Only for car and motorbike itineraries.
+	*/
+	case simplest = "simplest"
+	/**
+	Only for car itineraries.
+	*/
+	case shortest = "shortest"
+	/**
+	Only for car and motorbike itineraries.
+	*/
+	case notoll = "notoll"
+}
+
+/**
+The walking speed of the user.
+
+Only used for pedestrian itineraries.
+*/
+public enum MappyWalkSpeed: String
+{
+	case slow = "slow"
+	case normal = "normal"
+	case fast = "fast"
+}
+
+/**
+A `MappyRouteType` indentifies the type of a route object returned by the Mappy Directions API.
+*/
+public enum MappyRouteType: String
+{
+	/**
+	The route is an updated version (durations, traffic, etc) of a previous route following a given itinerary.
+	*/
+	case current = "current"
+	/**
+	The route is a faster alternative to a route of type `current` returned in the same Directions response.
+
+	The route starts and ends at the same waypoints than the `current` route returned along in the same response.
+	*/
+	case best = "best"
+}
+
 public class MappyNavigationRouteOptions: RouteOptions
 {
 	// MARK: - Initializers
@@ -56,12 +108,13 @@ public class MappyNavigationRouteOptions: RouteOptions
 
 	public required init?(coder decoder: NSCoder)
 	{
-		provider = decoder.decodeObject(of: NSString.self, forKey: "provider") as String? ?? ""
-		qid = decoder.decodeObject(of: NSString.self, forKey: "qid") as String? ?? ""
-		routeType = decoder.decodeObject(of: NSString.self, forKey: "routeType") as String?
-		vehicle = decoder.decodeObject(of: NSString.self, forKey: "vehicle") as String?
-		walkSpeed = decoder.decodeObject(of: NSString.self, forKey: "walkSpeed") as String?
-		destinationAddress = decoder.decodeObject(of: NSString.self, forKey: "destinationAddress") as String?
+		self.provider = decoder.decodeObject(of: NSString.self, forKey: "provider") as String? ?? ""
+		self.qid = decoder.decodeObject(of: NSString.self, forKey: "qid") as String? ?? ""
+		self.routeCalculation = MappyRouteCalculation(rawValue: decoder.decodeObject(of: NSString.self, forKey: "routeCalculation") as String? ?? "")
+		self.vehicle = decoder.decodeObject(of: NSString.self, forKey: "vehicle") as String?
+		self.walkSpeed = MappyWalkSpeed(rawValue: decoder.decodeObject(of: NSString.self, forKey: "walkSpeed") as String? ?? "")
+		self.destinationAddress = decoder.decodeObject(of: NSString.self, forKey: "destinationAddress") as String?
+
 		super.init(coder: decoder)
 	}
 
@@ -70,9 +123,9 @@ public class MappyNavigationRouteOptions: RouteOptions
 		super.encode(with: coder)
 		coder.encode(provider, forKey: "provider")
 		coder.encode(qid, forKey: "qid")
-		coder.encode(routeType, forKey: "routeType")
+		coder.encode(routeCalculation?.rawValue, forKey: "routeCalculation")
 		coder.encode(vehicle, forKey: "vehicle")
-		coder.encode(walkSpeed, forKey: "walkSpeed")
+		coder.encode(walkSpeed?.rawValue, forKey: "walkSpeed")
 		coder.encode(destinationAddress, forKey: "destinationAddress")
 	}
 
@@ -86,24 +139,24 @@ public class MappyNavigationRouteOptions: RouteOptions
 	open var provider: String
 
 	/**
-	QID used in initial /routes request.
+	QID used in initial transport/routes requests.
 	*/
 	open var qid: String
 
 	/**
-	Type of journey.
+	Type of metric to use to calculate the itineary.
 	*/
-	open var routeType: String?
+	open var routeCalculation: MappyRouteCalculation?
 
 	/**
-	Vehicle used for transport (only for car and motorbike).
+	Vehicle used for transport by the user (only for car and motorbike itineraries).
 	*/
 	open var vehicle: String?
 
 	/**
-	Walk speed profile.
+	Walking speed of the user (only for pedestrian itineraries).
 	*/
-	open var walkSpeed: String?
+	open var walkSpeed: MappyWalkSpeed?
 
 	/**
 	Stop address reported in GPS instructions.
@@ -150,9 +203,9 @@ public class MappyNavigationRouteOptions: RouteOptions
 		{
 			params.append(URLQueryItem(name: "address_to", value: waypointAddress))
 		}
-		if let routeType = routeType
+		if let routeCalculation = routeCalculation
 		{
-			params.append(URLQueryItem(name: "gps_route_type", value: routeType))
+			params.append(URLQueryItem(name: "gps_route_type", value: routeCalculation.rawValue))
 		}
 		if let vehicle = vehicle
 		{
@@ -160,7 +213,7 @@ public class MappyNavigationRouteOptions: RouteOptions
 		}
 		if let walkSpeed = walkSpeed
 		{
-			params.append(URLQueryItem(name: "walk_speed", value: walkSpeed))
+			params.append(URLQueryItem(name: "walk_speed", value: walkSpeed.rawValue))
 		}
 
 		// TODO: "bearings", "waypoint_names" ?
@@ -180,7 +233,7 @@ public class MappyNavigationRouteOptions: RouteOptions
 		let copy = super.copy(with: zone) as! MappyNavigationRouteOptions
 		copy.provider = provider
 		copy.qid = qid
-		copy.routeType = routeType
+		copy.routeCalculation = routeCalculation
 		copy.vehicle = vehicle
 		copy.walkSpeed = walkSpeed
 		copy.destinationAddress = destinationAddress
@@ -202,7 +255,7 @@ public class MappyNavigationRouteOptions: RouteOptions
 		guard super.isEqual(to: mappyNavigationRouteOptions) else { return false }
 		guard provider == other.provider,
 			qid == other.qid,
-			routeType == other.routeType,
+			routeCalculation == other.routeCalculation,
 			vehicle == other.vehicle,
 			walkSpeed == other.walkSpeed,
 			destinationAddress == other.destinationAddress else { return false }
