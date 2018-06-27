@@ -80,9 +80,8 @@ class ViewController: UIViewController, MBDrawingViewDelegate {
 			Waypoint(coordinate: CLLocationCoordinate2D(latitude: 48.8502559801871, longitude: 2.30837619054591), name: "Mapbox"),
 			Waypoint(coordinate: CLLocationCoordinate2D(latitude: 48.8448336928138, longitude: 2.3193625185628), name: "Maine - Vaugirard"),
 			], provider: "car", qid: "1ad02a47-0e87-48f4-d190-a794fbbb6aac")
-		options.destinationAddress = "Maine - Vaugirard"
-		options.shapeFormat = .polyline
-		options.routeCalculation = .fastest
+		options.shapeFormat = .geoJSON
+		options.routeCalculationType = "fastest"
 		options.vehicle = "comcar"
 		options.walkSpeed = .normal
 
