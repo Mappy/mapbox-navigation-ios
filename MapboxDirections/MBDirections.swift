@@ -182,9 +182,7 @@ open class Directions: NSObject {
     @objc(calculateDirectionsWithOptions:completionHandler:)
     @discardableResult open func calculate(_ options: RouteOptions, completionHandler: @escaping RouteCompletionHandler) -> URLSessionDataTask {
         let url = self.url(forCalculating: options)
-		let urlString = url.absoluteString
-		let urlHack = URL(string: urlString.replacingOccurrences(of: "%3B", with: ";"))!
-        let task = dataTask(with: urlHack, completionHandler: { (json) in
+        let task = dataTask(with: url, completionHandler: { (json) in
             let response = options.response(from: json)
             if let routes = response.1 {
                 for route in routes {
