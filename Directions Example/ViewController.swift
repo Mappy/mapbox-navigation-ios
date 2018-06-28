@@ -82,8 +82,10 @@ class ViewController: UIViewController, MBDrawingViewDelegate {
 			], provider: "car", qid: "1ad02a47-0e87-48f4-d190-a794fbbb6aac")
 		options.shapeFormat = .geoJSON
 		options.routeCalculationType = "fastest"
+		options.userBearing = 78.001
 		options.vehicle = "comcar"
 		options.walkSpeed = .normal
+		options.bikeSpeed = .fast
 
 		Directions(accessToken: "dummy", host: "routemm.mappyrecette.net")
 //        Directions(accessToken: MapboxAccessToken)

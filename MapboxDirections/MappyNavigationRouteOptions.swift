@@ -13,6 +13,18 @@ public enum MappyWalkSpeed: String
 }
 
 /**
+The cycling speed of the user.
+
+Only used for bike itineraries.
+*/
+public enum MappyBikeSpeed: String
+{
+	case slow = "slow"
+	case normal = "normal"
+	case fast = "fast"
+}
+
+/**
 A `MappyRouteType` indentifies the type of a route object returned by the Mappy Directions API.
 */
 public enum MappyRouteType: String
@@ -88,8 +100,10 @@ public class MappyNavigationRouteOptions: RouteOptions
 		self.provider = decoder.decodeObject(of: NSString.self, forKey: "provider") as String? ?? ""
 		self.qid = decoder.decodeObject(of: NSString.self, forKey: "qid") as String? ?? ""
 		self.routeCalculationType = decoder.decodeObject(of: NSString.self, forKey: "routeCalculationType") as String? ?? ""
+		self.userBearing = decoder.decodeDouble(forKey: "userBearing") as CLLocationDegrees?
 		self.vehicle = decoder.decodeObject(of: NSString.self, forKey: "vehicle") as String?
 		self.walkSpeed = MappyWalkSpeed(rawValue: decoder.decodeObject(of: NSString.self, forKey: "walkSpeed") as String? ?? "")
+		self.bikeSpeed = MappyBikeSpeed(rawValue: decoder.decodeObject(of: NSString.self, forKey: "bikeSpeed") as String? ?? "")
 
 		super.init(coder: decoder)
 	}
@@ -100,8 +114,10 @@ public class MappyNavigationRouteOptions: RouteOptions
 		coder.encode(provider, forKey: "provider")
 		coder.encode(qid, forKey: "qid")
 		coder.encode(routeCalculationType, forKey: "routeCalculationType")
+		coder.encode(userBearing, forKey: "userBearing")
 		coder.encode(vehicle, forKey: "vehicle")
 		coder.encode(walkSpeed?.rawValue, forKey: "walkSpeed")
+		coder.encode(bikeSpeed?.rawValue, forKey: "bikeSpeed")
 	}
 
 	// MARK: - Properties
@@ -124,6 +140,11 @@ public class MappyNavigationRouteOptions: RouteOptions
 	open var routeCalculationType: String?
 
 	/**
+	Bearing of the user in degrees from north.
+	*/
+	open var userBearing: CLLocationDirection?
+
+	/**
 	Vehicle used for transport by the user (only for car and motorbike itineraries).
 	*/
 	open var vehicle: String?
@@ -132,6 +153,11 @@ public class MappyNavigationRouteOptions: RouteOptions
 	Walking speed of the user (only for pedestrian itineraries).
 	*/
 	open var walkSpeed: MappyWalkSpeed?
+
+	/**
+	Cycling speed of the user (only for bike itineraries).
+	*/
+	open var bikeSpeed: MappyBikeSpeed?
 
 
 	// MARK: - Overrides
@@ -164,6 +190,10 @@ public class MappyNavigationRouteOptions: RouteOptions
 		{
 			params.append(URLQueryItem(name: "gps_route_type", value: routeCalculationType))
 		}
+		if let bearing = userBearing
+		{
+			params.append(URLQueryItem(name: "bearing", value: "\(Int(bearing.truncatingRemainder(dividingBy: 360)))"))
+		}
 		if let vehicle = vehicle
 		{
 			params.append(URLQueryItem(name: "vehicle", value: vehicle))
@@ -172,14 +202,16 @@ public class MappyNavigationRouteOptions: RouteOptions
 		{
 			params.append(URLQueryItem(name: "walk_speed", value: walkSpeed.rawValue))
 		}
+		if let bikeSpeed = bikeSpeed
+		{
+			params.append(URLQueryItem(name: "bike_speed", value: bikeSpeed.rawValue))
+		}
 
 		if !waypoints.compactMap({ $0.name }).isEmpty
 		{
 			let names = waypoints.map { $0.name ?? "" }.joined(separator: ";")
 			params.append(URLQueryItem(name: "waypoint_names", value: names))
 		}
-
-		// TODO: "bearings" ?
 
 		return params
 	}
@@ -197,8 +229,10 @@ public class MappyNavigationRouteOptions: RouteOptions
 		copy.provider = provider
 		copy.qid = qid
 		copy.routeCalculationType = routeCalculationType
+		copy.userBearing = userBearing
 		copy.vehicle = vehicle
 		copy.walkSpeed = walkSpeed
+		copy.bikeSpeed = bikeSpeed
 		return copy
 	}
 
@@ -218,8 +252,10 @@ public class MappyNavigationRouteOptions: RouteOptions
 		guard provider == other.provider,
 			qid == other.qid,
 			routeCalculationType == other.routeCalculationType,
+			userBearing == other.userBearing,
 			vehicle == other.vehicle,
-			walkSpeed == other.walkSpeed
+			walkSpeed == other.walkSpeed,
+			bikeSpeed == other.bikeSpeed
 			else { return false }
 		return true
 	}
