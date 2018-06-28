@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		29F7E94220E4E1B500A7B2A4 /* MappyRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29F7E94120E4E1B500A7B2A4 /* MappyRoute.swift */; };
 		358D48811E2EAB2500F32A65 /* MBRouteOptions.h in Headers */ = {isa = PBXBuildFile; fileRef = 358D48801E2EAB2500F32A65 /* MBRouteOptions.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		358D48821E2EAB2500F32A65 /* MBRouteOptions.h in Headers */ = {isa = PBXBuildFile; fileRef = 358D48801E2EAB2500F32A65 /* MBRouteOptions.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		358D48831E2EAB2500F32A65 /* MBRouteOptions.h in Headers */ = {isa = PBXBuildFile; fileRef = 358D48801E2EAB2500F32A65 /* MBRouteOptions.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -259,6 +260,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		29F7E94120E4E1B500A7B2A4 /* MappyRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MappyRoute.swift; sourceTree = "<group>"; };
 		358D48801E2EAB2500F32A65 /* MBRouteOptions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MBRouteOptions.h; sourceTree = "<group>"; };
 		358D48851E2EAB4500F32A65 /* MBRouteOptions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MBRouteOptions.m; sourceTree = "<group>"; };
 		35EFD00A207DFACA00BF3873 /* MBVisualInstruction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MBVisualInstruction.swift; sourceTree = "<group>"; };
@@ -541,6 +543,7 @@
 				C56516831FE1A2DD00A0AD18 /* MBVisualInstructionType.swift */,
 				35EFD00A207DFACA00BF3873 /* MBVisualInstruction.swift */,
 				A3BAAC9620E0DEC4007B5D9A /* MappyNavigationRouteOptions.swift */,
+				29F7E94120E4E1B500A7B2A4 /* MappyRoute.swift */,
 			);
 			path = MapboxDirections;
 			sourceTree = "<group>";
@@ -1280,6 +1283,7 @@
 				DAC05F1A1CFC077C00FA0071 /* MBRouteLeg.swift in Sources */,
 				C5434B8A200693D00069E887 /* MBTracepoint.swift in Sources */,
 				DA6C9DA61CAE462800094FBC /* MBDirections.swift in Sources */,
+				29F7E94220E4E1B500A7B2A4 /* MappyRoute.swift in Sources */,
 				C55FB44B1F6AEBF6006BD1E9 /* MBSpokenInstruction.swift in Sources */,
 				C5DAAC9A20191675001F9261 /* MBMatch.swift in Sources */,
 				C58EA7AA1E9D7EAD008F98CE /* MBCongestion.swift in Sources */,

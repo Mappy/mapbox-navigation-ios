@@ -1,0 +1,43 @@
+import Foundation
+
+/**
+A `MappyRouteType` indentifies the type of a route object returned by the Mappy Directions API.
+*/
+public enum MappyRouteType: String
+{
+	/**
+	The route is an updated version (durations, traffic, etc) of a previous route following a given itinerary.
+	*/
+	case current = "current"
+	/**
+	The route is a faster alternative to a route of type `current` returned in the same Directions response.
+
+	The route starts and ends at the same waypoints than the `current` route returned along in the same response.
+	*/
+	case best = "best"
+}
+
+/**
+A `MapppyRoute` object is a normal `Route` object with additionnal data specific to Mappy API.
+*/
+public class MappyRoute: Route
+{
+	public let routeType: MappyRouteType
+	public let signature: String
+
+	override init(json: JSONDictionary, waypoints: [Waypoint], routeOptions: RouteOptions)
+	{
+		self.routeType = MappyRouteType(rawValue: json["mappy_designation"] as? String ?? "") ?? .current
+		self.signature = json["mappy_signature"] as? String ?? ""
+
+		super.init(json: json, waypoints: waypoints, routeOptions: routeOptions)
+	}
+
+	public required init?(coder decoder: NSCoder)
+	{
+		self.routeType = MappyRouteType(rawValue: decoder.decodeObject(of: NSString.self, forKey: "routeType") as String? ?? "") ?? .current
+		self.signature = decoder.decodeObject(of: NSString.self, forKey: "signature") as String? ?? ""
+
+		super.init(coder: decoder)
+	}
+}

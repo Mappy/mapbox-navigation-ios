@@ -24,23 +24,6 @@ public enum MappyBikeSpeed: String
 	case fast = "fast"
 }
 
-/**
-A `MappyRouteType` indentifies the type of a route object returned by the Mappy Directions API.
-*/
-public enum MappyRouteType: String
-{
-	/**
-	The route is an updated version (durations, traffic, etc) of a previous route following a given itinerary.
-	*/
-	case current = "current"
-	/**
-	The route is a faster alternative to a route of type `current` returned in the same Directions response.
-
-	The route starts and ends at the same waypoints than the `current` route returned along in the same response.
-	*/
-	case best = "best"
-}
-
 public class MappyNavigationRouteOptions: RouteOptions
 {
 	// MARK: - Initializers
@@ -214,6 +197,33 @@ public class MappyNavigationRouteOptions: RouteOptions
 		}
 
 		return params
+	}
+
+	/**
+	Returns response objects that represent the given JSON dictionary data.
+
+	- parameter json: The API response in JSON dictionary format.
+	- returns: A tuple containing an array of waypoints and an array of routes.
+	*/
+	public override func response(from json: JSONDictionary) -> ([Waypoint]?, [Route]?)
+	{
+		var namedWaypoints: [Waypoint]?
+		if let jsonWaypoints = (json["waypoints"] as? [JSONDictionary]) {
+			namedWaypoints = zip(jsonWaypoints, self.waypoints).map { (api, local) -> Waypoint in
+				let location = api["location"] as! [Double]
+				let coordinate = CLLocationCoordinate2D(geoJSON: location)
+				let possibleAPIName = api["name"] as? String
+				let apiName = possibleAPIName?.nonEmptyString
+				return Waypoint(coordinate: coordinate, name: local.name ?? apiName)
+			}
+		}
+
+		let waypoints = namedWaypoints ?? self.waypoints
+
+		let routes = (json["routes"] as? [JSONDictionary])?.map {
+			MappyRoute(json: $0, waypoints: waypoints, routeOptions: self)
+		}
+		return (waypoints, routes)
 	}
 
 	override public class var supportsSecureCoding: Bool
