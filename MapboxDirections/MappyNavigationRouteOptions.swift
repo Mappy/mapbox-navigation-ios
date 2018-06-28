@@ -73,7 +73,9 @@ public class MappyNavigationRouteOptions: RouteOptions
 
 	public required init(waypoints: [Waypoint], profileIdentifier: MBDirectionsProfileIdentifier?)
 	{
-		fatalError("init(waypoints:profileIdentifier:) has not been implemented")
+		self.provider = ""
+		self.qid = ""
+		super.init(waypoints: waypoints, profileIdentifier: profileIdentifier)
 	}
 
 	// MARK: - NSCoding
@@ -83,6 +85,7 @@ public class MappyNavigationRouteOptions: RouteOptions
 		self.provider = decoder.decodeObject(of: NSString.self, forKey: "provider") as String? ?? ""
 		self.qid = decoder.decodeObject(of: NSString.self, forKey: "qid") as String? ?? ""
 		self.routeCalculationType = decoder.decodeObject(of: NSString.self, forKey: "routeCalculationType") as String? ?? ""
+		self.routeSignature = decoder.decodeObject(of: NSString.self, forKey: "routeSignature") as String?
 		self.userBearing = decoder.decodeDouble(forKey: "userBearing") as CLLocationDegrees?
 		self.vehicle = decoder.decodeObject(of: NSString.self, forKey: "vehicle") as String?
 		self.walkSpeed = MappyWalkSpeed(rawValue: decoder.decodeObject(of: NSString.self, forKey: "walkSpeed") as String? ?? "")
@@ -97,6 +100,7 @@ public class MappyNavigationRouteOptions: RouteOptions
 		coder.encode(provider, forKey: "provider")
 		coder.encode(qid, forKey: "qid")
 		coder.encode(routeCalculationType, forKey: "routeCalculationType")
+		coder.encode(routeSignature, forKey: "routeSignature")
 		coder.encode(userBearing, forKey: "userBearing")
 		coder.encode(vehicle, forKey: "vehicle")
 		coder.encode(walkSpeed?.rawValue, forKey: "walkSpeed")
@@ -121,6 +125,11 @@ public class MappyNavigationRouteOptions: RouteOptions
 	Type of metric to use to calculate the itineary.
 	*/
 	open var routeCalculationType: String?
+
+	/**
+	Opaque `Route` signature if requesting the server an updated version of an existing route.
+	*/
+	open var routeSignature: String?
 
 	/**
 	Bearing of the user in degrees from north.
@@ -163,12 +172,14 @@ public class MappyNavigationRouteOptions: RouteOptions
 	{
 		var params: [URLQueryItem] = [
 			URLQueryItem(name: "geometries", value: String(describing: shapeFormat)),
-			URLQueryItem(name: "lang", value: locale.identifier)
+			URLQueryItem(name: "lang", value: locale.identifier),
+			URLQueryItem(name: "qid", value: qid)
 		]
 
-		params.append(URLQueryItem(name: "qid", value: qid))
-		params.append(URLQueryItem(name: "alternatives", value: String(includesAlternativeRoutes)))
-
+		if self.routeSignature != nil
+		{
+			params.append(URLQueryItem(name: "alternatives", value: String(includesAlternativeRoutes)))
+		}
 		if let routeCalculationType = routeCalculationType
 		{
 			params.append(URLQueryItem(name: "gps_route_type", value: routeCalculationType))
@@ -200,6 +211,27 @@ public class MappyNavigationRouteOptions: RouteOptions
 	}
 
 	/**
+	Data to send in the request body.
+	*/
+	override internal var data: Data?
+	{
+		if let signature = self.routeSignature
+		{
+			let data = signature.data(using: .utf8)
+			return data
+		}
+		return nil
+	}
+
+	/**
+	Content-Type to set for the request if `requestData` is not nil.
+	*/
+	override internal var contentType: String?
+	{
+		return "application/json"
+	}
+
+	/**
 	Returns response objects that represent the given JSON dictionary data.
 
 	- parameter json: The API response in JSON dictionary format.
@@ -221,7 +253,7 @@ public class MappyNavigationRouteOptions: RouteOptions
 		let waypoints = namedWaypoints ?? self.waypoints
 
 		let routes = (json["routes"] as? [JSONDictionary])?.map {
-			MappyRoute(json: $0, waypoints: waypoints, routeOptions: self)
+			MappyRoute(json: $0, waypoints: waypoints, routeOptions: self.copy() as! MappyNavigationRouteOptions)
 		}
 		return (waypoints, routes)
 	}
@@ -239,6 +271,7 @@ public class MappyNavigationRouteOptions: RouteOptions
 		copy.provider = provider
 		copy.qid = qid
 		copy.routeCalculationType = routeCalculationType
+		copy.routeSignature = routeSignature
 		copy.userBearing = userBearing
 		copy.vehicle = vehicle
 		copy.walkSpeed = walkSpeed
@@ -262,6 +295,7 @@ public class MappyNavigationRouteOptions: RouteOptions
 		guard provider == other.provider,
 			qid == other.qid,
 			routeCalculationType == other.routeCalculationType,
+			routeSignature == other.routeSignature,
 			userBearing == other.userBearing,
 			vehicle == other.vehicle,
 			walkSpeed == other.walkSpeed,

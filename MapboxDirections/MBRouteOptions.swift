@@ -146,6 +146,22 @@ open class RouteOptions: DirectionsOptions {
         return params
     }
 
+	/**
+	Data to send in the request body.
+	*/
+	internal var data: Data?
+	{
+		return nil
+	}
+
+	/**
+	Content-Type to set for the request if `requestData` is not nil.
+	*/
+	internal var contentType: String?
+	{
+		return nil
+	}
+
     /**
      Returns response objects that represent the given JSON dictionary data.
 

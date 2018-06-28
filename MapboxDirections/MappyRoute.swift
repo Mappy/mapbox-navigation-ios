@@ -25,10 +25,12 @@ public class MappyRoute: Route
 	public let routeType: MappyRouteType
 	public let signature: String
 
-	override init(json: JSONDictionary, waypoints: [Waypoint], routeOptions: RouteOptions)
+	init(json: JSONDictionary, waypoints: [Waypoint], routeOptions: MappyNavigationRouteOptions)
 	{
 		self.routeType = MappyRouteType(rawValue: json["mappy_designation"] as? String ?? "") ?? .current
-		self.signature = json["mappy_signature"] as? String ?? ""
+		let routeSignature = json["mappy_signature"] as? String ?? ""
+		self.signature = routeSignature
+		routeOptions.routeSignature = routeSignature
 
 		super.init(json: json, waypoints: waypoints, routeOptions: routeOptions)
 	}

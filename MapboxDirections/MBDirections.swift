@@ -182,7 +182,9 @@ open class Directions: NSObject {
     @objc(calculateDirectionsWithOptions:completionHandler:)
     @discardableResult open func calculate(_ options: RouteOptions, completionHandler: @escaping RouteCompletionHandler) -> URLSessionDataTask {
         let url = self.url(forCalculating: options)
-        let task = dataTask(with: url, completionHandler: { (json) in
+		let data = options.data
+		let contentType = options.contentType
+		let task = dataTask(with: url, data: data, contentType: contentType, completionHandler: { (json) in
             let response = options.response(from: json)
             if let routes = response.1 {
                 for route in routes {
@@ -258,13 +260,14 @@ open class Directions: NSObject {
      - returns: The data task for the URL.
      - postcondition: The caller must resume the returned task.
      */
-    fileprivate func dataTask(with url: URL, data: Data? = nil, completionHandler: @escaping (_ json: JSONDictionary) -> Void, errorHandler: @escaping (_ error: NSError) -> Void) -> URLSessionDataTask {
+	fileprivate func dataTask(with url: URL, data: Data? = nil, contentType: String? = nil, completionHandler: @escaping (_ json: JSONDictionary) -> Void, errorHandler: @escaping (_ error: NSError) -> Void) -> URLSessionDataTask {
         
         var request = URLRequest(url: url)
         request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
         
         if let data = data {
-            request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+			let contentType = contentType ?? "application/x-www-form-urlencoded"
+            request.setValue(contentType, forHTTPHeaderField: "Content-Type")
             request.httpMethod = "POST"
             request.httpBody = data
         }
