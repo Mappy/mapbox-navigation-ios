@@ -210,7 +210,8 @@ public class MappyNavigationRouteOptions: RouteOptions
 	{
 		if let signature = self.routeSignature
 		{
-			let data = signature.data(using: .utf8)
+			let json = ["mappy_signature": signature]
+			let data = try? JSONSerialization.data(withJSONObject: json, options: [])
 			return data
 		}
 		return nil
