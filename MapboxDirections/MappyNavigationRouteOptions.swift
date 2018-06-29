@@ -86,7 +86,6 @@ public class MappyNavigationRouteOptions: RouteOptions
 		self.qid = decoder.decodeObject(of: NSString.self, forKey: "qid") as String? ?? ""
 		self.routeCalculationType = decoder.decodeObject(of: NSString.self, forKey: "routeCalculationType") as String? ?? ""
 		self.routeSignature = decoder.decodeObject(of: NSString.self, forKey: "routeSignature") as String?
-		self.userBearing = decoder.decodeDouble(forKey: "userBearing") as CLLocationDegrees?
 		self.vehicle = decoder.decodeObject(of: NSString.self, forKey: "vehicle") as String?
 		self.walkSpeed = MappyWalkSpeed(rawValue: decoder.decodeObject(of: NSString.self, forKey: "walkSpeed") as String? ?? "")
 		self.bikeSpeed = MappyBikeSpeed(rawValue: decoder.decodeObject(of: NSString.self, forKey: "bikeSpeed") as String? ?? "")
@@ -101,7 +100,6 @@ public class MappyNavigationRouteOptions: RouteOptions
 		coder.encode(qid, forKey: "qid")
 		coder.encode(routeCalculationType, forKey: "routeCalculationType")
 		coder.encode(routeSignature, forKey: "routeSignature")
-		coder.encode(userBearing, forKey: "userBearing")
 		coder.encode(vehicle, forKey: "vehicle")
 		coder.encode(walkSpeed?.rawValue, forKey: "walkSpeed")
 		coder.encode(bikeSpeed?.rawValue, forKey: "bikeSpeed")
@@ -130,11 +128,6 @@ public class MappyNavigationRouteOptions: RouteOptions
 	Opaque `Route` signature if requesting the server an updated version of an existing route.
 	*/
 	open var routeSignature: String?
-
-	/**
-	Bearing of the user in degrees from north.
-	*/
-	open var userBearing: CLLocationDirection?
 
 	/**
 	Vehicle used for transport by the user (only for car and motorbike itineraries).
@@ -184,7 +177,7 @@ public class MappyNavigationRouteOptions: RouteOptions
 		{
 			params.append(URLQueryItem(name: "gps_route_type", value: routeCalculationType))
 		}
-		if let bearing = userBearing
+		if let bearing = self.waypoints.first?.heading, bearing >= 0
 		{
 			params.append(URLQueryItem(name: "bearing", value: "\(Int(bearing.truncatingRemainder(dividingBy: 360)))"))
 		}
@@ -272,7 +265,6 @@ public class MappyNavigationRouteOptions: RouteOptions
 		copy.qid = qid
 		copy.routeCalculationType = routeCalculationType
 		copy.routeSignature = routeSignature
-		copy.userBearing = userBearing
 		copy.vehicle = vehicle
 		copy.walkSpeed = walkSpeed
 		copy.bikeSpeed = bikeSpeed
@@ -296,7 +288,6 @@ public class MappyNavigationRouteOptions: RouteOptions
 			qid == other.qid,
 			routeCalculationType == other.routeCalculationType,
 			routeSignature == other.routeSignature,
-			userBearing == other.userBearing,
 			vehicle == other.vehicle,
 			walkSpeed == other.walkSpeed,
 			bikeSpeed == other.bikeSpeed
