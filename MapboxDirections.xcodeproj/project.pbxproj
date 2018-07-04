@@ -6,6 +6,20 @@
 	objectVersion = 46;
 	objects = {
 
+/* Begin PBXAggregateTarget section */
+		4E1A71B020ECF43A00EF6422 /* MapboxDirectionsUniversal */ = {
+			isa = PBXAggregateTarget;
+			buildConfigurationList = 4E1A71B120ECF43A00EF6422 /* Build configuration list for PBXAggregateTarget "MapboxDirectionsUniversal" */;
+			buildPhases = (
+				4E1A71B420ECF44100EF6422 /* ShellScript */,
+			);
+			dependencies = (
+			);
+			name = MapboxDirectionsUniversal;
+			productName = MapboxDirectionsUniversal;
+		};
+/* End PBXAggregateTarget section */
+
 /* Begin PBXBuildFile section */
 		29F7E94220E4E1B500A7B2A4 /* MappyRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29F7E94120E4E1B500A7B2A4 /* MappyRoute.swift */; };
 		358D48811E2EAB2500F32A65 /* MBRouteOptions.h in Headers */ = {isa = PBXBuildFile; fileRef = 358D48801E2EAB2500F32A65 /* MBRouteOptions.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -929,6 +943,10 @@
 				LastUpgradeCheck = 0940;
 				ORGANIZATIONNAME = Mapbox;
 				TargetAttributes = {
+					4E1A71B020ECF43A00EF6422 = {
+						CreatedOnToolsVersion = 9.4.1;
+						ProvisioningStyle = Automatic;
+					};
 					DA1A10AE1D00F8FF009F82FA = {
 						CreatedOnToolsVersion = 7.3.1;
 						LastSwiftMigration = 0800;
@@ -990,6 +1008,7 @@
 				DA1A10D41D0101ED009F82FA /* MapboxDirectionsTV */,
 				DA1A10DD1D0101ED009F82FA /* MapboxDirectionsTVTests */,
 				DA1A10FA1D010361009F82FA /* MapboxDirectionsWatch */,
+				4E1A71B020ECF43A00EF6422 /* MapboxDirectionsUniversal */,
 			);
 		};
 /* End PBXProject section */
@@ -1093,6 +1112,19 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		4E1A71B420ECF44100EF6422 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "sh BuildPhases/build_universal_directions.sh";
+		};
 		DADD27F51E5ABD6600D31FAD /* Copy Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -1358,6 +1390,22 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		4E1A71B220ECF43A00EF6422 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		4E1A71B320ECF43A00EF6422 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
 		DA1A10C01D00F8FF009F82FA /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1920,6 +1968,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		4E1A71B120ECF43A00EF6422 /* Build configuration list for PBXAggregateTarget "MapboxDirectionsUniversal" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4E1A71B220ECF43A00EF6422 /* Debug */,
+				4E1A71B320ECF43A00EF6422 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		DA1A10C41D00F8FF009F82FA /* Build configuration list for PBXNativeTarget "MapboxDirectionsMac" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
