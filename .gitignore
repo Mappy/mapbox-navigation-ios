@@ -10,3 +10,5 @@ Carthage/Build
 Carthage/Checkouts
 /build
 /documentation
+
+pkg
