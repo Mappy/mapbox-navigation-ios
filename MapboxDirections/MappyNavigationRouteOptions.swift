@@ -175,7 +175,7 @@ public class MappyNavigationRouteOptions: RouteOptions
 		}
 		if let routeCalculationType = routeCalculationType
 		{
-			params.append(URLQueryItem(name: "gps_route_type", value: routeCalculationType))
+			params.append(URLQueryItem(name: "route_type", value: routeCalculationType))
 		}
 		if let bearing = self.waypoints.first?.heading, bearing >= 0
 		{
