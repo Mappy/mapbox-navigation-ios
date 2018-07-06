@@ -34,6 +34,8 @@
 		35EFD00C207DFACA00BF3873 /* MBVisualInstruction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35EFD00A207DFACA00BF3873 /* MBVisualInstruction.swift */; };
 		35EFD00D207DFACA00BF3873 /* MBVisualInstruction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35EFD00A207DFACA00BF3873 /* MBVisualInstruction.swift */; };
 		35EFD00E207DFACA00BF3873 /* MBVisualInstruction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35EFD00A207DFACA00BF3873 /* MBVisualInstruction.swift */; };
+		4E1A71BC20EF673800EF6422 /* MapboxDirections.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = DA6C9D881CAE442B00094FBC /* MapboxDirections.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		4E1A71BE20EF674300EF6422 /* Mapbox.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = DADD27F21E5ABD4300D31FAD /* Mapbox.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		8D381B611FD9F5B1008D5A58 /* noDestinationName.json in Resources */ = {isa = PBXBuildFile; fileRef = 8D381B601FD9F5B1008D5A58 /* noDestinationName.json */; };
 		8D381B631FDB01D1008D5A58 /* apiDestinationName.json in Resources */ = {isa = PBXBuildFile; fileRef = 8D381B621FDB01D1008D5A58 /* apiDestinationName.json */; };
 		8D381B641FDB0898008D5A58 /* noDestinationName.json in Resources */ = {isa = PBXBuildFile; fileRef = 8D381B601FD9F5B1008D5A58 /* noDestinationName.json */; };
@@ -209,7 +211,6 @@
 		DADD27F01E5AB0EB00D31FAD /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = DADD27ED1E5AB0EB00D31FAD /* ViewController.m */; };
 		DADD27F31E5ABD4300D31FAD /* Mapbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DADD27F21E5ABD4300D31FAD /* Mapbox.framework */; };
 		DADD27F41E5ABD6000D31FAD /* Mapbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DADD27F21E5ABD4300D31FAD /* Mapbox.framework */; };
-		DADD27F71E5AC8E900D31FAD /* MapboxDirections.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DA6C9D881CAE442B00094FBC /* MapboxDirections.framework */; };
 		DAE33A1B1F215DF600C06039 /* IntersectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAE33A1A1F215DF600C06039 /* IntersectionTests.swift */; };
 		DAE33A1C1F215DF600C06039 /* IntersectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAE33A1A1F215DF600C06039 /* IntersectionTests.swift */; };
 		DAE33A1D1F215DF600C06039 /* IntersectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAE33A1A1F215DF600C06039 /* IntersectionTests.swift */; };
@@ -267,6 +268,8 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
+				4E1A71BC20EF673800EF6422 /* MapboxDirections.framework in Embed Frameworks */,
+				4E1A71BE20EF674300EF6422 /* Mapbox.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -422,7 +425,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DADD27F71E5AC8E900D31FAD /* MapboxDirections.framework in Frameworks */,
 				DADD27F31E5ABD4300D31FAD /* Mapbox.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -969,6 +971,7 @@
 					};
 					DA6C9D871CAE442B00094FBC = {
 						CreatedOnToolsVersion = 7.3;
+						DevelopmentTeam = 68X36QQGGD;
 						LastSwiftMigration = 0910;
 					};
 					DA6C9D901CAE442B00094FBC = {
@@ -1679,7 +1682,7 @@
 				CURRENT_PROJECT_VERSION = 29;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEFINES_MODULE = YES;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 68X36QQGGD;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 29;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
@@ -1707,7 +1710,7 @@
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
 				CURRENT_PROJECT_VERSION = 29;
 				DEFINES_MODULE = YES;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 68X36QQGGD;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 29;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
