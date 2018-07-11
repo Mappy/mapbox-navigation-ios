@@ -246,8 +246,21 @@ public class MappyNavigationRouteOptions: RouteOptions
 
 		let waypoints = namedWaypoints ?? self.waypoints
 
+		let tmp: [(String, String)]? = (json["mappy_congestion_colors"] as? [[String: String]])?.map
+		{
+			let label = $0["label"] ?? "unknown"
+			let color = $0["color"] ?? "#000000"
+			return (label, color)
+		}
+
+		var congestionColors = [String: String]()
+		tmp?.forEach({ (congestion, color) in
+
+			congestionColors[congestion] = color
+		})
+
 		let routes = (json["routes"] as? [JSONDictionary])?.map {
-			MappyRoute(json: $0, waypoints: waypoints, routeOptions: self.copy() as! MappyNavigationRouteOptions)
+			MappyRoute(json: $0, waypoints: waypoints, congestionColors: congestionColors, routeOptions: self.copy() as! MappyNavigationRouteOptions)
 		}
 		return (waypoints, routes)
 	}

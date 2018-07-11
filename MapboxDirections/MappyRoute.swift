@@ -24,13 +24,15 @@ public class MappyRoute: Route
 {
 	public let routeType: MappyRouteType
 	public let signature: String
+	public private(set) var congestionColors: [String: String]?
 
-	init(json: JSONDictionary, waypoints: [Waypoint], routeOptions: MappyNavigationRouteOptions)
+	init(json: JSONDictionary, waypoints: [Waypoint], congestionColors: [String: String]?, routeOptions: MappyNavigationRouteOptions)
 	{
 		self.routeType = MappyRouteType(rawValue: json["mappy_designation"] as? String ?? "") ?? .current
 		let routeSignature = json["mappy_signature"] as? String ?? ""
 		self.signature = routeSignature
 		routeOptions.routeSignature = routeSignature
+		self.congestionColors = congestionColors
 
 		super.init(json: json, waypoints: waypoints, routeOptions: routeOptions)
 	}
