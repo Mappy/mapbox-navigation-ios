@@ -5,7 +5,7 @@ import Mapbox
 
 // A Mapbox access token is required to use the Directions API.
 // https://www.mapbox.com/help/create-api-access-token/
-let MapboxAccessToken = "sk.eyJ1IjoieGF2aWVyY291dGluIiwiYSI6IldfdlRPVlkifQ.Kdk-xoV7zPNAcD_FJtA-UQ"
+let MapboxAccessToken = "pk.eyJ1IjoibWFwcHlpb3MiLCJhIjoiY2pqaWh5OGZuMTJ2MzN2cm1heHpmZmVjbCJ9.zT4TP13qJsNthxAUuYMYmg"
 
 class ViewController: UIViewController, MBDrawingViewDelegate {
     @IBOutlet var mapView: MGLMapView!

@@ -5,7 +5,7 @@
 
 // A Mapbox access token is required to use the Directions API.
 // https://www.mapbox.com/help/create-api-access-token/
-NSString * const MapboxAccessToken = @"<# your Mapbox access token #>";
+NSString * const MapboxAccessToken = @"pk.eyJ1IjoibWFwcHlpb3MiLCJhIjoiY2pqaWh5OGZuMTJ2MzN2cm1heHpmZmVjbCJ9.zT4TP13qJsNthxAUuYMYmg";
 
 @interface ViewController ()
 
