@@ -24,7 +24,7 @@ public class MappyRoute: Route
 {
 	public let routeType: MappyRouteType
 	public let signature: String
-	public private(set) var congestionColors: [String: String]?
+	public let congestionColors: [String: String]?
 
 	init(json: JSONDictionary, waypoints: [Waypoint], congestionColors: [String: String]?, routeOptions: MappyNavigationRouteOptions)
 	{
@@ -41,6 +41,7 @@ public class MappyRoute: Route
 	{
 		self.routeType = MappyRouteType(rawValue: decoder.decodeObject(of: NSString.self, forKey: "routeType") as String? ?? "") ?? .current
 		self.signature = decoder.decodeObject(of: NSString.self, forKey: "signature") as String? ?? ""
+		self.congestionColors = decoder.decodeObject(of: [NSDictionary.self, NSString.self, NSString.self], forKey: "congestionColors") as? [String: String]
 
 		super.init(coder: decoder)
 	}
