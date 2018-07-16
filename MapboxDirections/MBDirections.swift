@@ -145,7 +145,7 @@ open class Directions: NSObject {
      */
     @objc public init(accessToken: String?, host: String?) {
         let accessToken = accessToken ?? defaultAccessToken
-        assert(accessToken != nil && !accessToken!.isEmpty, "A Mapbox access token is required. Go to <https://www.mapbox.com/studio/account/tokens/>. In Info.plist, set the MGLMapboxAccessToken key to your access token, or use the Directions(accessToken:host:) initializer.")
+        assert(accessToken != nil, "A Mapbox access token is required. Go to <https://www.mapbox.com/studio/account/tokens/>. In Info.plist, set the MGLMapboxAccessToken key to your access token, or use the Directions(accessToken:host:) initializer.")
         
         self.accessToken = accessToken!
         
