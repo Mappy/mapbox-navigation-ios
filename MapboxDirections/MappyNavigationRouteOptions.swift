@@ -255,7 +255,7 @@ public class MappyNavigationRouteOptions: RouteOptions
 		}
 
 		let routes = (json["routes"] as? [JSONDictionary])?.map {
-			MappyRoute(json: $0, waypoints: waypoints, congestionColors: congestionColors, routeOptions: self.copy() as! MappyNavigationRouteOptions)
+			MappyRoute(json: $0, waypoints: waypoints, congestionColors: congestionColors, options: self.copy() as! MappyNavigationRouteOptions)
 		}
 		return (waypoints, routes)
 	}
