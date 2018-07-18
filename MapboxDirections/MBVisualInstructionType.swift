@@ -34,6 +34,11 @@ public enum VisualInstructionComponentType: Int, CustomStringConvertible {
      A component contains an exit number.
      */
     case exitCode
+
+	/**
+	 The component contains a colored label
+	 */
+	case coloredText
     
     public init?(description: String) {
         let type: VisualInstructionComponentType
@@ -48,6 +53,8 @@ public enum VisualInstructionComponentType: Int, CustomStringConvertible {
             type = .exit
         case "exit-number":
             type = .exitCode
+		case "colored_label":
+			type = .coloredText
         default:
             return nil
         }
@@ -66,6 +73,8 @@ public enum VisualInstructionComponentType: Int, CustomStringConvertible {
             return "exit"
         case .exitCode:
             return "exit-number"
+		case .coloredText:
+			return "colored_label"
         }
     }
 }

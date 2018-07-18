@@ -30,6 +30,12 @@ open class VisualInstructionComponent: NSObject, ComponentRepresentable {
      A component with a lower abbreviation priority value should be abbreviated before a component with a higher abbreviation priority value.
      */
     @objc public var abbreviationPriority: Int = NSNotFound
+
+	/**
+	 Mappy text colors as hexa string
+	 Ex: "#C9242A"
+	 */
+	public var textHexaColors: (foreground: String, background: String)?
     
     /**
      The plain text representation of this component.
@@ -72,6 +78,13 @@ open class VisualInstructionComponent: NSObject, ComponentRepresentable {
         }
         
         self.init(type: type, text: text, imageURL: imageURL, abbreviation: abbreviation, abbreviationPriority: abbreviationPriority)
+
+		if self.type == .coloredText {
+			if let foreground = json["foreground_color"] as? String,
+				let background = json["background_color"] as? String {
+				self.textHexaColors = (foreground, background)
+			}
+		}
     }
     
     /**
