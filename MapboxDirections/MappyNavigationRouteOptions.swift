@@ -89,6 +89,7 @@ public class MappyNavigationRouteOptions: RouteOptions
 		self.vehicle = decoder.decodeObject(of: NSString.self, forKey: "vehicle") as String?
 		self.walkSpeed = MappyWalkSpeed(rawValue: decoder.decodeObject(of: NSString.self, forKey: "walkSpeed") as String? ?? "")
 		self.bikeSpeed = MappyBikeSpeed(rawValue: decoder.decodeObject(of: NSString.self, forKey: "bikeSpeed") as String? ?? "")
+		self.forceBetterRoute = decoder.decodeBool(forKey: "forceBetterRoute")
 
 		super.init(coder: decoder)
 	}
@@ -103,6 +104,7 @@ public class MappyNavigationRouteOptions: RouteOptions
 		coder.encode(vehicle, forKey: "vehicle")
 		coder.encode(walkSpeed?.rawValue, forKey: "walkSpeed")
 		coder.encode(bikeSpeed?.rawValue, forKey: "bikeSpeed")
+		coder.encode(forceBetterRoute, forKey: "forceBetterRoute")
 	}
 
 	// MARK: - Properties
@@ -145,9 +147,9 @@ public class MappyNavigationRouteOptions: RouteOptions
 	open var bikeSpeed: MappyBikeSpeed?
 
 	/**
-	Debug parameter to force the service to respond with a better route
+	Debug parameter to force the service to respond with an arbitrary alternative route that will be marked as better.
 	*/
-	open var forceBetterRoute: Bool?
+	open var forceBetterRoute: Bool = false
 
 	// MARK: - Overrides
 
@@ -176,6 +178,10 @@ public class MappyNavigationRouteOptions: RouteOptions
 		if self.routeSignature != nil
 		{
 			params.append(URLQueryItem(name: "alternatives", value: String(includesAlternativeRoutes)))
+			if self.forceBetterRoute == true && self.includesAlternativeRoutes == true
+			{
+				params.append(URLQueryItem(name: "dev_better_route_threshold", value: "-1"))
+			}
 		}
 		if let routeCalculationType = routeCalculationType
 		{
@@ -196,10 +202,6 @@ public class MappyNavigationRouteOptions: RouteOptions
 		if let bikeSpeed = bikeSpeed
 		{
 			params.append(URLQueryItem(name: "bike_speed", value: bikeSpeed.rawValue))
-		}
-		if self.forceBetterRoute == true
-		{
-			params.append(URLQueryItem(name: "dev_better_route_threshold", value: "-1"))
 		}
 
 		if !waypoints.compactMap({ $0.name }).isEmpty
@@ -285,6 +287,7 @@ public class MappyNavigationRouteOptions: RouteOptions
 		copy.vehicle = vehicle
 		copy.walkSpeed = walkSpeed
 		copy.bikeSpeed = bikeSpeed
+		copy.forceBetterRoute = forceBetterRoute
 		return copy
 	}
 
@@ -307,7 +310,8 @@ public class MappyNavigationRouteOptions: RouteOptions
 			routeSignature == other.routeSignature,
 			vehicle == other.vehicle,
 			walkSpeed == other.walkSpeed,
-			bikeSpeed == other.bikeSpeed
+			bikeSpeed == other.bikeSpeed,
+			forceBetterRoute == other.forceBetterRoute
 			else { return false }
 		return true
 	}
