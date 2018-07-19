@@ -144,6 +144,10 @@ public class MappyNavigationRouteOptions: RouteOptions
 	*/
 	open var bikeSpeed: MappyBikeSpeed?
 
+	/**
+	Debug parameter to force the service to respond with a better route
+	*/
+	open var forceBetterRoute: Bool?
 
 	// MARK: - Overrides
 
@@ -192,6 +196,10 @@ public class MappyNavigationRouteOptions: RouteOptions
 		if let bikeSpeed = bikeSpeed
 		{
 			params.append(URLQueryItem(name: "bike_speed", value: bikeSpeed.rawValue))
+		}
+		if self.forceBetterRoute == true
+		{
+			params.append(URLQueryItem(name: "dev_better_route_threshold", value: "-1"))
 		}
 
 		if !waypoints.compactMap({ $0.name }).isEmpty
