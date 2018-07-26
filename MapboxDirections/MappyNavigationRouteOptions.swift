@@ -7,9 +7,7 @@ Only used for pedestrian itineraries.
 */
 public enum MappyWalkSpeed: String
 {
-	case slow = "slow"
-	case normal = "normal"
-	case fast = "fast"
+	case slow, normal, fast
 }
 
 /**
@@ -19,9 +17,7 @@ Only used for bike itineraries.
 */
 public enum MappyBikeSpeed: String
 {
-	case slow = "slow"
-	case normal = "normal"
-	case fast = "fast"
+	case slow, normal, fast
 }
 
 public class MappyNavigationRouteOptions: RouteOptions
@@ -187,7 +183,8 @@ public class MappyNavigationRouteOptions: RouteOptions
 		{
 			params.append(URLQueryItem(name: "route_type", value: routeCalculationType))
 		}
-		if let bearing = self.waypoints.first?.heading, bearing >= 0
+		if let bearing = self.waypoints.first?.heading,
+			bearing >= 0
 		{
 			params.append(URLQueryItem(name: "bearing", value: "\(Int(bearing.truncatingRemainder(dividingBy: 360)))"))
 		}

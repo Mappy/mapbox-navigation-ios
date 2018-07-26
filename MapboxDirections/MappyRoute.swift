@@ -8,13 +8,13 @@ public enum MappyRouteType: String
 	/**
 	The route is an updated version (durations, traffic, etc) of a previous route following a given itinerary.
 	*/
-	case current = "current"
+	case current
 	/**
 	The route is a faster alternative to a route of type `current` returned in the same Directions response.
 
 	The route starts and ends at the same waypoints than the `current` route returned along in the same response.
 	*/
-	case best = "best"
+	case best
 }
 
 /**
