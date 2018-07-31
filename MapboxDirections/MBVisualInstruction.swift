@@ -36,16 +36,24 @@ open class VisualInstruction: NSObject, NSSecureCoding {
      This property is only relevant if the `maneuverType` is any of the following values: `ManeuverType.takeRoundabout`, `ManeuverType.takeRotary`, `ManeuverType.turnAtRoundabout`, `ManeuverType.exitRoundabout`, or `ManeuverType.exitRotary`.
      */
     @objc public var finalHeading: CLLocationDegrees = 180
+
+    /**
+    The number of exits from the approach to the recommended outlet, including the said outlet.
+
+    This property is only relevant if the `maneuverType` is any of the following values: `ManeuverType.takeRoundabout`, `ManeuverType.takeRotary`, `ManeuverType.turnAtRoundabout`, `ManeuverType.exitRoundabout`, or `ManeuverType.exitRotary`.
+    */
+    @objc public var exitNumber: Int = 0
     
     /**
      Initializes a new visual instruction banner object that displays the given information.
      */
-    @objc public init(text: String?, maneuverType: ManeuverType, maneuverDirection: ManeuverDirection, components: [ComponentRepresentable], degrees: CLLocationDegrees = 180) {
+	@objc public init(text: String?, maneuverType: ManeuverType, maneuverDirection: ManeuverDirection, components: [ComponentRepresentable], degrees: CLLocationDegrees = 180, exitNumber: Int = 0) {
         self.text = text
         self.maneuverType = maneuverType
         self.maneuverDirection = maneuverDirection
         self.components = components
         self.finalHeading = degrees
+        self.exitNumber = exitNumber
     }
     
     /**
@@ -82,8 +90,9 @@ open class VisualInstruction: NSObject, NSSecureCoding {
         }
         
         let degrees = json["degrees"] as? CLLocationDegrees ?? 180
+		let exitNumber = json["exit-number"] as? Int ?? 0
         
-        self.init(text: text, maneuverType: maneuverType, maneuverDirection: maneuverDirection, components: components, degrees: degrees)
+		self.init(text: text, maneuverType: maneuverType, maneuverDirection: maneuverDirection, components: components, degrees: degrees, exitNumber: exitNumber)
     }
     
     @objc public required init?(coder decoder: NSCoder) {
@@ -108,6 +117,7 @@ open class VisualInstruction: NSObject, NSSecureCoding {
         self.components = components
         
         self.finalHeading = decoder.decodeDouble(forKey: "degrees")
+		self.exitNumber = decoder.decodeInteger(forKey: "exitNumber")
     }
     
     public func encode(with coder: NSCoder) {
@@ -115,6 +125,7 @@ open class VisualInstruction: NSObject, NSSecureCoding {
         coder.encode(maneuverType, forKey: "maneuverType")
         coder.encode(maneuverDirection, forKey: "maneuverDirection")
         coder.encode(finalHeading, forKey: "degrees")
+		coder.encode(exitNumber, forKey: "exitNumber")
         coder.encode(components, forKey: "components")
     }
 }
