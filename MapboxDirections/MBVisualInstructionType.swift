@@ -36,7 +36,7 @@ public enum VisualInstructionComponentType: Int, CustomStringConvertible {
     case exitCode
 
 	/**
-	 The component contains a colored label
+	 The component contains a colored label.
 	 */
 	case coloredText
     

@@ -32,7 +32,7 @@ open class VisualInstructionComponent: NSObject, ComponentRepresentable {
     @objc public var abbreviationPriority: Int = NSNotFound
 
 	/**
-	 Mappy text colors as hexa string
+	 Mappy text colors as hexadecimal string.
 	 Ex: "#C9242A"
 	 */
 	public var textHexaColors: (foreground: String, background: String)?
