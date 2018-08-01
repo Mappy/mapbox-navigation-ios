@@ -25,18 +25,91 @@ public class MappyNavigationRouteOptions: RouteOptions
 	// MARK: - Initializers
 
 	/**
-	Initializes a navigation route options object for routes between the given waypoints and an optional profile identifier optimized for navigation.
+	Initializes a navigation route options object for routes between the given waypoints
+
+	The calculated route will be optimized for the given provider and respect the route calculation type.
 	*/
-	public init(waypoints: [Waypoint], provider: String, qid: String)
+	public init(waypoints: [Waypoint], provider: String, routeCalculationType: String, qid: String)
 	{
 		self.provider = provider
+		self.routeCalculationType = routeCalculationType
 		self.qid = qid
+		self.additionalQueryParams = [String:String]()
 
 		super.init(waypoints: waypoints.map {
 			$0.coordinateAccuracy = -1
 			return $0
 		}, profileIdentifier: .automobileAvoidingTraffic)
 
+		self.commonInit()
+	}
+
+	/**
+	Initializes a navigation route options object for routes between the given waypoints.
+
+	Known options will be pulled from additionalQueryParams and assigned to their respective properties,
+	other keys present in the dictionnary will be sent to the API as URL query parameters.
+	*/
+	public init(waypoints: [Waypoint], provider: String, additionalQueryParams params: [String:String])
+	{
+		self.provider = provider
+
+		self.routeCalculationType = params["route_type"] ?? ""
+		self.qid = params["qid"] ?? ""
+		self.carVehicle = params["vehicle"]
+		self.motorbikeVehicule = params["motorbike_vehicle"]
+		if let walkSpeed = params["walk_speed"] {
+			self.walkSpeed = MappyWalkSpeed(rawValue: walkSpeed)
+		}
+		if let bikeSpeed = params["bike_speed"] {
+			self.bikeSpeed = MappyBikeSpeed(rawValue: bikeSpeed)
+		}
+
+		var cleanedParams = params
+		cleanedParams["route_type"] = nil
+		cleanedParams["qid"] = nil
+		cleanedParams["vehicle"] = nil
+		cleanedParams["motorbike_vehicle"] = nil
+		cleanedParams["walk_speed"] = nil
+		cleanedParams["bike_speed"] = nil
+
+		self.additionalQueryParams = cleanedParams
+
+		super.init(waypoints: waypoints.map {
+			$0.coordinateAccuracy = -1
+			return $0
+		}, profileIdentifier: .automobileAvoidingTraffic)
+
+		self.commonInit()
+	}
+
+	/**
+	Initializes a navigation route options object for routes between the given locations and an optional profile identifier optimized for navigation.
+	*/
+	public convenience init(locations: [CLLocation], provider: String, routeCalculationType: String, qid: String)
+	{
+		self.init(waypoints: locations.map { Waypoint(location: $0) }, provider: provider, routeCalculationType: routeCalculationType, qid: qid)
+	}
+
+	/**
+	Initializes a route options object for routes between the given geographic coordinates and an optional profile identifier optimized for navigation.
+	*/
+	public convenience init(coordinates: [CLLocationCoordinate2D], provider: String, routeCalculationType: String, qid: String)
+	{
+		self.init(waypoints: coordinates.map { Waypoint(coordinate: $0) }, provider: provider, routeCalculationType: routeCalculationType, qid: qid)
+	}
+
+	public required init(waypoints: [Waypoint], profileIdentifier: MBDirectionsProfileIdentifier?)
+	{
+		self.provider = ""
+		self.routeCalculationType = ""
+		self.qid = ""
+		self.additionalQueryParams = [String:String]()
+		super.init(waypoints: waypoints, profileIdentifier: profileIdentifier)
+	}
+
+	private func commonInit()
+	{
 		includesSteps = true
 		shapeFormat = .polyline
 		routeShapeResolution = .full
@@ -51,29 +124,6 @@ public class MappyNavigationRouteOptions: RouteOptions
 		roadClassesToAvoid = []
 	}
 
-	/**
-	Initializes a navigation route options object for routes between the given locations and an optional profile identifier optimized for navigation.
-	*/
-	public convenience init(locations: [CLLocation], provider: String, qid: String)
-	{
-		self.init(waypoints: locations.map { Waypoint(location: $0) }, provider: provider, qid: qid)
-	}
-
-	/**
-	Initializes a route options object for routes between the given geographic coordinates and an optional profile identifier optimized for navigation.
-	*/
-	public convenience init(coordinates: [CLLocationCoordinate2D], provider: String, qid: String)
-	{
-		self.init(waypoints: coordinates.map { Waypoint(coordinate: $0) }, provider: provider, qid: qid)
-	}
-
-	public required init(waypoints: [Waypoint], profileIdentifier: MBDirectionsProfileIdentifier?)
-	{
-		self.provider = ""
-		self.qid = ""
-		super.init(waypoints: waypoints, profileIdentifier: profileIdentifier)
-	}
-
 	// MARK: - NSCoding
 
 	public required init?(coder decoder: NSCoder)
@@ -81,8 +131,10 @@ public class MappyNavigationRouteOptions: RouteOptions
 		self.provider = decoder.decodeObject(of: NSString.self, forKey: "provider") as String? ?? ""
 		self.qid = decoder.decodeObject(of: NSString.self, forKey: "qid") as String? ?? ""
 		self.routeCalculationType = decoder.decodeObject(of: NSString.self, forKey: "routeCalculationType") as String? ?? ""
+		self.additionalQueryParams = decoder.decodeObject(of: [NSDictionary.self, NSString.self, NSString.self], forKey: "additionalQueryParams") as? [String: String] ?? [String:String]()
 		self.routeSignature = decoder.decodeObject(of: NSString.self, forKey: "routeSignature") as String?
-		self.vehicle = decoder.decodeObject(of: NSString.self, forKey: "vehicle") as String?
+		self.carVehicle = decoder.decodeObject(of: NSString.self, forKey: "carVehicle") as String?
+		self.motorbikeVehicule = decoder.decodeObject(of: NSString.self, forKey: "motorbikeVehicule") as String?
 		self.walkSpeed = MappyWalkSpeed(rawValue: decoder.decodeObject(of: NSString.self, forKey: "walkSpeed") as String? ?? "")
 		self.bikeSpeed = MappyBikeSpeed(rawValue: decoder.decodeObject(of: NSString.self, forKey: "bikeSpeed") as String? ?? "")
 		self.forceBetterRoute = decoder.decodeBool(forKey: "forceBetterRoute")
@@ -96,8 +148,10 @@ public class MappyNavigationRouteOptions: RouteOptions
 		coder.encode(provider, forKey: "provider")
 		coder.encode(qid, forKey: "qid")
 		coder.encode(routeCalculationType, forKey: "routeCalculationType")
+		coder.encode(additionalQueryParams, forKey: "additionalQueryParams")
 		coder.encode(routeSignature, forKey: "routeSignature")
-		coder.encode(vehicle, forKey: "vehicle")
+		coder.encode(carVehicle, forKey: "carVehicle")
+		coder.encode(motorbikeVehicule, forKey: "motorbikeVehicule")
 		coder.encode(walkSpeed?.rawValue, forKey: "walkSpeed")
 		coder.encode(bikeSpeed?.rawValue, forKey: "bikeSpeed")
 		coder.encode(forceBetterRoute, forKey: "forceBetterRoute")
@@ -110,17 +164,24 @@ public class MappyNavigationRouteOptions: RouteOptions
 	/**
 	Route provider.
 	*/
-	open var provider: String
-
-	/**
-	QID used in initial transport/routes requests.
-	*/
-	open var qid: String
+	open private(set) var provider: String
 
 	/**
 	Type of metric to use to calculate the itineary.
 	*/
-	open var routeCalculationType: String?
+	open private(set) var routeCalculationType: String
+
+	/**
+	QID used in initial transport/routes requests.
+	*/
+	open private(set) var qid: String
+
+	/**
+	Additional params to be passed in request URL.
+
+	Known params are removed from this array and set to the corresponding property.
+	*/
+	open private(set) var additionalQueryParams: [String:String]
 
 	/**
 	Opaque `Route` signature if requesting the server an updated version of an existing route.
@@ -128,9 +189,14 @@ public class MappyNavigationRouteOptions: RouteOptions
 	open var routeSignature: String?
 
 	/**
-	Vehicle used for transport by the user (only for car and motorbike itineraries).
+	Vehicle used for car transportation by the user.
 	*/
-	open var vehicle: String?
+	open var carVehicle: String?
+
+	/**
+	Vehicle used for motorbike transportation by the user.
+	*/
+	open var motorbikeVehicule: String?
 
 	/**
 	Walking speed of the user (only for pedestrian itineraries).
@@ -168,7 +234,8 @@ public class MappyNavigationRouteOptions: RouteOptions
 		var params: [URLQueryItem] = [
 			URLQueryItem(name: "geometries", value: String(describing: shapeFormat)),
 			URLQueryItem(name: "lang", value: locale.identifier),
-			URLQueryItem(name: "qid", value: qid)
+			URLQueryItem(name: "qid", value: qid),
+			URLQueryItem(name: "route_type", value: self.routeCalculationType)
 		]
 
 		if self.routeSignature != nil
@@ -179,18 +246,19 @@ public class MappyNavigationRouteOptions: RouteOptions
 				params.append(URLQueryItem(name: "dev_better_route_threshold", value: "-1"))
 			}
 		}
-		if let routeCalculationType = routeCalculationType
-		{
-			params.append(URLQueryItem(name: "route_type", value: routeCalculationType))
-		}
+		
 		if let bearing = self.waypoints.first?.heading,
 			bearing >= 0
 		{
 			params.append(URLQueryItem(name: "bearing", value: "\(Int(bearing.truncatingRemainder(dividingBy: 360)))"))
 		}
-		if let vehicle = vehicle
+		if let carVehicle = carVehicle
 		{
-			params.append(URLQueryItem(name: "vehicle", value: vehicle))
+			params.append(URLQueryItem(name: "vehicle", value: carVehicle))
+		}
+		if let motorbikeVehicule = motorbikeVehicule
+		{
+			params.append(URLQueryItem(name: "motorbike_vehicle", value: motorbikeVehicule))
 		}
 		if let walkSpeed = walkSpeed
 		{
@@ -206,6 +274,9 @@ public class MappyNavigationRouteOptions: RouteOptions
 			let names = waypoints.map { $0.name ?? "" }.joined(separator: ";")
 			params.append(URLQueryItem(name: "waypoint_names", value: names))
 		}
+
+		let additionalItems = self.additionalQueryParams.map { return URLQueryItem(name: $0.key, value: $0.value) }
+		params.append(contentsOf: additionalItems)
 
 		return params
 	}
@@ -280,8 +351,10 @@ public class MappyNavigationRouteOptions: RouteOptions
 		copy.provider = provider
 		copy.qid = qid
 		copy.routeCalculationType = routeCalculationType
+		copy.additionalQueryParams = additionalQueryParams
 		copy.routeSignature = routeSignature
-		copy.vehicle = vehicle
+		copy.carVehicle = carVehicle
+		copy.motorbikeVehicule = motorbikeVehicule
 		copy.walkSpeed = walkSpeed
 		copy.bikeSpeed = bikeSpeed
 		copy.forceBetterRoute = forceBetterRoute
@@ -304,8 +377,10 @@ public class MappyNavigationRouteOptions: RouteOptions
 		guard provider == other.provider,
 			qid == other.qid,
 			routeCalculationType == other.routeCalculationType,
+			additionalQueryParams == other.additionalQueryParams,
 			routeSignature == other.routeSignature,
-			vehicle == other.vehicle,
+			carVehicle == other.carVehicle,
+			motorbikeVehicule == other.motorbikeVehicule,
 			walkSpeed == other.walkSpeed,
 			bikeSpeed == other.bikeSpeed,
 			forceBetterRoute == other.forceBetterRoute

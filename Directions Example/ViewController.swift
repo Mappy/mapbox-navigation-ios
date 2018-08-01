@@ -76,26 +76,55 @@ class ViewController: UIViewController, MBDrawingViewDelegate {
 //            ])
 //        options.includesSteps = true
 
-		let departure = Waypoint(coordinate: CLLocationCoordinate2D(latitude: 48.8502559801871, longitude: 2.30837619054591), name: "Départ")
-		departure.heading = 78.0001
-//		let roundAboutDeparture = Waypoint(coordinate: CLLocationCoordinate2D(latitude: 49.013763, longitude: 1.195359))
-		let arrival = Waypoint(coordinate: CLLocationCoordinate2D(latitude: 48.8448336928138, longitude: 2.3193625185628), name: "Maine - Vaugirard")
-//		let roundAboutArrival = Waypoint(coordinate: CLLocationCoordinate2D(latitude: 49.015516, longitude: 1.184420))
-		let options = MappyNavigationRouteOptions(
-			waypoints: [
-				departure, arrival
-//				roundAboutDeparture, roundAboutArrival
-			],
-			provider: "car",
-			qid: "1ad02a47-0e87-48f4-d190-a794fbbb6aac")
-		options.shapeFormat = .polyline6
-		options.routeCalculationType = "fastest"
-		options.vehicle = "comcar"
-		options.walkSpeed = .normal
-		options.bikeSpeed = .fast
-//		options.includesAlternativeRoutes = true
-//		options.forceBetterRoute = true
-//		options.routeSignature = "{\"legs\":[{\"end_offset\":0.5174573291,\"start_offset\":0.0791643457,\"path\":[12500001662182,12500001605371,12500001793085,12500001409972,12500001554967,12500001284146,12500001824262,12500001292524,12500001601838,12500001601837,12500001369147,12500001494157,12500001500045,12500001546884,12500001027504,12500000981188,12500001472033,12500001472034,12500001805334,12500001131745,12500001021176,12500001600626,12500001407018,12500001082194,12500001613011,12500001808104,12500001095874,12500001112472,12500000982166,12500001002638,12500001731391,12500001048324,12500001048796,12500001395539,12500001498399,12500001099033,12500001181500,12500001158527]}]}"
+		let makeWaypoints: (() -> [Waypoint]) = {
+			let departure = Waypoint(coordinate: CLLocationCoordinate2D(latitude: 48.8502559801871, longitude: 2.30837619054591), name: "Départ")
+			departure.heading = 78.0001
+			let arrival = Waypoint(coordinate: CLLocationCoordinate2D(latitude: 48.8448336928138, longitude: 2.3193625185628), name: "Maine - Vaugirard")
+			return [departure, arrival]
+		}
+		let makeRoundaboutWaypoints: (() -> [Waypoint]) = {
+			let departure = Waypoint(coordinate: CLLocationCoordinate2D(latitude: 49.013763, longitude: 1.195359))
+			let arrival = Waypoint(coordinate: CLLocationCoordinate2D(latitude: 49.015516, longitude: 1.184420))
+			return [departure, arrival]
+		}
+
+		let makeOptionsWithExplicitParams: (() -> MappyNavigationRouteOptions) = {
+			let options = MappyNavigationRouteOptions(
+				waypoints: makeWaypoints(),
+//				waypoints: makeRoundaboutWaypoints(),
+				provider: "car",
+				routeCalculationType: "fastest",
+				qid: "1ad02a47-0e87-48f4-d190-a794fbbb6aac")
+			options.shapeFormat = .polyline6
+			options.carVehicle = "comcar"
+			options.motorbikeVehicule = "moto125"
+			options.walkSpeed = .slow
+			options.bikeSpeed = .fast
+//			options.includesAlternativeRoutes = true
+//			options.forceBetterRoute = true
+//			options.routeSignature = "{\"legs\":[{\"end_offset\":0.5174573291,\"start_offset\":0.0791643457,\"path\":[12500001662182,12500001605371,12500001793085,12500001409972,12500001554967,12500001284146,12500001824262,12500001292524,12500001601838,12500001601837,12500001369147,12500001494157,12500001500045,12500001546884,12500001027504,12500000981188,12500001472033,12500001472034,12500001805334,12500001131745,12500001021176,12500001600626,12500001407018,12500001082194,12500001613011,12500001808104,12500001095874,12500001112472,12500000982166,12500001002638,12500001731391,12500001048324,12500001048796,12500001395539,12500001498399,12500001099033,12500001181500,12500001158527]}]}"
+			return options
+		}
+
+		let makeOptionsWithUntypedQueryParams: (() -> MappyNavigationRouteOptions) = {
+			let options = MappyNavigationRouteOptions(
+				waypoints: makeWaypoints(),
+				provider: "car",
+				additionalQueryParams: [
+					"route_type": "fastest",
+					"qid": "1ad02a47-0e87-48f4-d190-a794fbbb6aac",
+					"vehicle": "comcar",
+					"motorbike_vehicle": "moto125",
+					"walk_speed": "slow",
+					"bike_speed": "fast",
+					"foo": "bar",
+					])
+			options.shapeFormat = .polyline6
+			return options
+		}
+
+//		let options = makeOptionsWithExplicitParams()
+		let options = makeOptionsWithUntypedQueryParams()
 
 		Directions(accessToken: "", host: "routemm.mappyrecette.net")
 //		Directions(accessToken: "", host: "routemm.mappysnap.net")
