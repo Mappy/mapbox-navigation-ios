@@ -167,6 +167,7 @@ open class DistanceFormatter: LengthFormatter {
      The user’s `Locale` is used here to set the units.
     */
     @objc public func string(from distance: CLLocationDistance) -> String {
+		nonFractionalLengthFormatter.numberFormatter.locale = numberFormatter.locale
         numberFormatter.positivePrefix = ""
         numberFormatter.positiveSuffix = ""
         numberFormatter.decimalSeparator = nonFractionalLengthFormatter.numberFormatter.decimalSeparator
