@@ -17,3 +17,5 @@ Carthage/Checkouts
 /documentation
 /build
 pkg
+test-reports
+
