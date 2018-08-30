@@ -29,8 +29,8 @@ class DirectionsTests: XCTestCase {
         let response = HTTPURLResponse(url: url, statusCode: 429, httpVersion: nil, headerFields: headerFields)
         
         let error: NSError? = nil
-        
-        let resultError = Directions.informativeError(describing: json, response: response, underlyingError: error)
+
+		let resultError = Directions.informativeError(describing: json, response: response, underlyingError: error, locale: Locale(identifier: "en-US"))
         
         XCTAssertEqual(resultError.localizedFailureReason, "More than 600 requests have been made with this access token within a period of 1 minute.")
         XCTAssertEqual(resultError.localizedRecoverySuggestion, "Wait until November 18, 2016 at 9:16:24 AM GMT before retrying.")

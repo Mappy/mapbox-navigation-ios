@@ -330,7 +330,7 @@ open class Directions: NSObject {
     /**
      Returns an error that supplements the given underlying error with additional information from the an HTTP response’s body or headers.
      */
-    static func informativeError(describing json: JSONDictionary, response: URLResponse?, underlyingError error: NSError?) -> NSError {
+	static func informativeError(describing json: JSONDictionary, response: URLResponse?, underlyingError error: NSError?, locale: Locale? = Locale.current) -> NSError {
         let apiStatusCode = json["code"] as? String
         var userInfo = error?.userInfo ?? [:]
         if let response = response as? HTTPURLResponse {
@@ -355,7 +355,11 @@ open class Directions: NSObject {
                     failureReason = "More than \(formattedCount) requests have been made with this access token within a period of \(formattedInterval)."
                 }
                 if let rolloverTime = response.rateLimitResetTime {
-                    let formattedDate = DateFormatter.localizedString(from: rolloverTime, dateStyle: .long, timeStyle: .long)
+					let dateFormatter = DateFormatter()
+					dateFormatter.locale = locale
+					dateFormatter.dateStyle = .long
+					dateFormatter.timeStyle = .long
+                    let formattedDate = dateFormatter.string(from: rolloverTime)
                     recoverySuggestion = "Wait until \(formattedDate) before retrying."
                 }
             default:
