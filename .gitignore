@@ -12,3 +12,5 @@ Carthage/Checkouts
 /documentation
 
 pkg
+test-reports
+
