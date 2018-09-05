@@ -606,6 +606,10 @@ extension RouteController: CLLocationManagerDelegate {
             return
         }
 
+		if distance.isNaN {
+			return
+		}
+
         var course = location.course
         if let upcomingCoordinate = polyline.coordinateFromStart(distance: routeProgress.distanceTraveled+(distance*2)) {
             course = interpolatedCoordinate.direction(to: upcomingCoordinate)

@@ -144,6 +144,10 @@ open class SimulatedLocationManager: NavigationLocationManager {
         guard let newCoordinate = polyline.coordinateFromStart(distance: currentDistance) else {
             return
         }
+
+		if currentDistance.isNaN {
+			return
+		}
         
         // Closest coordinate ahead
         guard let lookAheadCoordinate = polyline.coordinateFromStart(distance: currentDistance + 10) else { return }
