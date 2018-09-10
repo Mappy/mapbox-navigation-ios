@@ -49,6 +49,8 @@
 		8D381B6D1FDB3D8B008D5A58 /* String.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D381B691FDB101F008D5A58 /* String.swift */; };
 		A3BAAC9720E0DEC4007B5D9A /* MappyNavigationRouteOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3BAAC9620E0DEC4007B5D9A /* MappyNavigationRouteOptions.swift */; };
 		A3DCBA6E2146AEA700BB6203 /* MappySpokenInstructionType.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3DCBA6D2146AEA700BB6203 /* MappySpokenInstructionType.swift */; };
+		A3DCBA702146BB7900BB6203 /* MappyControlZoneInstruction.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3DCBA6F2146BB7800BB6203 /* MappyControlZoneInstruction.swift */; };
+		A3DCBA722146BCF500BB6203 /* MappyControlZoneType.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3DCBA712146BCF500BB6203 /* MappyControlZoneType.swift */; };
 		AEAB390D20D7F4F4008F4E54 /* subLaneInstructions.json in Resources */ = {isa = PBXBuildFile; fileRef = AEAB390C20D7F4F4008F4E54 /* subLaneInstructions.json */; };
 		AEAB390E20D7F508008F4E54 /* subLaneInstructions.json in Resources */ = {isa = PBXBuildFile; fileRef = AEAB390C20D7F4F4008F4E54 /* subLaneInstructions.json */; };
 		AEAB390F20D7F50A008F4E54 /* subLaneInstructions.json in Resources */ = {isa = PBXBuildFile; fileRef = AEAB390C20D7F4F4008F4E54 /* subLaneInstructions.json */; };
@@ -303,6 +305,8 @@
 		8D381B691FDB101F008D5A58 /* String.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = String.swift; sourceTree = "<group>"; };
 		A3BAAC9620E0DEC4007B5D9A /* MappyNavigationRouteOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MappyNavigationRouteOptions.swift; sourceTree = "<group>"; };
 		A3DCBA6D2146AEA700BB6203 /* MappySpokenInstructionType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MappySpokenInstructionType.swift; sourceTree = "<group>"; };
+		A3DCBA6F2146BB7800BB6203 /* MappyControlZoneInstruction.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MappyControlZoneInstruction.swift; sourceTree = "<group>"; };
+		A3DCBA712146BCF500BB6203 /* MappyControlZoneType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MappyControlZoneType.swift; sourceTree = "<group>"; };
 		AEAB390C20D7F4F4008F4E54 /* subLaneInstructions.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = subLaneInstructions.json; sourceTree = "<group>"; };
 		AEAB391020D94699008F4E54 /* subVisualInstructions.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = subVisualInstructions.json; sourceTree = "<group>"; };
 		AEDC211820B5DBDE0052DED8 /* MBLaneIndicationComponent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MBLaneIndicationComponent.swift; sourceTree = "<group>"; };
@@ -584,6 +588,8 @@
 				AEDC211820B5DBDE0052DED8 /* MBLaneIndicationComponent.swift */,
 				C56516831FE1A2DD00A0AD18 /* MBVisualInstructionType.swift */,
 				35EFD00A207DFACA00BF3873 /* MBVisualInstruction.swift */,
+				A3DCBA6F2146BB7800BB6203 /* MappyControlZoneInstruction.swift */,
+				A3DCBA712146BCF500BB6203 /* MappyControlZoneType.swift */,
 				A3BAAC9620E0DEC4007B5D9A /* MappyNavigationRouteOptions.swift */,
 				29F7E94120E4E1B500A7B2A4 /* MappyRoute.swift */,
 				A3DCBA6D2146AEA700BB6203 /* MappySpokenInstructionType.swift */,
@@ -1339,6 +1345,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A3DCBA702146BB7900BB6203 /* MappyControlZoneInstruction.swift in Sources */,
 				C51538CC1E807FF00093FF3E /* MBAttribute.swift in Sources */,
 				A3BAAC9720E0DEC4007B5D9A /* MappyNavigationRouteOptions.swift in Sources */,
 				DA2E03EB1CB0E13D00D1269A /* MBRouteOptions.swift in Sources */,
@@ -1346,6 +1353,7 @@
 				C52552B91FA15D5900B1545C /* MBVisualInstructionBanner.swift in Sources */,
 				C52552C01FA1628A00B1545C /* MBVisualInstructionComponent.swift in Sources */,
 				C59426071F1EA6C400C8E59C /* MBRoadClasses.swift in Sources */,
+				A3DCBA722146BCF500BB6203 /* MappyControlZoneType.swift in Sources */,
 				358D48861E2EAB4500F32A65 /* MBRouteOptions.m in Sources */,
 				A3DCBA6E2146AEA700BB6203 /* MappySpokenInstructionType.swift in Sources */,
 				35EFD00B207DFACA00BF3873 /* MBVisualInstruction.swift in Sources */,

@@ -27,6 +27,11 @@ open class VisualInstructionBanner: NSObject, NSSecureCoding {
      This instruction could either contain the visual layout information or the lane information about the upcoming maneuver.
      */
     @objc public let tertiaryInstruction: VisualInstruction?
+
+    /**
+    A visual instruction that is presented additionally to warn about a zone where controls of the user driving can occur.
+    */
+    @objc public let controlZoneInstruction: MappyControlZoneInstruction?
     
     /**
      Which side of a bidirectional road the driver should drive on, also known as the rule of the road.
@@ -41,11 +46,12 @@ open class VisualInstructionBanner: NSObject, NSSecureCoding {
      */
     @objc(initWithJSON:drivingSide:)
     public convenience init(json: [String: Any], drivingSide: DrivingSide) {
-		let distanceAlongStep = json["distanceAlongGeometry"] as! CLLocationDistance
+        let distanceAlongStep = json["distanceAlongGeometry"] as! CLLocationDistance
         
         let primary = json["primary"] as! JSONDictionary
         let secondary = json["secondary"] as? JSONDictionary
         let tertiary = json["sub"] as? JSONDictionary
+        let controlZone = json["controlZone"] as? JSONDictionary
         
         let primaryInstruction = VisualInstruction(json: primary)
         var secondaryInstruction: VisualInstruction? = nil
@@ -57,8 +63,13 @@ open class VisualInstructionBanner: NSObject, NSSecureCoding {
         if let tertiary = tertiary {
             tertiaryInstruction = VisualInstruction(json: tertiary)
         }
+
+        var controlZoneInstruction: MappyControlZoneInstruction? = nil
+        if let controlZone = controlZone {
+            controlZoneInstruction = MappyControlZoneInstruction(json: controlZone)
+        }
         
-        self.init(distanceAlongStep: distanceAlongStep, primaryInstruction: primaryInstruction, secondaryInstruction: secondaryInstruction, tertiaryInstruction: tertiaryInstruction, drivingSide: drivingSide)
+        self.init(distanceAlongStep: distanceAlongStep, primaryInstruction: primaryInstruction, secondaryInstruction: secondaryInstruction, tertiaryInstruction: tertiaryInstruction, controlZoneInstruction: controlZoneInstruction, drivingSide: drivingSide)
     }
     
     /**
@@ -69,11 +80,12 @@ open class VisualInstructionBanner: NSObject, NSSecureCoding {
      - parameter secondaryInstruction: Less important details about the `RouteStep`.
      - parameter drivingSide: Which side of a bidirectional road the driver should drive on.
      */
-    @objc public init(distanceAlongStep: CLLocationDistance, primaryInstruction: VisualInstruction, secondaryInstruction: VisualInstruction?, tertiaryInstruction: VisualInstruction?, drivingSide: DrivingSide) {
+    @objc public init(distanceAlongStep: CLLocationDistance, primaryInstruction: VisualInstruction, secondaryInstruction: VisualInstruction?, tertiaryInstruction: VisualInstruction?, controlZoneInstruction: MappyControlZoneInstruction?, drivingSide: DrivingSide) {
         self.distanceAlongStep = distanceAlongStep
         self.primaryInstruction = primaryInstruction
         self.secondaryInstruction = secondaryInstruction
         self.tertiaryInstruction = tertiaryInstruction
+        self.controlZoneInstruction = controlZoneInstruction
         self.drivingSide = drivingSide
     }
     
@@ -92,6 +104,7 @@ open class VisualInstructionBanner: NSObject, NSSecureCoding {
         self.primaryInstruction = primaryInstruction
         self.secondaryInstruction = decoder.decodeObject(of: VisualInstruction.self, forKey: "secondary")
         self.tertiaryInstruction = decoder.decodeObject(of: VisualInstruction.self, forKey: "tertiaryInstruction")
+        self.controlZoneInstruction = decoder.decodeObject(of: MappyControlZoneInstruction.self, forKey: "controlZoneInstruction")
     }
     
     public static var supportsSecureCoding = true
@@ -101,6 +114,7 @@ open class VisualInstructionBanner: NSObject, NSSecureCoding {
         coder.encode(primaryInstruction, forKey: "primary")
         coder.encode(secondaryInstruction, forKey: "secondary")
         coder.encode(tertiaryInstruction, forKey: "tertiaryInstruction")
+        coder.encode(controlZoneInstruction, forKey: "controlZoneInstruction")
         coder.encode(drivingSide, forKey: "drivingSide")
     }
 }

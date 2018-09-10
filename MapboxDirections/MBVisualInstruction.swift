@@ -62,7 +62,7 @@ open class VisualInstruction: NSObject, NSSecureCoding {
      - parameter json: A JSON object that conforms to the [banner instruction](https://www.mapbox.com/api-documentation/#banner-instruction-object) format described in the Directions API documentation.
      */
     @objc(initWithJSON:)
-    public convenience init(json: [String: Any]) {
+    public init(json: [String: Any]) {
         let text = json["text"] as? String
         var components = [ComponentRepresentable]()
         
@@ -91,8 +91,13 @@ open class VisualInstruction: NSObject, NSSecureCoding {
         
         let degrees = json["degrees"] as? CLLocationDegrees ?? 180
 		let exitNumber = json["exit-number"] as? Int ?? 0
-        
-		self.init(text: text, maneuverType: maneuverType, maneuverDirection: maneuverDirection, components: components, degrees: degrees, exitNumber: exitNumber)
+
+		self.text = text
+		self.maneuverType = maneuverType
+		self.maneuverDirection = maneuverDirection
+		self.components = components
+		self.finalHeading = degrees
+		self.exitNumber = exitNumber
     }
     
     @objc public required init?(coder decoder: NSCoder) {
