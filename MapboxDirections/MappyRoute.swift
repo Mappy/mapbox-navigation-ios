@@ -45,4 +45,13 @@ public class MappyRoute: Route
 
 		super.init(coder: decoder)
 	}
+
+	@objc public override func encode(with coder: NSCoder)
+	{
+		coder.encode(routeType.rawValue, forKey: "routeType")
+		coder.encode(signature, forKey: "signature")
+		coder.encode(congestionColors, forKey: "congestionColors")
+		
+		super.encode(with: coder)
+	}
 }
