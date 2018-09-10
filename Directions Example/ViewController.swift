@@ -77,10 +77,14 @@ class ViewController: UIViewController, MBDrawingViewDelegate {
 //        options.includesSteps = true
 
 		let makeWaypoints: (() -> [Waypoint]) = {
-			let departure = Waypoint(coordinate: CLLocationCoordinate2D(latitude: 48.8502559801871, longitude: 2.30837619054591), name: "Départ")
-			departure.heading = 78.0001
-			let arrival = Waypoint(coordinate: CLLocationCoordinate2D(latitude: 48.8448336928138, longitude: 2.3193625185628), name: "Maine - Vaugirard")
-			return [departure, arrival]
+//			let departure = Waypoint(coordinate: CLLocationCoordinate2D(latitude: 48.8502559801871, longitude: 2.30837619054591), name: "Départ")
+//			departure.heading = 78.0001
+//			let arrival = Waypoint(coordinate: CLLocationCoordinate2D(latitude: 48.8448336928138, longitude: 2.3193625185628), name: "Maine - Vaugirard")
+//			return [departure, arrival]
+
+			let paris = Waypoint(coordinate: CLLocationCoordinate2D(latitude: 48.862118, longitude: 2.346846), name: "Paris")
+			let bordeaux = Waypoint(coordinate: CLLocationCoordinate2D(latitude: 44.845177, longitude: -0.471071), name: "Bordeaux")
+			return [paris, bordeaux]
 		}
 		let makeRoundaboutWaypoints: (() -> [Waypoint]) = {
 			let departure = Waypoint(coordinate: CLLocationCoordinate2D(latitude: 49.013763, longitude: 1.195359))
