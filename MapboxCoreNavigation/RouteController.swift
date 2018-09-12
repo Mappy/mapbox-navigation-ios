@@ -338,7 +338,7 @@ open class RouteController: NSObject {
         
         tunnelIntersectionManager.delegate = self
 
-        startEvents(accessToken: route.accessToken)
+        startEvents(accessToken: "faketoken.faketoken")
     }
 
     deinit {
@@ -358,7 +358,7 @@ open class RouteController: NSObject {
     }
 
     func startEvents(accessToken: String?) {
-        let eventLoggingEnabled = UserDefaults.standard.bool(forKey: NavigationMetricsDebugLoggingEnabled)
+        let eventLoggingEnabled = false
 
         var mapboxAccessToken: String? = nil
 
@@ -372,8 +372,8 @@ open class RouteController: NSObject {
 
         if let mapboxAccessToken = mapboxAccessToken {
             eventsManager.isDebugLoggingEnabled = eventLoggingEnabled
-            eventsManager.isMetricsEnabledInSimulator = true
-            eventsManager.isMetricsEnabledForInUsePermissions = true
+            eventsManager.isMetricsEnabledInSimulator = false
+            eventsManager.isMetricsEnabledForInUsePermissions = false
             let userAgent = usesDefaultUserInterface ? "mapbox-navigation-ui-ios" : "mapbox-navigation-ios"
             eventsManager.initialize(withAccessToken: mapboxAccessToken, userAgentBase: userAgent, hostSDKVersion: String(describing: Bundle(for: RouteController.self).object(forInfoDictionaryKey: "CFBundleShortVersionString")!))
             eventsManager.disableLocationMetrics()
@@ -684,7 +684,10 @@ extension RouteController: CLLocationManagerDelegate {
         updateIntersectionIndex(for: currentStepProgress)
 
         // Notify observers if the step’s remaining distance has changed.
-        let polyline = Polyline(routeProgress.currentLegProgress.currentStep.coordinates!)
+		guard let currentStepCoordinates = routeProgress.currentLegProgress.currentStep.coordinates else {
+			return
+		}
+        let polyline = Polyline(currentStepCoordinates)
         if let closestCoordinate = polyline.closestCoordinate(to: location.coordinate) {
             let remainingDistance = polyline.distance(from: closestCoordinate.coordinate)
             let distanceTraveled = currentStep.distance - remainingDistance

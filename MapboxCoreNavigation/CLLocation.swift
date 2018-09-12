@@ -72,7 +72,9 @@ extension CLLocation {
     //MARK: - Route Snapping
     
     func snapped(to legProgress: RouteLegProgress) -> CLLocation? {
-        let coords = coordinates(for: legProgress)
+		guard let coords = coordinates(for: legProgress) else {
+			return nil
+		}
         let distanceRemaining = legProgress.currentStepProgress.distanceRemaining
         
         let lineSlicedFromUser = Polyline(coords).sliced(from: coordinate)
@@ -91,8 +93,10 @@ extension CLLocation {
     /**
      Calculates the proper coordinates to use when calculating a snapped location.
      */
-    func coordinates(for legProgress: RouteLegProgress) -> [CLLocationCoordinate2D] {
-        let stepCoordinates = legProgress.currentStep.coordinates!
+    func coordinates(for legProgress: RouteLegProgress) -> [CLLocationCoordinate2D]? {
+		guard let stepCoordinates = legProgress.currentStep.coordinates else {
+			return nil
+		}
         
         // If the upcoming maneuver a sharp turn, only look at the current step for snapping.
         // Otherwise, we may get false positives from nearby step coordinates
