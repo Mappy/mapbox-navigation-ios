@@ -62,7 +62,7 @@ open class SpokenInstruction: NSObject, NSSecureCoding {
      - parameter text: A plain-text representation of the speech-optimized instruction.
      - parameter ssmlText: A formatted representation of the speech-optimized instruction.
      */
-	@objc public init(distanceAlongStep: CLLocationDistance, text: String, ssmlText: String, mappyType: MappySpokenInstructionType) {
+	@objc public init(distanceAlongStep: CLLocationDistance, text: String, ssmlText: String, mappyType: MappySpokenInstructionType = .maneuver) {
         self.distanceAlongStep = distanceAlongStep
         self.text = text
         self.ssmlText = ssmlText
