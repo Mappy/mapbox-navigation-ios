@@ -309,6 +309,8 @@ open class RouteController: NSObject {
     }
 
     public var userSnapToStepDistanceFromManeuver: CLLocationDistance?
+
+	private var debugLogger = Logger(withFilename: "RouteControllerLogs", andLevel: .debug)
     
     /**
      Intializes a new `RouteController`.
@@ -361,6 +363,8 @@ open class RouteController: NSObject {
         let eventLoggingEnabled = false
 
         var mapboxAccessToken: String? = nil
+
+		self.debugLogger.logDebug("Start Navigation")
 
         if let accessToken = accessToken {
             mapboxAccessToken = accessToken
@@ -435,6 +439,8 @@ open class RouteController: NSObject {
      Stops monitoring the user’s location along the route.
      */
     @objc public func suspendLocationUpdates() {
+
+		self.debugLogger.logDebug("Stop Navigation")
         locationManager.stopUpdatingLocation()
         locationManager.stopUpdatingHeading()
         locationManager.delegate = nil
@@ -596,19 +602,29 @@ extension RouteController {
 extension RouteController: CLLocationManagerDelegate {
 
     @objc func interpolateLocation() {
+
+		self.debugLogger.logDebug("Enter interpolateLocation")
+
         guard let location = locationManager.lastKnownLocation else { return }
+		self.debugLogger.logDebug("Location acquired \(location)")
+
         guard let coordinates = routeProgress.route.coordinates else { return }
-        let polyline = Polyline(coordinates)
+		self.debugLogger.logDebug("Coordinates acquired \(coordinates)")
+
+		let polyline = Polyline(coordinates)
 
         let distance = location.speed as CLLocationDistance
 
         guard let interpolatedCoordinate = polyline.coordinateFromStart(distance: routeProgress.distanceTraveled+distance) else {
             return
         }
+		self.debugLogger.logDebug("InterpolatedCoordinate acquired \(interpolatedCoordinate)")
 
 		if distance.isNaN {
 			return
 		}
+
+		self.debugLogger.logDebug("Distance OK \(distance)")
 
         var course = location.course
         if let upcomingCoordinate = polyline.coordinateFromStart(distance: routeProgress.distanceTraveled+(distance*2)) {
@@ -622,9 +638,12 @@ extension RouteController: CLLocationManagerDelegate {
                                               course: course,
                                               speed: location.speed,
                                               timestamp: Date())
+		self.debugLogger.logDebug("interpolatedLocation OK \(interpolatedLocation)")
 
         self.locationManager(self.locationManager, didUpdateLocations: [interpolatedLocation])
-    }
+
+		self.debugLogger.logDebug("Exit interpolateLocation")
+	}
 
     @objc public func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
         heading = newHeading
