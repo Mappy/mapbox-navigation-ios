@@ -216,6 +216,14 @@ public class MappyNavigationRouteOptions: RouteOptions
 	// MARK: - Overrides
 
 	/**
+	An array of directions query strings to include in the request URL.
+	*/
+	internal override var queries: [String]
+	{
+		return waypoints.map { String(format: "%.6f,%.6f", arguments: [$0.coordinate.longitude, $0.coordinate.latitude]) }
+	}
+
+	/**
 	The path of the request URL, not including the hostname or any parameters.
 	*/
 	internal override var path: String
