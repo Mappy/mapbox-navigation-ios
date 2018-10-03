@@ -607,7 +607,7 @@ extension RouteController {
 extension RouteController: CLLocationManagerDelegate {
 
     @objc func interpolateLocation() {
-        guard let location = locationManager.lastKnownLocation else { return }
+        guard let location = self.location else { return }
         guard let coordinates = routeProgress.route.coordinates else { return }
         let polyline = Polyline(coordinates)
 
