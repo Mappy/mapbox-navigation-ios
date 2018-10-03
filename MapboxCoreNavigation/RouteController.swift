@@ -240,6 +240,17 @@ open class RouteController: NSObject {
     */
     @objc public var forceProactiveReroutingAtNextUpdate = false
 
+	@objc public var simulateNoGPSReception = false {
+		didSet {
+			if self.simulateNoGPSReception {
+				locationManager.stopUpdatingLocation()
+			}
+			else {
+				locationManager.startUpdatingLocation()
+			}
+		}
+	}
+
     /**
      When set to `false`, flushing of telemetry events is not delayed. Is set to `true` by default.
      */
