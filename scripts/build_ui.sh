@@ -2,7 +2,7 @@
 
 set -e
 
-SIMULATOR_VERSION=11.4
+SIMULATOR_VERSION=12.0
 
 #xcodebuild clean build -scheme MapboxNavigation -destination "platform=iOS Simulator,name=iPhone 8,OS=${SIMULATOR_VERSION}" | xcpretty && exit ${PIPESTATUS[0]}
 
