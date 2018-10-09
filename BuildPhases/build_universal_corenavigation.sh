@@ -8,8 +8,9 @@ mkdir -p "${UNIVERSAL_OUTPUTFOLDER}/iOS"
 TARGET_NAME=MapboxCoreNavigation
 
 # Step 1. Build Device and Simulator versions on iOS
-xcodebuild -scheme "${TARGET_NAME}" -configuration ${CONFIGURATION} -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 6' -UseModernBuildSystem=NO clean build
-xcodebuild -scheme "${TARGET_NAME}" -configuration ${CONFIGURATION} -sdk iphoneos -UseModernBuildSystem=NO clean build
+xcodebuild -scheme "${TARGET_NAME}" -configuration ${CONFIGURATION} -UseModernBuildSystem=NO clean | xcpretty
+xcodebuild -scheme "${TARGET_NAME}" -configuration ${CONFIGURATION} -UseModernBuildSystem=NO -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 6' build
+xcodebuild -scheme "${TARGET_NAME}" -configuration ${CONFIGURATION} -UseModernBuildSystem=NO -sdk iphoneos -UseModernBuildSystem=NO build
 
 # Step 2. Copy the framework structure (from iphoneos build) to the universal folder
 cp -R "${BUILD_DIR}/${CONFIGURATION}-iphoneos/${TARGET_NAME}.framework" "${UNIVERSAL_OUTPUTFOLDER}/iOS"
