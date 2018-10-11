@@ -159,7 +159,7 @@ public class MappyNavigationRouteOptions: RouteOptions
 
 	// MARK: - Properties
 
-	open let apiVersion: String = "1.0"
+	public let apiVersion: String = "1.0"
 
 	/**
 	Route provider.
