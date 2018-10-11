@@ -4,17 +4,11 @@ import CoreLocation
 import UIKit
 #endif
 
-#if os(iOS)
-import UIKit
-#endif
-
 /**
  `NavigationLocationManager` is the base location manager which handles permissions and background modes.
  */
 @objc(MBNavigationLocationManager)
-open class NavigationLocationManager: CLLocationManager {
-    
-    var lastKnownLocation: CLLocation?
+open class NavigationLocationManager: CLLocationManager{
     
     override public init() {
         super.init()
@@ -24,5 +18,11 @@ open class NavigationLocationManager: CLLocationManager {
         if Bundle.main.backgroundModes.contains("location") {
             allowsBackgroundLocationUpdates = true
         }
+    }
+}
+
+extension NavigationLocationManager: RouterDataSource {
+    public var locationProvider: NavigationLocationManager.Type {
+        return type(of: self)
     }
 }

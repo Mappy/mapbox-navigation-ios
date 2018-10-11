@@ -2,14 +2,30 @@ import UIKit
 import MapboxCoreNavigation
 import MapboxDirections
 
+/**
+ `InstructionsBannerViewDelegate` provides methods for reacting to user interactions in `InstructionsBannerView`.
+ */
 @objc(MBInstructionsBannerViewDelegate)
-protocol InstructionsBannerViewDelegate: class {
+public protocol InstructionsBannerViewDelegate: class {
     
+    /**
+     Called when the user taps the `InstructionsBannerView`.
+     */
     @objc(didTapInstructionsBanner:)
     optional func didTapInstructionsBanner(_ sender: BaseInstructionsBannerView)
     
+    
+    /**
+     Called when the user drags either up or down on the `InstructionsBannerView`.
+     */
+    @available(*, deprecated, message: "Please use didSwipeInstructionsBanner instead.")
     @objc(didDragInstructionsBanner:)
     optional func didDragInstructionsBanner(_ sender: BaseInstructionsBannerView)
+    
+    /**
+     Called when the user swipes either left, right, or down on the `InstructionsBannerView`
+     */
+    @objc optional func didSwipeInstructionsBanner(_ sender: BaseInstructionsBannerView, swipeDirection direction: UISwipeGestureRecognizerDirection)
 }
 
 /// :nodoc:
@@ -28,7 +44,11 @@ open class BaseInstructionsBannerView: UIControl {
     weak var _separatorView: UIView!
     weak var separatorView: SeparatorView!
     weak var stepListIndicatorView: StepListIndicatorView!
-    weak var delegate: InstructionsBannerViewDelegate? {
+    
+    @IBInspectable
+    public var swipeable: Bool = false
+    
+    public weak var delegate: InstructionsBannerViewDelegate? {
         didSet {
             stepListIndicatorView.isHidden = false
         }
@@ -76,13 +96,41 @@ open class BaseInstructionsBannerView: UIControl {
         stepListIndicatorView.isHidden = true
     }
     
-    @objc func draggedInstructionsBanner(_ sender: Any) {
-        if let gestureRecognizer = sender as? UIPanGestureRecognizer, gestureRecognizer.state == .ended, let delegate = delegate {
-            stepListIndicatorView.isHidden = !stepListIndicatorView.isHidden
-            delegate.didDragInstructionsBanner?(self)
+    @objc func swipedInstructionBannerLeft(_ sender: Any) {
+        if !swipeable {
+            return
+        }
+
+        if let gestureRecognizer = sender as? UISwipeGestureRecognizer, gestureRecognizer.state == .ended {
+            if let delegate = delegate {
+                delegate.didSwipeInstructionsBanner?(self, swipeDirection: .left)
+            }
         }
     }
     
+    @objc func swipedInstructionBannerRight(_ sender: Any) {
+        if !swipeable {
+            return
+        }
+        
+        if let gestureRecognizer = sender as? UISwipeGestureRecognizer, gestureRecognizer.state == .ended {
+            if let delegate = delegate {
+                delegate.didSwipeInstructionsBanner?(self, swipeDirection: .right)
+            }
+        }
+    }
+    
+    @objc func swipedInstructionBannerDown(_ sender: Any) {
+        if let gestureRecognizer = sender as? UISwipeGestureRecognizer, gestureRecognizer.state == .ended {
+            stepListIndicatorView.isHidden = !stepListIndicatorView.isHidden
+            
+            if let delegate = delegate {
+                delegate.didSwipeInstructionsBanner?(self, swipeDirection: .down)
+                delegate.didDragInstructionsBanner?(self)
+            }
+        }
+    }
+        
     @objc func tappedInstructionsBanner(_ sender: Any) {
         if let delegate = delegate {
             stepListIndicatorView.isHidden = !stepListIndicatorView.isHidden

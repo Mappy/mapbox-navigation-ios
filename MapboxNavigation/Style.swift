@@ -32,9 +32,23 @@ open class Style: NSObject {
     @objc public var styleType: StyleType = .day
     
     /**
-     Map style to be used for the style.
+     URL of the style to display on the map during turn-by-turn navigation.
      */
     @objc open var mapStyleURL: URL = MGLStyle.navigationGuidanceDayStyleURL
+    
+    #if canImport(CarPlay)
+    /**
+     URL of the style to display on the map when previewing a route, for example on CarPlay.
+     */
+    @objc open var previewMapStyleURL = MGLStyle.navigationPreviewDayStyleURL
+    #else
+    /**
+     URL of the style to display on the map when previewing a route.
+     
+     This property is currently unused by default, but you can use it to present your own route preview map.
+     */
+    @objc open var previewMapStyleURL = MGLStyle.navigationPreviewDayStyleURL
+    #endif
     
     /**
      Applies the style for all changed properties.
@@ -411,6 +425,15 @@ open class WayNameView: UIView {
         }
     }
     
+    var attributedText: NSAttributedString? {
+        get {
+            return label.attributedText
+        }
+        set {
+            label.attributedText = newValue
+        }
+    }
+    
     @objc dynamic public var borderColor: UIColor? {
         get {
             guard let color = layer.borderColor else { return nil }
@@ -583,6 +606,9 @@ open class InstructionsBannerContentView: UIView { }
 /// :nodoc:
 @objc(MBBottomBannerContentView)
 open class BottomBannerContentView: UIView { }
+
+/// :nodoc:
+class NavigationAnnotation: MGLPointAnnotation { }
 
 /// :nodoc:
 @objc(MBMarkerView)

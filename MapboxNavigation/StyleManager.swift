@@ -9,7 +9,8 @@ public protocol StyleManagerDelegate: NSObjectProtocol {
     /**
      Asks the delegate for a location to use when calculating sunset and sunrise.
      */
-    @objc func locationFor(styleManager: StyleManager) -> CLLocation?
+    @objc(locationForStyleManager:)
+    func location(for styleManager: StyleManager) -> CLLocation?
     
     /**
      Informs the delegate that a style was applied.
@@ -29,16 +30,40 @@ public protocol StyleManagerDelegate: NSObjectProtocol {
 @objc(MBStyleManager)
 open class StyleManager: NSObject {
     
-    weak var delegate: StyleManagerDelegate?
+    /**
+     The receiver of the delegate. See `StyleManagerDelegate` for more information.
+     */
+    @objc public weak var delegate: StyleManagerDelegate?
     
-    internal var date: Date?
-    var currentStyleType: StyleType?
-    var styles = [Style]() { didSet { applyStyle() } }
-    var automaticallyAdjustsStyleForTimeOfDay = true {
+    /**
+     Determines whether the style manager should apply a new style given the time of day.
+     
+     - precondition: Two styles must be provided for this property to have any effect.
+     */
+    @objc public var automaticallyAdjustsStyleForTimeOfDay = true {
         didSet {
-            resumeNotifications()
+            resetTimeOfDayTimer()
         }
     }
+    
+    /**
+     The styles that are in circulation. Active style is set based on
+     the sunrise and sunset at your current location. A change of
+     preferred content size by the user will also trigger an update.
+     
+     - precondition: Two styles must be provided for
+     `StyleManager.automaticallyAdjustsStyleForTimeOfDay` to have any effect.
+     */
+    @objc public var styles = [Style]() {
+        didSet {
+            applyStyle()
+            resetTimeOfDayTimer()
+        }
+    }
+    
+    internal var date: Date?
+    
+    var currentStyleType: StyleType?
     
     /**
      Initializes a new `StyleManager`.
@@ -71,7 +96,7 @@ open class StyleManager: NSObject {
         NSObject.cancelPreviousPerformRequests(withTarget: self, selector: #selector(timeOfDayChanged), object: nil)
         
         guard automaticallyAdjustsStyleForTimeOfDay && styles.count > 1 else { return }
-        guard let location = delegate?.locationFor(styleManager: self) else { return }
+        guard let location = delegate?.location(for:self) else { return }
         
         guard let solar = Solar(date: date, coordinate: location.coordinate),
             let sunrise = solar.sunrise,
@@ -113,7 +138,7 @@ open class StyleManager: NSObject {
     }
     
     func applyStyle() {
-        guard let location = delegate?.locationFor(styleManager: self) else {
+        guard let location = delegate?.location(for: self) else {
             // We can't calculate sunset or sunrise w/o a location so just apply the first style
             if let style = styles.first, currentStyleType != style.styleType {
                 currentStyleType = style.styleType
@@ -148,7 +173,7 @@ open class StyleManager: NSObject {
     }
     
     func forceRefreshAppearanceIfNeeded() {
-        guard let location = delegate?.locationFor(styleManager: self) else { return }
+        guard let location = delegate?.location(for: self) else { return }
         
         let styleTypeForLocation = styleType(for: location)
         
@@ -189,7 +214,8 @@ extension Date {
             guard let sunriseDate = calendar.date(from: sunriseComponents) else {
                 return nil
             }
-            return sunriseDate.timeIntervalSince(date)
+            let interval = sunriseDate.timeIntervalSince(date)
+            return interval >= 0 ? interval : (interval + 24 * 3600)
         } else {
             let sunsetComponents = calendar.dateComponents([.hour, .minute, .second], from: sunset)
             guard let sunsetDate = calendar.date(from: sunsetComponents) else {
@@ -201,10 +227,10 @@ extension Date {
     
     fileprivate func isNighttime(sunrise: Date, sunset: Date) -> Bool {
         let calendar = Calendar.current
-        let currentMinutesFromMidnight = calendar.component(.hour, from: self) * 60 + calendar.component(.minute, from: self)
-        let sunriseMinutesFromMidnight = calendar.component(.hour, from: sunrise) * 60 + calendar.component(.minute, from: sunrise)
-        let sunsetMinutesFromMidnight = calendar.component(.hour, from: sunset) * 60 + calendar.component(.minute, from: sunset)
-        return currentMinutesFromMidnight < sunriseMinutesFromMidnight || currentMinutesFromMidnight > sunsetMinutesFromMidnight
+        let currentSecondsFromMidnight = calendar.component(.hour, from: self) * 3600 + calendar.component(.minute, from: self) * 60 + calendar.component(.second, from: self)
+        let sunriseSecondsFromMidnight = calendar.component(.hour, from: sunrise) * 3600 + calendar.component(.minute, from: sunrise) * 60 + calendar.component(.second, from: sunrise)
+        let sunsetSecondsFromMidnight = calendar.component(.hour, from: sunset) * 3600 + calendar.component(.minute, from: sunset) * 60 + calendar.component(.second, from: sunset)
+        return currentSecondsFromMidnight < sunriseSecondsFromMidnight || currentSecondsFromMidnight > sunsetSecondsFromMidnight
     }
 }
 

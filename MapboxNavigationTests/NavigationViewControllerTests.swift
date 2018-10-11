@@ -12,31 +12,33 @@ class NavigationViewControllerTests: XCTestCase {
     var customRoadName = [CLLocationCoordinate2D: String?]()
     
     var updatedStyleNumberOfTimes = 0
-    
-    lazy var dependencies: (navigationViewController: NavigationViewController, startLocation: CLLocation, poi: [CLLocation], endLocation: CLLocation) = {
-       
-        let navigationViewController = NavigationViewController(for: initialRoute,
-                                                         directions: Directions(accessToken: "garbage", host: nil))
+    lazy var dependencies: (navigationViewController: NavigationViewController, navigationService: NavigationService, startLocation: CLLocation, poi: [CLLocation], endLocation: CLLocation, voice: RouteVoiceController) = {
+
+        let fakeVoice: RouteVoiceController = FakeVoiceController()
+        let fakeDirections = DirectionsSpy(accessToken: "garbage", host: nil)
+        let fakeService = MapboxNavigationService(route: initialRoute, directions: fakeDirections, locationSource: NavigationLocationManagerFake(), simulating: .never)
+        let navigationViewController = NavigationViewController(for: initialRoute, navigationService: fakeService, voiceController: fakeVoice)
         
         navigationViewController.delegate = self
         
-        let routeController = navigationViewController.routeController!
-        let firstCoord      = routeController.routeProgress.currentLegProgress.nearbyCoordinates.first!
+        let navigationService = navigationViewController.navigationService!
+        let router = navigationService.router!
+        let firstCoord      = router.routeProgress.currentLegProgress.nearbyCoordinates.first!
         let firstLocation   = location(at: firstCoord)
         
         var poi = [CLLocation]()
-        let taylorStreetIntersection = routeController.routeProgress.route.legs.first!.steps.first!.intersections!.first!
-        let turkStreetIntersection   = routeController.routeProgress.route.legs.first!.steps[3].intersections!.first!
-        let fultonStreetIntersection = routeController.routeProgress.route.legs.first!.steps[5].intersections!.first!
+        let taylorStreetIntersection = router.route.legs.first!.steps.first!.intersections!.first!
+        let turkStreetIntersection   = router.route.legs.first!.steps[3].intersections!.first!
+        let fultonStreetIntersection = router.route.legs.first!.steps[5].intersections!.first!
         
         poi.append(location(at: taylorStreetIntersection.location))
         poi.append(location(at: turkStreetIntersection.location))
         poi.append(location(at: fultonStreetIntersection.location))
         
-        let lastCoord    = routeController.routeProgress.currentLegProgress.remainingSteps.last!.coordinates!.first!
+        let lastCoord    = router.routeProgress.currentLegProgress.remainingSteps.last!.coordinates!.first!
         let lastLocation = location(at: lastCoord)
         
-        return (navigationViewController: navigationViewController, startLocation: firstLocation, poi: poi, endLocation: lastLocation)
+        return (navigationViewController: navigationViewController, navigationService: navigationService, startLocation: firstLocation, poi: poi, endLocation: lastLocation, voice: fakeVoice)
     }()
     
     lazy var initialRoute: Route = {
@@ -71,31 +73,31 @@ class NavigationViewControllerTests: XCTestCase {
     func testNavigationViewControllerDelegateRoadNameAtLocationImplemented() {
         
         let navigationViewController = dependencies.navigationViewController
-        let routeController = navigationViewController.routeController!
+        let service = dependencies.navigationService
         
         // Identify a location to set the custom road name.
         let taylorStreetLocation = dependencies.poi.first!
         let roadName = "Taylor Swift Street"
         customRoadName[taylorStreetLocation.coordinate] = roadName
         
-        routeController.locationManager(routeController.locationManager, didUpdateLocations: [taylorStreetLocation])
+        service.locationManager!(service.locationManager, didUpdateLocations: [taylorStreetLocation])
         
         let wayNameView = (navigationViewController.mapViewController?.navigationView.wayNameView)!
-        let currentRoadName = wayNameView.text!
-        XCTAssertEqual(currentRoadName, roadName, "Expected: \(roadName); Actual: \(currentRoadName)")
+        let currentRoadName = wayNameView.text
+        XCTAssertEqual(currentRoadName, roadName, "Expected: \(roadName); Actual: \(String(describing: currentRoadName))")
         XCTAssertFalse(wayNameView.isHidden, "WayNameView should be visible.")
     }
     
     func testNavigationShouldNotCallStyleManagerDidRefreshAppearanceMoreThanOnceWithOneStyle() {
-        let navigationViewController = NavigationViewController(for: initialRoute, styles: [DayStyle()])
-        let routeController = navigationViewController.routeController!
+        let navigationViewController = NavigationViewController(for: initialRoute, styles: [DayStyle()], navigationService: dependencies.navigationService, voiceController: FakeVoiceController())
+        let service = dependencies.navigationService
         navigationViewController.styleManager.delegate = self
         
         let someLocation = dependencies.poi.first!
         
-        routeController.locationManager(routeController.locationManager, didUpdateLocations: [someLocation])
-        routeController.locationManager(routeController.locationManager, didUpdateLocations: [someLocation])
-        routeController.locationManager(routeController.locationManager, didUpdateLocations: [someLocation])
+        let test: (Any) -> Void = { _ in service.locationManager!(service.locationManager, didUpdateLocations: [someLocation]) }
+        
+        (0...2).forEach(test)
         
         XCTAssertEqual(updatedStyleNumberOfTimes, 0, "The style should not be updated.")
         updatedStyleNumberOfTimes = 0
@@ -103,30 +105,30 @@ class NavigationViewControllerTests: XCTestCase {
     
     // If tunnel flags are enabled and we need to switch styles, we should not force refresh the map style because we have only 1 style.
     func testNavigationShouldNotCallStyleManagerDidRefreshAppearanceWhenOnlyOneStyle() {
-        let navigationViewController = NavigationViewController(for: initialRoute, styles: [NightStyle()])
-        let routeController = navigationViewController.routeController!
+        let navigationViewController = NavigationViewController(for: initialRoute, styles: [NightStyle()], navigationService: dependencies.navigationService, voiceController: FakeVoiceController())
+        let service = dependencies.navigationService
         navigationViewController.styleManager.delegate = self
         
         let someLocation = dependencies.poi.first!
         
-        routeController.locationManager(routeController.locationManager, didUpdateLocations: [someLocation])
-        routeController.locationManager(routeController.locationManager, didUpdateLocations: [someLocation])
-        routeController.locationManager(routeController.locationManager, didUpdateLocations: [someLocation])
+        let test: (Any) -> Void = { _ in service.locationManager!(service.locationManager, didUpdateLocations: [someLocation]) }
+        
+        (0...2).forEach(test)
         
         XCTAssertEqual(updatedStyleNumberOfTimes, 0, "The style should not be updated.")
         updatedStyleNumberOfTimes = 0
     }
     
     func testNavigationShouldNotCallStyleManagerDidRefreshAppearanceMoreThanOnceWithTwoStyles() {
-        let navigationViewController = NavigationViewController(for: initialRoute, styles: [DayStyle(), NightStyle()])
-        let routeController = navigationViewController.routeController!
+        let navigationViewController = NavigationViewController(for: initialRoute, styles: [DayStyle(), NightStyle()], navigationService: dependencies.navigationService, voiceController: FakeVoiceController())
+        let service = dependencies.navigationService
         navigationViewController.styleManager.delegate = self
         
         let someLocation = dependencies.poi.first!
         
-        routeController.locationManager(routeController.locationManager, didUpdateLocations: [someLocation])
-        routeController.locationManager(routeController.locationManager, didUpdateLocations: [someLocation])
-        routeController.locationManager(routeController.locationManager, didUpdateLocations: [someLocation])
+        let test: (Any) -> Void = { _ in service.locationManager!(service.locationManager, didUpdateLocations: [someLocation]) }
+        
+        (0...2).forEach(test)
         
         XCTAssertEqual(updatedStyleNumberOfTimes, 0, "The style should not be updated.")
         updatedStyleNumberOfTimes = 0
@@ -137,54 +139,58 @@ class NavigationViewControllerTests: XCTestCase {
     func testNavigationViewControllerDelegateRoadNameAtLocationEmptyString() {
         
         let navigationViewController = dependencies.navigationViewController
-        let routeController = navigationViewController.routeController!
+        let service = dependencies.navigationService
         
         // Identify a location to set the custom road name.
         let turkStreetLocation = dependencies.poi[1]
         let roadName = ""
         customRoadName[turkStreetLocation.coordinate] = roadName
         
-        routeController.locationManager(routeController.locationManager, didUpdateLocations: [turkStreetLocation])
+        service.locationManager!(service.locationManager, didUpdateLocations: [turkStreetLocation])
         
         let wayNameView = (navigationViewController.mapViewController?.navigationView.wayNameView)!
-        let currentRoadName = wayNameView.text!
-        XCTAssertEqual(currentRoadName, roadName, "Expected: \(roadName); Actual: \(currentRoadName)")
+        guard let currentRoadName = wayNameView.text else {
+            XCTFail("UI Failed to consume progress update. The chain from location update -> progress update generation -> progress update consumption is broken somewhere.")
+            return
+        }
+        XCTAssertEqual(currentRoadName, roadName, "Expected: \(roadName); Actual: \(String(describing:currentRoadName))")
         XCTAssertTrue(wayNameView.isHidden, "WayNameView should be hidden.")
     }
     
     func testNavigationViewControllerDelegateRoadNameAtLocationUmimplemented() {
         
         let navigationViewController = dependencies.navigationViewController
-        
-        // We break the communication between CLLocation and MBRouteController
-        // Intent: Prevent the routecontroller from being fed real location updates
-        navigationViewController.routeController.locationManager.delegate = nil
-        
         UIApplication.shared.delegate!.window!!.addSubview(navigationViewController.view)
         
-        let routeController = navigationViewController.routeController!
+        let service = dependencies.navigationService
         
         // Identify a location without a custom road name.
         let fultonStreetLocation = dependencies.poi[2]
+
         
-        navigationViewController.mapViewController!.labelRoadNameCompletionHandler = { (defaultRaodNameAssigned) in
-            XCTAssertTrue(defaultRaodNameAssigned, "label road name was not successfully set")
+        navigationViewController.mapViewController!.labelRoadNameCompletionHandler = { (defaultRoadNameAssigned) in
+            XCTAssertTrue(defaultRoadNameAssigned, "label road name was not successfully set")
         }
         
-        routeController.locationManager(routeController.locationManager, didUpdateLocations: [fultonStreetLocation])
+        service.locationManager!(service.locationManager, didUpdateLocations: [fultonStreetLocation])
     }
     
     func testDestinationAnnotationUpdatesUponReroute() {
         let styleLoaded = XCTestExpectation(description: "Style Loaded")
-        let navigationViewController = NavigationViewControllerTestable(for: initialRoute, styles: [TestableDayStyle()], styleLoaded: styleLoaded)
+        let service = MapboxNavigationService(route: initialRoute, directions: DirectionsSpy(accessToken: "beef"), simulating: .never)
+        let navigationViewController = NavigationViewControllerTestable(for: initialRoute,  styles: [TestableDayStyle()], navigationService: service, styleLoaded: styleLoaded)
         
         //wait for the style to load -- routes won't show without it.
         wait(for: [styleLoaded], timeout: 5)
         navigationViewController.route = initialRoute
+
+        runUntil({
+            return !navigationViewController.mapView!.annotations!.isEmpty
+        })
         
-        let firstDestination = initialRoute.routeOptions.waypoints.last!.coordinate
         guard let annotations = navigationViewController.mapView?.annotations else { return XCTFail("Annotations not found.")}
 
+        let firstDestination = initialRoute.routeOptions.waypoints.last!.coordinate
         let destinations = annotations.filter(annotationFilter(matching: firstDestination))
         XCTAssert(!destinations.isEmpty, "Destination annotation does not exist on map")
     
@@ -210,7 +216,7 @@ class NavigationViewControllerTests: XCTestCase {
 }
 
 extension NavigationViewControllerTests: NavigationViewControllerDelegate, StyleManagerDelegate {
-    func locationFor(styleManager: StyleManager) -> CLLocation? {
+    func location(for styleManager: StyleManager) -> CLLocation? {
         return dependencies.poi.first!
     }
     
@@ -250,15 +256,14 @@ class NavigationViewControllerTestable: NavigationViewController {
     var styleLoadedExpectation: XCTestExpectation
     
     required init(for route: Route,
-                  directions: Directions = Directions.shared,
                   styles: [Style]? = [DayStyle(), NightStyle()],
-                  locationManager: NavigationLocationManager? = NavigationLocationManager(),
+                  navigationService: NavigationService? = nil,
                   styleLoaded: XCTestExpectation) {
         styleLoadedExpectation = styleLoaded
-        super.init(for: route, directions: directions,styles: styles, locationManager: locationManager)
+        super.init(for: route, styles: styles, navigationService: navigationService, voiceController: FakeVoiceController())
     }
     
-    required init(for route: Route, directions: Directions, styles: [Style]?, locationManager: NavigationLocationManager?) {
+    required init(for route: Route, styles: [Style]?, navigationService: NavigationService?, voiceController: RouteVoiceController?) {
         fatalError("This initalizer is not supported in this testing subclass.")
     }
     
@@ -269,11 +274,33 @@ class NavigationViewControllerTestable: NavigationViewController {
     required init?(coder aDecoder: NSCoder) {
         fatalError("This initalizer is not supported in this testing subclass.")
     }
+
 }
 
 class TestableDayStyle: DayStyle {
     required init() {
         super.init()
         mapStyleURL = Fixture.blankStyle
+    }
+}
+
+
+class FakeVoiceController: RouteVoiceController {
+    override func speak(_ instruction: SpokenInstruction) {
+        //no-op
+    }
+    
+    override func pauseSpeechAndPlayReroutingDing(notification: NSNotification) {
+        //no-op
+    }
+}
+
+class NavigationLocationManagerFake: NavigationLocationManager {
+    //Short-circut message that turns-on location updates.
+    override func startUpdatingLocation() {
+        return
+    }
+    override func startUpdatingHeading() {
+        return
     }
 }

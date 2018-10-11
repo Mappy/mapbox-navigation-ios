@@ -2,10 +2,12 @@ import UIKit
 import MapboxCoreNavigation
 import MapboxNavigation
 import MapboxDirections
-import Mapbox
+import UserNotifications
+
 
 private typealias RouteRequestSuccess = (([Route]) -> Void)
 private typealias RouteRequestFailure = ((NSError) -> Void)
+
 
 class ViewController: UIViewController, MGLMapViewDelegate {
     
@@ -15,9 +17,18 @@ class ViewController: UIViewController, MGLMapViewDelegate {
     @IBOutlet weak var startButton: UIButton!
     @IBOutlet weak var bottomBar: UIView!
     @IBOutlet weak var clearMap: UIButton!
-
+    @IBOutlet weak var bottomBarBackground: UIView!
+    
     // MARK: Properties
-    var mapView: NavigationMapView?
+    var mapView: NavigationMapView? {
+        didSet {
+            oldValue?.removeFromSuperview()
+            if let mapView = mapView {
+                configureMapView(mapView)
+                view.insertSubview(mapView, belowSubview: longPressHintView)
+            }
+        }
+    }
     var waypoints: [Waypoint] = [] {
         didSet {
             waypoints.forEach {
@@ -56,13 +67,11 @@ class ViewController: UIViewController, MGLMapViewDelegate {
     }
 
     var alertController: UIAlertController!
-
+    
     // MARK: - Lifecycle Methods
 
     override func viewDidLoad() {
         super.viewDidLoad()
-
-        CLLocationManager().requestWhenInUseAuthorization()
         
         alertController = UIAlertController(title: "Start Navigation", message: "Select the navigation type", preferredStyle: .actionSheet)
         
@@ -95,12 +104,23 @@ class ViewController: UIViewController, MGLMapViewDelegate {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
 
-        //Reload the mapView.
-        setupMapView()
+        self.mapView = NavigationMapView(frame: view.bounds)
 
         // Reset the navigation styling to the defaults if we are returning from a presentation.
         if (presentedViewController != nil) {
             DayStyle().apply()
+        }
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+
+        if #available(iOS 10.0, *) {
+            UNUserNotificationCenter.current().requestAuthorization(options: [.badge, .alert, .sound]) { _,_ in
+                DispatchQueue.main.async {
+                    CLLocationManager().requestWhenInUseAuthorization()
+                }
+            }
         }
     }
 
@@ -125,6 +145,7 @@ class ViewController: UIViewController, MGLMapViewDelegate {
         requestRoute()
     }
 
+
     // MARK: - IBActions
     @IBAction func replay(_ sender: Any) {
         let bundle = Bundle(for: ViewController.self)
@@ -134,7 +155,8 @@ class ViewController: UIViewController, MGLMapViewDelegate {
 
         let locationManager = ReplayLocationManager(locations: Array<CLLocation>.locations(from: filePath))
 
-        let navigationViewController = NavigationViewController(for: route, locationManager: locationManager)
+        let navigationService = MapboxNavigationService(route: route, locationSource: locationManager)
+        let navigationViewController = NavigationViewController(for: route, navigationService: navigationService)
 
         present(navigationViewController, animated: true, completion: nil)
     }
@@ -193,19 +215,17 @@ class ViewController: UIViewController, MGLMapViewDelegate {
     func startBasicNavigation() {
         guard let route = routes?.first else { return }
 
-        let navigationViewController = NavigationViewController(for: route,
-																directions: self.directions,
-																locationManager: navigationLocationManager())
+        let navigationViewController = NavigationViewController(for: route, navigationService: navigationService())
         navigationViewController.delegate = self
 		navigationViewController.routeController.reroutesProactively = true
-
+		
         presentAndRemoveMapview(navigationViewController)
     }
     
     func startNavigation(styles: [Style]) {
         guard let route = routes?.first else { return }
         
-        let navigationViewController = NavigationViewController(for: route, styles: styles, locationManager: navigationLocationManager())
+        let navigationViewController = NavigationViewController(for: route, styles: styles, navigationService: navigationService())
         navigationViewController.delegate = self
 		navigationViewController.routeController.reroutesProactively = true
         
@@ -235,15 +255,17 @@ class ViewController: UIViewController, MGLMapViewDelegate {
 
         let styles = [CustomDayStyle(), CustomNightStyle()]
 
-        let navigationViewController = NavigationViewController(for: route, styles: styles, locationManager: navigationLocationManager())
+        let navigationViewController = NavigationViewController(for: route, styles: styles, navigationService: navigationService())
         navigationViewController.delegate = self
 
         presentAndRemoveMapview(navigationViewController)
     }
 
-    func navigationLocationManager() -> NavigationLocationManager {
-        guard let route = routes?.first else { return NavigationLocationManager() }
-        return simulationButton.isSelected ? SimulatedLocationManager(route: route) : NavigationLocationManager()
+    func navigationService() -> NavigationService? {
+        guard let route = routes?.first else { return nil }
+        let simulate = simulationButton.isSelected
+        let mode: SimulationMode = simulate ? .always : .onPoorGPS
+        return MapboxNavigationService(route: route, simulating: mode)
     }
 
     func presentAndRemoveMapview(_ navigationViewController: NavigationViewController) {
@@ -252,24 +274,19 @@ class ViewController: UIViewController, MGLMapViewDelegate {
             self.mapView = nil
         }
     }
-    
-    func setupMapView() {
-        guard self.mapView == nil else { return }
-        let mapView = NavigationMapView(frame: view.bounds)
-        self.mapView = mapView
-        
+
+    func configureMapView(_ mapView: NavigationMapView) {
         mapView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         mapView.delegate = self
         mapView.navigationMapDelegate = self
         mapView.userTrackingMode = .follow
-        
-        view.insertSubview(mapView, belowSubview: longPressHintView)
-        
+        mapView.logoView.isHidden = true
+
         let singleTap = UILongPressGestureRecognizer(target: self, action: #selector(didLongPress(tap:)))
         mapView.gestureRecognizers?.filter({ $0 is UILongPressGestureRecognizer }).forEach(singleTap.require(toFail:))
         mapView.addGestureRecognizer(singleTap)
     }
-    
+
     func mapView(_ mapView: MGLMapView, didFinishLoading style: MGLStyle) {
         self.mapView?.localizeLabels()
         
@@ -330,7 +347,7 @@ extension ViewController: VoiceControllerDelegate {
         return SpokenInstruction(distanceAlongStep: instruction.distanceAlongStep, text: "New Instruction!", ssmlText: "<speak>New Instruction!</speak>")
     }
     
-    // By default, the routeController will attempt to filter out bad locations.
+    // By default, the navigation service will attempt to filter out unqualified locations.
     // If however you would like to filter these locations in,
     // you can conditionally return a Bool here according to your own heuristics.
     // See CLLocation.swift `isQualified` for what makes a location update unqualified.
@@ -343,11 +360,14 @@ extension ViewController: VoiceControllerDelegate {
 extension ViewController: WaypointConfirmationViewControllerDelegate {
     func confirmationControllerDidConfirm(_ confirmationController: WaypointConfirmationViewController) {
         confirmationController.dismiss(animated: true, completion: {
-            guard let navigationViewController = self.presentedViewController as? NavigationViewController else { return }
+            guard let navigationViewController = self.presentedViewController as? NavigationViewController,
+                  let navService = navigationViewController.navigationService else { return }
 
-            guard navigationViewController.routeController.routeProgress.route.legs.count > navigationViewController.routeController.routeProgress.legIndex + 1 else { return }
-            navigationViewController.routeController.routeProgress.legIndex += 1
-            navigationViewController.routeController.resume()
+            let router = navService.router!
+            guard router.route.legs.count > router.routeProgress.legIndex + 1 else { return }
+            
+            router.routeProgress.legIndex += 1
+            navService.start()
         })
     }
 }
@@ -363,7 +383,7 @@ extension ViewController: NavigationViewControllerDelegate {
         // This type of screen could show information about a destination, pickup/dropoff confirmation, instructions upon arrival, etc.
         
         //If we're not in a "Multiple Stops" demo, show the normal EORVC
-        if navigationViewController.routeController.routeProgress.isFinalLeg {
+        if navigationViewController.navigationService.router.routeProgress.isFinalLeg {
             return true
         }
         
@@ -383,6 +403,7 @@ extension ViewController: NavigationViewControllerDelegate {
         navigationViewController.dismiss(animated: true, completion: nil)
     }
 }
+
 
 // Mark: VisualInstructionDelegate
 extension ViewController: VisualInstructionDelegate {

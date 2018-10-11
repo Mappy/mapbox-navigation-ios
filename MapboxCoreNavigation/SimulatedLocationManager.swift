@@ -29,8 +29,7 @@ fileprivate class SimulatedLocation: CLLocation {
  */
 @objc(MBSimulatedLocationManager)
 open class SimulatedLocationManager: NavigationLocationManager {
-    fileprivate var currentDistance: CLLocationDistance = 0
-    fileprivate var currentLocation = CLLocation()
+    internal var currentDistance: CLLocationDistance = 0
     fileprivate var currentSpeed: CLLocationSpeed = 30
     
     fileprivate var locations: [SimulatedLocation]!
@@ -40,10 +39,13 @@ open class SimulatedLocationManager: NavigationLocationManager {
      Specify the multiplier to use when calculating speed based on the RouteLeg’s `expectedSegmentTravelTimes`.
      */
     @objc public var speedMultiplier: Double = 1
-    
+    fileprivate var simulatedLocation: CLLocation?
     @objc override open var location: CLLocation? {
         get {
-            return currentLocation
+            return simulatedLocation
+        }
+        set {
+            simulatedLocation = newValue
         }
     }
     
@@ -51,6 +53,17 @@ open class SimulatedLocationManager: NavigationLocationManager {
         didSet {
             reset()
         }
+    }
+    
+    open override func copy() -> Any {
+        let copy = SimulatedLocationManager(route: route!)
+        copy.currentDistance = currentDistance
+        copy.simulatedLocation = simulatedLocation
+        copy.currentSpeed = currentSpeed
+        copy.locations = locations
+        copy.routeLine = routeLine
+        copy.speedMultiplier = speedMultiplier
+        return copy
     }
     
     var routeProgress: RouteProgress?
@@ -136,7 +149,7 @@ open class SimulatedLocationManager: NavigationLocationManager {
         }
     }
     
-    @objc fileprivate func tick() {
+    @objc internal func tick() {
         NSObject.cancelPreviousPerformRequests(withTarget: self, selector: #selector(tick), object: nil)
         
         let polyline = Polyline(routeLine)
@@ -230,10 +243,10 @@ open class SimulatedLocationManager: NavigationLocationManager {
                                   course: course,
                                   speed: currentSpeed,
                                   timestamp: Date())
-        currentLocation = location
-        lastKnownLocation = location
         
-        delegate?.locationManager?(self, didUpdateLocations: [currentLocation])
+        self.simulatedLocation = location
+        
+        delegate?.locationManager?(self, didUpdateLocations: [location])
         currentDistance = calculateCurrentDistance(currentDistance)
         perform(#selector(tick), with: nil, afterDelay: 1)
     }

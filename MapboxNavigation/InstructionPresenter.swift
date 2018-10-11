@@ -210,16 +210,17 @@ class InstructionPresenter {
         }
         
         attachment.font = dataSource.font
-        
+
         return NSAttributedString(attachment: attachment)
     }
     
     private func exitShield(side: ExitSide = .right, text: String, component: VisualInstructionComponent, dataSource: DataSource) -> NSAttributedString? {
         guard let cacheKey = component.cacheKey else { return nil }
         
+
         let additionalKey = ExitView.criticalHash(side: side, dataSource: dataSource)
         let attachment = ExitAttachment()
-        
+
         let key = [cacheKey, additionalKey].joined(separator: "-")
         if let image = imageRepository.cachedImageForKey(key) {
             attachment.image = image
@@ -243,9 +244,14 @@ class InstructionPresenter {
     }
     
     private func takeSnapshot(on view: UIView) -> UIImage? {
-        let window = UIApplication.shared.delegate!.window!!
+        let window: UIWindow
+        if let hostView = dataSource as? UIView, let hostWindow = hostView.window {
+            window = hostWindow
+        } else {
+            window = UIApplication.shared.delegate!.window!!
+        }
         
-        //We have to temporarily add the view to the view heirarchy in order for UIAppearance to work it's magic.
+        // Temporarily add the view to the view hierarchy for UIAppearance to work its magic.
         window.addSubview(view)
         let image = view.imageRepresentation
         view.removeFromSuperview()
@@ -254,13 +260,18 @@ class InstructionPresenter {
 
 }
 
-protocol ImagePresenter {
+protocol ImagePresenter: TextPresenter {
     var image: UIImage? { get }
+}
+
+protocol TextPresenter {
+    var text: String? { get }
     var font: UIFont { get }
 }
 
 class ImageInstruction: NSTextAttachment, ImagePresenter {
     var font: UIFont = UIFont.systemFont(ofSize: UIFont.systemFontSize)
+    var text: String?
     
     override func attachmentBounds(for textContainer: NSTextContainer?, proposedLineFragment lineFrag: CGRect, glyphPosition position: CGPoint, characterIndex charIndex: Int) -> CGRect {
         guard let image = image else {
@@ -269,12 +280,39 @@ class ImageInstruction: NSTextAttachment, ImagePresenter {
         let yOrigin = (font.capHeight - image.size.height).rounded() / 2
         return CGRect(x: 0, y: yOrigin, width: image.size.width, height: image.size.height)
     }
-
 }
 
+class TextInstruction: ImageInstruction {}
 class ShieldAttachment: ImageInstruction {}
 class GenericShieldAttachment: ShieldAttachment {}
 class ExitAttachment: ImageInstruction {}
+class RoadNameLabelAttachment: TextInstruction {
+    var scale: CGFloat?
+    var color: UIColor?
+
+    var compositeImage: UIImage? {
+        guard let image = image, let text = text, let color = color, let scale = scale else {
+            return nil
+        }
+        
+        var currentImage: UIImage?
+        let textHeight = font.lineHeight
+        let pointY = (image.size.height - textHeight) / 2
+        currentImage = image.insert(text: text as NSString, color: color, font: font, atPoint: CGPoint(x: 0, y: pointY), scale: scale)
+        
+        return currentImage
+    }
+    
+    convenience init(image: UIImage, text: String, color: UIColor, font: UIFont, scale: CGFloat) {
+        self.init()
+        self.image = image
+        self.font = font
+        self.text = text
+        self.color = color
+        self.scale = scale
+        self.image = compositeImage ?? image
+    }
+}
 
 extension CGSize {
     fileprivate static var greatestFiniteSize = CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)

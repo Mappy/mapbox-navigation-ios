@@ -3,6 +3,7 @@ import MapboxDirections
 @testable import MapboxCoreNavigation
 @testable import MapboxNavigation
 
+
 class StepsViewControllerTests: XCTestCase {
     
     struct Constants {
@@ -14,8 +15,9 @@ class StepsViewControllerTests: XCTestCase {
         
         let bogusToken = "pk.feedCafeDeadBeefBadeBede"
         let directions = Directions(accessToken: bogusToken)
-
-        let routeController = RouteController(along: initialRoute, directions: directions)
+        let dataSource = RouteControllerDataSourceFake()
+        
+        let routeController = RouteController(along: initialRoute, directions: directions, dataSource: dataSource)
         
         let stepsViewController = StepsViewController(routeProgress: routeController.routeProgress)
         
@@ -40,17 +42,18 @@ class StepsViewControllerTests: XCTestCase {
         
         let stepsViewController = dependencies.stepsViewController
 
-        measure {
-            // Measure Performance - stepsViewController.rebuildDataSourceIfNecessary()
-            XCTAssertNotNil(stepsViewController.view, "StepsViewController not initiated properly")
-        }
+        XCTAssertNotNil(stepsViewController.view, "StepsViewController not initiated properly")
+//        measure {
+//            // Measure Performance - stepsViewController.rebuildDataSourceIfNecessary()
+//        }
         
         let containsStepsTableView = stepsViewController.view.subviews.contains(stepsViewController.tableView)
         XCTAssertTrue(containsStepsTableView, "StepsViewController does not have a table subview")
         XCTAssertNotNil(stepsViewController.tableView, "TableView not initiated")
     }
-    
-    func testUpdateCellPerformance() {
+
+    /// NOTE: This test is disabled pending https://github.com/mapbox/mapbox-navigation-ios/issues/1468
+    func x_testUpdateCellPerformance() {
         
         let stepsViewController = dependencies.stepsViewController
         
