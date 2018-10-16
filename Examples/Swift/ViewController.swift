@@ -217,8 +217,7 @@ class ViewController: UIViewController, MGLMapViewDelegate {
 
         let navigationViewController = NavigationViewController(for: route, navigationService: navigationService())
         navigationViewController.delegate = self
-		navigationViewController.routeController.reroutesProactively = true
-		
+        
         presentAndRemoveMapview(navigationViewController)
     }
     
@@ -227,7 +226,6 @@ class ViewController: UIViewController, MGLMapViewDelegate {
         
         let navigationViewController = NavigationViewController(for: route, styles: styles, navigationService: navigationService())
         navigationViewController.delegate = self
-		navigationViewController.routeController.reroutesProactively = true
         
         presentAndRemoveMapview(navigationViewController)
     }
