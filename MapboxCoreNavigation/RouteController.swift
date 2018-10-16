@@ -5,10 +5,12 @@ import Polyline
 import MapboxMobileEvents
 import Turf
 
+
 protocol RouteControllerDataSource: class {
     var location: CLLocation? { get }
     var locationProvider: NavigationLocationManager.Type { get }
 }
+
 
 /**
  A `RouteController` tracks the user’s progress along a route, posting notifications as the user reaches significant points along the route. On every location update, the route controller evaluates the user’s location, determining whether the user remains on the route. If not, the route controller calculates a new route.
@@ -49,6 +51,15 @@ open class RouteController: NSObject, Router {
      If true, the `RouteController` attempts to calculate a more optimal route for the user on an interval defined by `RouteControllerProactiveReroutingInterval`.
      */
     @objc public var reroutesProactively = false
+
+    /**
+    Force the `RouteController` to request a route update from the server when receiving next location update.
+
+    This is a Mappy debug feature. This works by bypassing all usual checks that determine if a proactive rerouting should occur.
+    `reroutesProactively` must be set to true otherwise this parameter is ignored.
+	This property reverts to false once forced request has been sent.
+    */
+    @objc public var forceProactiveReroutingAtNextUpdate = false
 	
     var didFindFasterRoute = false
 
@@ -127,13 +138,11 @@ open class RouteController: NSObject, Router {
 	Replaces the currently followed route.
 	*/
 	@objc public func updateRoute(_ route: Route) {
-		self.delegate?.routeController?(self, willRerouteAlong: route)
-		NotificationCenter.default.post(name: .routeControllerWillRerouteAlong, object: self, userInfo: [
-			RouteControllerNotificationUserInfoKey.routeKey: route ])
-
-		self.routeProgress = RouteProgress(route: route, legIndex: 0)
-
-		self.delegate?.routeController?(self, didRerouteAlong: route)
+		self.delegate?.router?(self, willRerouteAlong: route)
+        NotificationCenter.default.post(name: .routeControllerWillRerouteAlong, object: self, userInfo: [
+            RouteControllerNotificationUserInfoKey.routeKey: route])
+		self._routeProgress = RouteProgress(route: route, legIndex: 0)
+		self.delegate?.router?(self, didRerouteAlong: route, at: dataSource.location, proactive: didFindFasterRoute)
 	}
 
     /**
@@ -202,9 +211,9 @@ open class RouteController: NSObject, Router {
         
         self.lastRerouteLocation = location
         
-        let complete = { [weak self] (route: Route?, error: NSError?) in
+        let complete = { [weak self] (route: Route?, _ mappyRoutes: [MappyRoute]?, error: NSError?) in
             self?.isRerouting = false
-            completion(route, error)
+            completion(route, mappyRoutes, error)
         }
         
         routeTask = directions.calculate(options) {(waypoints, potentialRoutes, potentialError) in
@@ -216,7 +225,7 @@ open class RouteController: NSObject, Router {
 			if routes.count > 0,
 				let mappyRoutes = routes as? [MappyRoute]
 			{
-				return completion(nil, mappyRoutes, potentialError)
+				return complete(nil, mappyRoutes, potentialError)
 			}
             
             let mostSimilar = routes.mostSimilar(to: progress.route)
@@ -286,6 +295,8 @@ open class RouteController: NSObject, Router {
 }
 
 extension RouteController: CLLocationManagerDelegate {
+
+
     @objc public func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
         heading = newHeading
     }
@@ -330,6 +341,7 @@ extension RouteController: CLLocationManagerDelegate {
 
         updateIntersectionIndex(for: currentStepProgress)
         // Notify observers if the step’s remaining distance has changed.
+
         update(progress: routeProgress, with: self.location!, rawLocation: location)
         updateDistanceToIntersection(from: location)
         updateRouteStepProgress(for: location)
@@ -466,20 +478,22 @@ extension RouteController: CLLocationManagerDelegate {
 						return
 					}
 
-					strongSelf.delegate?.routeController?(strongSelf, willRerouteAlong: upToDateRoute)
+					strongSelf.delegate?.router?(strongSelf, willRerouteAlong: upToDateRoute)
 					NotificationCenter.default.post(name: .routeControllerWillRerouteAlong, object: strongSelf, userInfo: [
-						RouteControllerNotificationUserInfoKey.routeKey: upToDateRoute ])
+						RouteControllerNotificationUserInfoKey.routeKey: upToDateRoute])
 
+                    strongSelf.didFindFasterRoute = true
 					// Skip first spoken instruction when updating route
 					let spokenInstructionIndex = (firstStep.instructionsSpokenAlongStep?.count ?? 0) >= 1 ? 1 : 0
-					strongSelf.routeProgress = RouteProgress(route: upToDateRoute, legIndex: 0, spokenInstructionIndex: spokenInstructionIndex)
-
-					strongSelf.delegate?.routeController?(strongSelf, didRerouteAlong: upToDateRoute)
+					strongSelf._routeProgress = RouteProgress(route: upToDateRoute, legIndex: 0, spokenInstructionIndex: spokenInstructionIndex)
+					strongSelf.announce(reroute: upToDateRoute, at: location, proactive: true)
+                    strongSelf.movementsAwayFromRoute = 0
+                    strongSelf.didFindFasterRoute = false
 				}
 
 				if let fasterRoute = routes.first(where: { $0.routeType == .best })
 				{
-					strongSelf.delegate?.routeController?(strongSelf, didReceiveFasterRoute: fasterRoute)
+					strongSelf.delegate?.router?(strongSelf, didReceiveFasterRoute: fasterRoute)
 				}
 
 				return
@@ -499,9 +513,9 @@ extension RouteController: CLLocationManagerDelegate {
                 currentUpcomingManeuver == firstLeg.steps[1] && route.expectedTravelTime <= 0.9 * durationRemaining
 
             if routeIsFaster {
-				strongSelf.delegate?.routeController?(strongSelf, willRerouteAlong: route)
+				strongSelf.delegate?.router?(strongSelf, willRerouteAlong: route)
 				NotificationCenter.default.post(name: .routeControllerWillRerouteAlong, object: strongSelf, userInfo: [
-					RouteControllerNotificationUserInfoKey.routeKey: route ])
+					RouteControllerNotificationUserInfoKey.routeKey: route])
 
                 strongSelf.didFindFasterRoute = true
                 // If the upcoming maneuver in the new route is the same as the current upcoming maneuver, don't announce it
@@ -551,7 +565,11 @@ extension RouteController: CLLocationManagerDelegate {
             }
 
             guard let route = route ?? mappyRoutes?.first else { return }
-			//TODO: announce will reroute ?
+
+            strongSelf.delegate?.router?(strongSelf, willRerouteAlong: route)
+            NotificationCenter.default.post(name: .routeControllerWillRerouteAlong, object: strongSelf, userInfo: [
+                RouteControllerNotificationUserInfoKey.routeKey: route])
+
             strongSelf.isRerouting = false
             strongSelf._routeProgress = RouteProgress(route: route, legIndex: 0)
             strongSelf._routeProgress.currentLegProgress.stepIndex = 0

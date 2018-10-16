@@ -375,9 +375,9 @@ open class RouteLegProgress: NSObject {
         assert(!nearby.isEmpty, "Step must have coordinates")
         return nearby
     }
-	
+
     public typealias StepIndexDistance = (index: Int, distance: CLLocationDistance)
-    
+
     public func closestStep(to coordinate: CLLocationCoordinate2D) -> StepIndexDistance? {
         var currentClosest: StepIndexDistance?
         let remainingSteps = leg.steps.suffix(from: stepIndex)

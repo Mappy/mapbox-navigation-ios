@@ -252,7 +252,7 @@ public class MapboxNavigationService: NSObject, NavigationService, DefaultInterf
         router = routerType.init(along: route, directions: self.directions, dataSource: self)
         
         let eventType = eventsManagerType ?? EventsManager.self
-        eventsManager = eventType.init(dataSource: self, accessToken: route.accessToken)
+        eventsManager = eventType.init(dataSource: self, accessToken: route.accessToken ?? "fakeToken")
         locationManager.activityType = route.routeOptions.activityType
         bootstrapEvents()
         
@@ -419,6 +419,14 @@ extension MapboxNavigationService: RouterDelegate {
         
         //notify our consumer
         delegate?.navigationService?(self, willRerouteFrom: location)
+    }
+    
+    public func router(_ router: Router, didReceiveFasterRoute route: Route) {
+        delegate?.navigationService?(self, didReceiveFasterRoute: route)
+    }
+    
+    public func router(_ router: Router, willRerouteAlong route: Route) {
+        delegate?.navigationService?(self, willRerouteAlong: route)
     }
     
     public func router(_ router: Router, didRerouteAlong route: Route, at location: CLLocation?, proactive: Bool) {

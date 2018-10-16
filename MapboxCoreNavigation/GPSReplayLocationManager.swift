@@ -7,6 +7,8 @@ public class GPSReplayLocationManager: NavigationLocationManager {
 	public var speedMultiplier: TimeInterval = 1
 
 	var currentIndex: Int = 0
+    
+    private var lastKnownLocation: CLLocation?
 
 	public var locations: [CLLocation]! {
 		didSet {

@@ -72,15 +72,14 @@ open class EventsManager: NSObject {
     @objc public var delaysEventFlushing = true
     
     func start() {
-        let eventLoggingEnabled = UserDefaults.standard.bool(forKey: NavigationMetricsDebugLoggingEnabled)
+        let eventLoggingEnabled = false
         
         manager.isDebugLoggingEnabled = eventLoggingEnabled
-        manager.isMetricsEnabledInSimulator = true
-        manager.isMetricsEnabledForInUsePermissions = true
+        manager.isMetricsEnabledInSimulator = false
+        manager.isMetricsEnabledForInUsePermissions = false
         let userAgent = usesDefaultUserInterface ? "mapbox-navigation-ui-ios" : "mapbox-navigation-ios"
         manager.initialize(withAccessToken: accessToken, userAgentBase: userAgent, hostSDKVersion: String(describing: Bundle.mapboxCoreNavigation.object(forInfoDictionaryKey: "CFBundleShortVersionString")!))
         manager.disableLocationMetrics()
-        manager.sendTurnstileEvent()
     }
     
     func navigationCancelEvent(rating potentialRating: Int? = nil, comment: String? = nil) -> EventDetails {

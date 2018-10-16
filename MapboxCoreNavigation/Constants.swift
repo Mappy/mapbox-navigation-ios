@@ -140,6 +140,11 @@ extension Notification.Name {
     public static let routeControllerWillReroute = MBRouteControllerWillReroute
     
     /**
+     Posted when `RouteController` is about to use a new route.
+     */
+    public static let routeControllerWillRerouteAlong = MBRouteControllerWillRerouteAlong
+    
+    /**
      Posted when `RouteController` obtains a new route in response to the user diverging from a previous route.
      
      The user info dictionary contains the keys `RouteControllerNotificationUserInfoKey.locationKey` and `RouteControllerNotificationUserInfoKey.isProactiveKey`.

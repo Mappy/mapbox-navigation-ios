@@ -33,26 +33,32 @@ open class PortableRouteController: RouteController {
         updateNavigator()
     }
     
-    override func getDirections(from location: CLLocation, along progress: RouteProgress, completion: @escaping (Route?, Error?) -> Void) {
+    override func getDirections(from location: CLLocation, along progress: RouteProgress, completion: @escaping (Route?, [MappyRoute]?, Error?) -> Void) {
         routeTask?.cancel()
         let options = progress.reroutingOptions(with: location)
         
         self.lastRerouteLocation = location
         
-        let complete = { [weak self] (route: Route?, error: NSError?) in
+        let complete = { [weak self] (route: Route?, mappyRoutes: [MappyRoute]?, error: NSError?) in
             self?.isRerouting = false
-            completion(route, error)
+            completion(route, mappyRoutes, error)
         }
         
         routeTask = directions.calculate(options) {(waypoints, potentialRoutes, potentialError) in
             guard let routes = potentialRoutes else {
-                complete(nil, potentialError)
+                complete(nil, nil, potentialError)
                 return
+            }
+            
+            if routes.count > 0,
+                let mappyRoutes = routes as? [MappyRoute]
+            {
+                return complete(nil, mappyRoutes, potentialError)
             }
             
             let mostSimilar = routes.mostSimilar(to: progress.route)
             
-            complete(mostSimilar ?? routes.first, potentialError)
+            complete(mostSimilar ?? routes.first, nil, potentialError)
         }
     }
     

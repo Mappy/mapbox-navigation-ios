@@ -16,6 +16,12 @@ public protocol RouterDelegate: class {
     
     @objc(router:shouldDiscardLocation:)
     optional func router(_ router: Router, shouldDiscard location: CLLocation) -> Bool
+    
+    @objc(router:didReceiveFasterRoute:)
+    optional func router(_ router: Router, didReceiveFasterRoute route: Route)
+    
+    @objc(router:willRerouteAlongRoute:)
+    optional func router(_ router: Router, willRerouteAlong route: Route)
 
     @objc(router:didRerouteAlongRoute:at:proactive:)
     optional func router(_ router: Router, didRerouteAlong route: Route, at location: CLLocation?, proactive: Bool)
