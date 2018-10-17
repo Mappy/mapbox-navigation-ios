@@ -242,13 +242,13 @@ class NavigationServiceTests: XCTestCase {
 
     // MARK: - Events & Delegation
 
-    func testTurnstileEventSentUponInitialization() {
-        // MARK: it sends a turnstile event upon initialization
-
-        let service = MapboxNavigationService(route: initialRoute, directions: directionsClientSpy, locationSource: NavigationLocationManager(), eventsManagerType: EventsManagerSpy.self)
-        let spyManager = service.eventsManager as! EventsManagerSpy
-        XCTAssertTrue(spyManager.spy.hasFlushedEvent(with: MMEEventTypeAppUserTurnstile))
-    }
+//    func testTurnstileEventSentUponInitialization() {
+//        // MARK: it sends a turnstile event upon initialization
+//
+//        let service = MapboxNavigationService(route: initialRoute, directions: directionsClientSpy, locationSource: NavigationLocationManager(), eventsManagerType: EventsManagerSpy.self)
+//        let spyManager = service.eventsManager as! EventsManagerSpy
+//        XCTAssertTrue(spyManager.spy.hasFlushedEvent(with: MMEEventTypeAppUserTurnstile))
+//    }
 
     func testReroutingFromALocationSendsEvents() {
         let navigationService = dependencies.navigationService
