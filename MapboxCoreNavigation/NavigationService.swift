@@ -202,6 +202,40 @@ public class MapboxNavigationService: NSObject, NavigationService, DefaultInterf
             simulatedLocationSource?.speedMultiplier = newValue
         }
     }
+
+	public var reroutesProactively: Bool {
+		get {
+			if let routeController = self.router as? RouteController {
+				return routeController.reroutesProactively
+			}
+			else {
+				return false
+			}
+		}
+
+		set {
+			if let routeController = self.router as? RouteController {
+				routeController.reroutesProactively = newValue
+			}
+		}
+	}
+
+	public var forceProactiveReroutingAtNextUpdate: Bool {
+		get {
+			if let routeController = self.router as? RouteController {
+				return routeController.forceProactiveReroutingAtNextUpdate
+			}
+			else {
+				return false
+			}
+		}
+
+		set {
+			if let routeController = self.router as? RouteController {
+				routeController.forceProactiveReroutingAtNextUpdate = newValue
+			}
+		}
+	}
     
     var poorGPSTimer: CountdownTimer!
     private var isSimulating: Bool { return simulatedLocationSource != nil }
@@ -333,6 +367,12 @@ public class MapboxNavigationService: NSObject, NavigationService, DefaultInterf
         eventsManager.sendCancelEvent(rating: feedback?.rating, comment: feedback?.comment)
         stop()
     }
+
+	public func updateRoute(_ route: Route) {
+		if let routeController = self.router as? RouteController {
+			routeController.updateRoute(route)
+		}
+	}
 
     private func bootstrapEvents() {
         eventsManager.dataSource = self

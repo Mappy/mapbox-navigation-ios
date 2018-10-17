@@ -362,7 +362,6 @@ extension RouteController: CLLocationManagerDelegate {
             checkForFasterRoute(from: location)
             return
         }
-		 // TODO: the 2 followings guard statements prevent route from being updated, should we remove/move them?
         // Only check for faster alternatives if the user has plenty of time left on the route.
         guard routeProgress.durationRemaining > 600 else { return }
         // If the user is approaching a maneuver, don't check for a faster alternatives
