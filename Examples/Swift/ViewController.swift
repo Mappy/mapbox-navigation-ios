@@ -49,6 +49,11 @@ class ViewController: UIViewController, MGLMapViewDelegate {
     }
 
 	var directions: Directions!
+    
+    enum directionHost {
+        case mapbox, mappyRecette, mappySnap
+    }
+    var hostChoice: directionHost = .mapbox
 
     // MARK: Directions Request Handlers
 
@@ -204,9 +209,15 @@ class ViewController: UIViewController, MGLMapViewDelegate {
             return success(routes)
         }
 
-//		self.directions = Directions.shared
-		self.directions = Directions(accessToken: "", host: "routemm.mappyrecette.net")
-//		self.directions = Directions(accessToken: "", host: "routemm.mappysnap.net")
+        self.hostChoice = .mappyRecette
+        switch hostChoice {
+        case .mapbox:
+            self.directions = Directions.shared
+        case .mappyRecette:
+            self.directions = Directions(accessToken: "", host: "routemm.mappyrecette.net")
+        case .mappySnap:
+            self.directions = Directions(accessToken: "", host: "routemm.mappysnap.net")
+        }
 		self.directions.calculate(options, completionHandler: handler)
     }
 
@@ -214,8 +225,16 @@ class ViewController: UIViewController, MGLMapViewDelegate {
 
     func startBasicNavigation() {
         guard let route = routes?.first else { return }
-
-        let navigationViewController = NavigationViewController(for: route, navigationService: navigationService())
+        let navService = navigationService()
+        if let mapboxNavigationService = navService as? MapboxNavigationService {
+            mapboxNavigationService.reroutesProactively = true
+            
+//            DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+//                (mapboxNavigationService.locationManager as? SimulatedLocationManager)?.shouldDeviateRoute = true
+//                debugPrint("start deviation")
+//            }
+        }
+        let navigationViewController = NavigationViewController(for: route, navigationService: navService)
         navigationViewController.delegate = self
         
         presentAndRemoveMapview(navigationViewController)
@@ -263,7 +282,8 @@ class ViewController: UIViewController, MGLMapViewDelegate {
         guard let route = routes?.first else { return nil }
         let simulate = simulationButton.isSelected
         let mode: SimulationMode = simulate ? .always : .onPoorGPS
-        return MapboxNavigationService(route: route, directions: self.directions, simulating: mode)
+        let routerType: Router.Type? = (self.hostChoice == .mapbox) ? nil : RouteController.self
+        return MapboxNavigationService(route: route, directions: self.directions, simulating: mode, routerType: routerType)
     }
 
     func presentAndRemoveMapview(_ navigationViewController: NavigationViewController) {
