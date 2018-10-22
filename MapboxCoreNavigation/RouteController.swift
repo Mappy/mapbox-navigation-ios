@@ -479,9 +479,7 @@ extension RouteController: CLLocationManagerDelegate {
 						RouteControllerNotificationUserInfoKey.routeKey: upToDateRoute])
 
                     strongSelf.didFindFasterRoute = true
-					// Skip first spoken instruction when updating route
-					let spokenInstructionIndex = (firstStep.instructionsSpokenAlongStep?.count ?? 0) >= 1 ? 1 : 0
-					strongSelf._routeProgress = RouteProgress(route: upToDateRoute, legIndex: 0, spokenInstructionIndex: spokenInstructionIndex)
+					strongSelf._routeProgress = RouteProgress(route: upToDateRoute, legIndex: 0, spokenInstructionIndex: 0)
 					strongSelf.announce(reroute: upToDateRoute, at: location, proactive: true)
                     strongSelf.movementsAwayFromRoute = 0
                     strongSelf.didFindFasterRoute = false
