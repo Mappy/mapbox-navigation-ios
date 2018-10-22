@@ -37,11 +37,6 @@ public var RouteControllerManeuverZoneRadius: CLLocationDistance = 40
 public var RouteControllerDeadReckoningTimeInterval: TimeInterval = 1.0
 
 /**
-Radius in meters from end of current leg the user must enter to count this leg as completed.
-*/
-public var RouteControllerWaypointArrivalRadius: CLLocationDistance = 50
-
-/**
  :nodoc This is used internally for debugging metrics
  */
 public var NavigationMetricsDebugLoggingEnabled = "MBNavigationMetricsDebugLoggingEnabled"

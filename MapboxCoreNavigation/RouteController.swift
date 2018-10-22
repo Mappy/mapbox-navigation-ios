@@ -413,12 +413,9 @@ extension RouteController: CLLocationManagerDelegate {
         let currentDestination = routeProgress.currentLeg.destination
         guard let remainingVoiceInstructions = routeProgress.currentLegProgress.currentStepProgress.remainingSpokenInstructions else { return }
 
-		let distanceToNextStep: CLLocationDistance = userSnapToStepDistanceFromManeuver ?? 0
-
         if routeProgress.currentLegProgress.remainingSteps.count <= 1
 			&& remainingVoiceInstructions.count == 0
 			&& currentDestination != previousArrivalWaypoint
-			&& distanceToNextStep <= RouteControllerWaypointArrivalRadius
 		{
             previousArrivalWaypoint = currentDestination
 
