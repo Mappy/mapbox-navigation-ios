@@ -80,6 +80,7 @@ open class EventsManager: NSObject {
         let userAgent = usesDefaultUserInterface ? "mapbox-navigation-ui-ios" : "mapbox-navigation-ios"
         manager.initialize(withAccessToken: accessToken, userAgentBase: userAgent, hostSDKVersion: String(describing: Bundle.mapboxCoreNavigation.object(forInfoDictionaryKey: "CFBundleShortVersionString")!))
         manager.disableLocationMetrics()
+		//manager.sendTurnstileEvent()
     }
     
     func navigationCancelEvent(rating potentialRating: Int? = nil, comment: String? = nil) -> EventDetails {

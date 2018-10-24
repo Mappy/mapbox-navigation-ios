@@ -50,12 +50,6 @@ open class PortableRouteController: RouteController {
                 return
             }
             
-            if routes.count > 0,
-                let mappyRoutes = routes as? [MappyRoute]
-            {
-                return complete(nil, mappyRoutes, potentialError)
-            }
-            
             let mostSimilar = routes.mostSimilar(to: progress.route)
             
             complete(mostSimilar ?? routes.first, nil, potentialError)

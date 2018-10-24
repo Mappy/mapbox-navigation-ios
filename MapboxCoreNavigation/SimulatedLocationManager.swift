@@ -129,9 +129,9 @@ open class SimulatedLocationManager: NavigationLocationManager {
             return
         }
 
-		self.currentDistance = calculateCurrentDistance(routeController.routeProgress.distanceTraveled)
-		routeProgress = routeController.routeProgress
-		route = routeController.routeProgress.route
+        self.currentDistance = calculateCurrentDistance(routeController.routeProgress.distanceTraveled)
+        routeProgress = routeController.routeProgress
+        route = routeController.routeProgress.route
     }
     
     deinit {
@@ -180,13 +180,11 @@ open class SimulatedLocationManager: NavigationLocationManager {
             let time = expectedSegmentTravelTimes.optional[closestCoordinateOnRoute.index] {
             let distance = coordinates[closestCoordinateOnRoute.index].distance(to: nextCoordinateOnRoute)
             currentSpeed =  max(distance / time, 2)
-		}
-		else if let stepTime = routeProgress?.currentLegProgress.currentStep.expectedTravelTime,
+        } else if let stepTime = routeProgress?.currentLegProgress.currentStep.expectedTravelTime,
 			let stepDistance = routeProgress?.currentLegProgress.currentStep.distance {
 			let meanSpeed = stepDistance / stepTime
 			currentSpeed = min(max(meanSpeed, minimumSpeed), maximumSpeed)
-		}
-		else {
+        } else {
             currentSpeed = calculateCurrentSpeed(distance: distance, coordinatesNearby: coordinatesNearby, closestLocation: closestLocation)
         }
 

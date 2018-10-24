@@ -136,6 +136,8 @@ extension Notification.Name {
     
     /**
      Posted when `RouteController` is about to use a new route.
+
+     The user info dictionary contains the key `RouteControllerNotificationUserInfoKey.routeKey`.
      */
     public static let routeControllerWillRerouteAlong = MBRouteControllerWillRerouteAlong
     

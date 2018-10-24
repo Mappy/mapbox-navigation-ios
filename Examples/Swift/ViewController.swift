@@ -242,8 +242,11 @@ class ViewController: UIViewController, MGLMapViewDelegate {
     
     func startNavigation(styles: [Style]) {
         guard let route = routes?.first else { return }
-        
-        let navigationViewController = NavigationViewController(for: route, styles: styles, navigationService: navigationService())
+        let navService = navigationService()
+		if let mapboxNavigationService = navService as? MapboxNavigationService {
+			mapboxNavigationService.reroutesProactively = true
+		}
+        let navigationViewController = NavigationViewController(for: route, styles: styles, navigationService: navService)
         navigationViewController.delegate = self
         
         presentAndRemoveMapview(navigationViewController)
