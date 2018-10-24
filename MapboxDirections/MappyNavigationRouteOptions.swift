@@ -317,7 +317,7 @@ public class MappyNavigationRouteOptions: RouteOptions
 	- parameter json: The API response in JSON dictionary format.
 	- returns: A tuple containing an array of waypoints and an array of routes.
 	*/
-	public override func response(from json: JSONDictionary) -> ([Waypoint]?, [Route]?)
+	public override func response(from json: [String: Any]) -> ([Waypoint]?, [Route]?)
 	{
 		var namedWaypoints: [Waypoint]?
 		if let jsonWaypoints = (json["waypoints"] as? [JSONDictionary]) {
