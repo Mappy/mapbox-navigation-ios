@@ -99,27 +99,27 @@ public class FeedbackViewController: UIViewController, DismissDraggable, UIGestu
     /**
      The events manager used to send feedback events.
      */
-    public weak var eventsManager: EventsManager?
+    public weak var eventsManager: NavigationEventsManager?
     
     var uuid: UUID? {
         return eventsManager?.recordFeedback()
     }
     
     /**
-     Initialize a new FeedbackViewController from an `EventsManager`.
+     Initialize a new FeedbackViewController from a `NavigationEventsManager`.
      */
-    @objc public init(eventsManager: EventsManager) {
+    @objc public init(eventsManager: NavigationEventsManager) {
         self.eventsManager = eventsManager
         super.init(nibName: nil, bundle: nil)
         commonInit()
     }
 
     public override func encode(with aCoder: NSCoder) {
-        aCoder.encode(eventsManager, forKey: "EventsManager")
+        aCoder.encode(eventsManager, forKey: "NavigationEventsManager")
     }
     
     required public init?(coder aDecoder: NSCoder) {
-        eventsManager = aDecoder.decodeObject(of: [EventsManager.self], forKey: "EventsManager") as? EventsManager
+        eventsManager = aDecoder.decodeObject(of: [NavigationEventsManager.self], forKey: "NavigationEventsManager") as? NavigationEventsManager
         super.init(coder: aDecoder)
         commonInit()
     }

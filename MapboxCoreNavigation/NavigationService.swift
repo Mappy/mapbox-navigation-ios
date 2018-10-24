@@ -39,7 +39,7 @@ public protocol DefaultInterfaceFlag {
 
 /**
  A `NavigationService` is the entry-point protocol for MapboxCoreNavigation.
-    It contains all the dependancies needed by the `MapboxNavigation` UI SDK, as well as dependancies for it's child objects.
+    It contains all the dependencies needed by the `MapboxNavigation` UI SDK, as well as dependencies for its child objects.
     `MapboxNavigationService` is the default implementation.
     If you would like to implement your own core-navigation stack, be sure to conform to this protocol.
  */
@@ -63,7 +63,7 @@ public protocol NavigationService: CLLocationManagerDelegate, RouterDataSource, 
     /**
      The events manager, responsible for all telemetry.
      */
-    var eventsManager: EventsManager! { get }
+    var eventsManager: NavigationEventsManager! { get }
     
     /**
      The route along which the user is expected to travel.
@@ -113,7 +113,7 @@ public protocol NavigationService: CLLocationManagerDelegate, RouterDataSource, 
 }
 
 /**
- A `NavigationService` is the entry-point interface into MapboxCoreNavigation. This service manages a `locationManager` (which feeds it location updates), a `Directions` service (for rerouting), a `Router` (for route-following), an `eventsManager` (for telemetry), and a simulation engine for use during poor GPS conditions.
+ A `NavigationService` is the entry-point interface into MapboxCoreNavigation. This service manages a `locationManager` (which feeds it location updates), a `Directions` service (for rerouting), a `Router` (for route-following), a `NavigationEventsManager` (for telemetry), and a simulation engine for use during poor GPS conditions.
  */
 @objc(MBNavigationService)
 public class MapboxNavigationService: NSObject, NavigationService, DefaultInterfaceFlag {
@@ -147,14 +147,14 @@ public class MapboxNavigationService: NSObject, NavigationService, DefaultInterf
     public var directions: Directions
     
     /**
-     The active router. By default, a `NativeRouteController`.
+     The active router. By default, a `PortableRouteController`.
     */
     public var router: Router!
     
     /**
      The events manager. Sends telemetry back to the Mapbox platform.
     */
-    public var eventsManager: EventsManager!
+    public var eventsManager: NavigationEventsManager!
     
     /**
      The `NavigationService` delegate. Wraps `RouterDelegate` messages.
@@ -272,7 +272,7 @@ public class MapboxNavigationService: NSObject, NavigationService, DefaultInterf
     @objc required public init(route: Route,
                                directions: Directions? = nil,
                                locationSource: NavigationLocationManager? = nil,
-                               eventsManagerType: EventsManager.Type? = nil,
+                               eventsManagerType: NavigationEventsManager.Type? = nil,
                                simulating simulationMode: SimulationMode = .onPoorGPS,
                                routerType: Router.Type? = DefaultRouter.self)
     {
@@ -281,11 +281,16 @@ public class MapboxNavigationService: NSObject, NavigationService, DefaultInterf
         self.simulationMode = simulationMode
         super.init()
         resumeNotifications()
-        poorGPSTimer = CountdownTimer(countdown: poorGPSPatience.dispatchInterval, payload: timerPayload)
+        
+        poorGPSTimer = CountdownTimer(countdown: poorGPSPatience.dispatchInterval)  { [weak self] in
+            guard let mode = self?.simulationMode, mode == .onPoorGPS else { return }
+            self?.simulate(intent: .poorGPS)
+        }
+        
         let routerType = routerType ?? DefaultRouter.self
         router = routerType.init(along: route, directions: self.directions, dataSource: self)
-        
-        let eventType = eventsManagerType ?? EventsManager.self
+
+        let eventType = eventsManagerType ?? NavigationEventsManager.self
         eventsManager = eventType.init(dataSource: self, accessToken: route.accessToken ?? "fakeToken")
         locationManager.activityType = route.routeOptions.activityType
         bootstrapEvents()
@@ -377,7 +382,6 @@ public class MapboxNavigationService: NSObject, NavigationService, DefaultInterf
     private func bootstrapEvents() {
         eventsManager.dataSource = self
         eventsManager.resetSession()
-        eventsManager.start()
     }
 
     private func resetGPSCountdown() {
@@ -391,11 +395,6 @@ public class MapboxNavigationService: NSObject, NavigationService, DefaultInterf
         
         // Reset the GPS countdown.
         poorGPSTimer.reset()
-    }
-    
-    private func timerPayload() {
-        guard simulationMode == .onPoorGPS else { return }
-        simulate(intent: .poorGPS)
     }
     
     func resumeNotifications() {
@@ -540,7 +539,7 @@ extension MapboxNavigationService {
     }
 }
 
-fileprivate extension EventsManager {
+fileprivate extension NavigationEventsManager {
     func incrementDistanceTraveled(by distance: CLLocationDistance) {
        sessionState?.totalDistanceCompleted += distance
     }
