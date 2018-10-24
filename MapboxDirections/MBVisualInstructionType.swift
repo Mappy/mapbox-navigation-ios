@@ -36,8 +36,10 @@ public enum VisualInstructionComponentType: Int, CustomStringConvertible {
     case exitCode
 
 	/**
-	 The component contains a colored label.
-	 */
+     The component contains a colored label.
+
+     The foreground and background colors are specified by the `VisualInstructionComponent.textHexaColors` property.
+     */
 	case coloredText
     
     public init?(description: String) {

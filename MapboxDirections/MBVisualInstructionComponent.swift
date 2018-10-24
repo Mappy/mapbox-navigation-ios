@@ -124,6 +124,11 @@ open class VisualInstructionComponent: NSObject, ComponentRepresentable {
         self.abbreviation = abbreviation
         
         abbreviationPriority = decoder.decodeInteger(forKey: "abbreviationPriority")
+
+		if let colorForeground = decoder.decodeObject(of: NSString.self, forKey: "textHexaColorsForeground") as String?,
+			let colorBackground = decoder.decodeObject(of: NSString.self, forKey: "textHexaColorsBackground") as String? {
+			self.textHexaColors = (colorForeground, colorBackground)
+		}
     }
     
     public func encode(with coder: NSCoder) {
@@ -132,6 +137,10 @@ open class VisualInstructionComponent: NSObject, ComponentRepresentable {
         coder.encode(imageURL, forKey: "imageURL")
         coder.encode(abbreviation, forKey: "abbreviation")
         coder.encode(abbreviationPriority, forKey: "abbreviationPriority")
+		if let textHexaColors = textHexaColors {
+			coder.encode(textHexaColors.foreground, forKey: "textHexaColorsForeground")
+			coder.encode(textHexaColors.background, forKey: "textHexaColorsBackground")
+		}
     }
 }
 

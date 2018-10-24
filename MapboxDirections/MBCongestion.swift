@@ -39,7 +39,7 @@ public enum CongestionLevel: Int, CustomStringConvertible {
     case severe
     
 	/**
-	The road segment has extreme congestion. Traffic may be more than completely stopped.
+	The road segment has extreme congestion. Traffic is probably completely stopped.
 
 	Extreme congestion levels are conventionally highlighted in black.
 	*/
@@ -62,7 +62,6 @@ public enum CongestionLevel: Int, CustomStringConvertible {
 		case "extreme":
 			level = .extreme
         default:
-			fatalError("Unknown Congestion Level \(description)")
             return nil
         }
         self.init(rawValue: level.rawValue)
