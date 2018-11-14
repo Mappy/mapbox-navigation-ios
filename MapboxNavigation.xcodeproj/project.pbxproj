@@ -1878,9 +1878,9 @@
 						LastSwiftMigration = 1010;
 						ProvisioningStyle = Automatic;
 					};
-					80F68CF5201095F000D112B8 = {
-						CreatedOnToolsVersion = 9.2;
-						ProvisioningStyle = Automatic;
+					C53F2EDE20EBC95600D9798F = {
+						DevelopmentTeam = GJZR2MEM28;
+						ProvisioningStyle = Manual;
 					};
 					C5ADFBC81DDCC7840011824B = {
 						CreatedOnToolsVersion = 8.1;
