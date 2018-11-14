@@ -252,7 +252,7 @@ open class NavigationViewController: UIViewController {
     /**
      The main map view displayed inside the view controller.
      
-     - note: Do not change this map view’s delegate.
+     - note: Do not change this map view’s `NavigationMapView.navigationMapDelegate` property; instead, implement the corresponding methods on `NavigationViewControllerDelegate`.
      */
     @objc public var mapView: NavigationMapView? {
         get {
@@ -316,7 +316,7 @@ open class NavigationViewController: UIViewController {
     
     var isConnectedToCarPlay: Bool {
         if #available(iOS 12.0, *) {
-            return CarPlayManager.shared.isConnectedToCarPlay
+            return CarPlayManager.isConnected
         } else {
             return false
         }

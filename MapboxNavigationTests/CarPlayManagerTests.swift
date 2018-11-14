@@ -3,6 +3,8 @@ import MapboxNavigation
 import MapboxCoreNavigation
 import MapboxDirections
 import MapboxMobileEvents
+@testable import TestHelper
+
 
 #if canImport(CarPlay)
 import CarPlay
@@ -18,14 +20,13 @@ class CarPlayManagerTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        manager = CarPlayManager.shared
+        manager = CarPlayManager()
         eventsManagerSpy = NavigationEventsManagerSpy()
         manager!.eventsManager = eventsManagerSpy!
     }
 
     override func tearDown() {
         manager = nil
-        CarPlayManager.resetSharedInstance()
         super.tearDown()
     }
 
@@ -153,7 +154,7 @@ class CarPlayManagerTests: XCTestCase {
         // given the user is previewing route choices
         // when a trip is started using one of the route choices
         let choice = CPRouteChoice(summaryVariants: ["summary1"], additionalInformationVariants: ["addl1"], selectionSummaryVariants: ["selection1"])
-        choice.userInfo = Fixture.routeWithBannerInstructions()
+        choice.userInfo = Fixture.route(from: "route-with-banner-instructions")
 
         manager.mapTemplate(mapTemplate, startedTrip: CPTrip(origin: MKMapItem(), destination: MKMapItem(), routeChoices: [choice]), using: choice)
 
@@ -203,7 +204,7 @@ class CarPlayManagerSpec: QuickSpec {
             let action = {
                 let fakeTemplate = CPMapTemplate()
                 let fakeRouteChoice = CPRouteChoice(summaryVariants: ["summary1"], additionalInformationVariants: ["addl1"], selectionSummaryVariants: ["selection1"])
-                fakeRouteChoice.userInfo = Fixture.routeWithBannerInstructions()
+                fakeRouteChoice.userInfo = Fixture.route(from: "route-with-banner-instructions")
                 let fakeTrip = CPTrip(origin: MKMapItem(), destination: MKMapItem(), routeChoices: [fakeRouteChoice])
 
                 //simulate starting a fake trip

@@ -11,11 +11,13 @@ import CarPlay
  */
 @available(iOS 12.0, *)
 @objc(MBCarPlayNavigationViewController)
-public class CarPlayNavigationViewController: UIViewController, MGLMapViewDelegate {
+public class CarPlayNavigationViewController: UIViewController {
     /**
      The view controller’s delegate.
      */
     @objc public weak var carPlayNavigationDelegate: CarPlayNavigationDelegate?
+    
+    public var carPlayManager: CarPlayManager
     
     @objc public var drivingSide: DrivingSide = .right
     
@@ -40,22 +42,26 @@ public class CarPlayNavigationViewController: UIViewController, MGLMapViewDelega
                             right: view.safeAreaInsets.right + padding)
     }
     
+    var styleObservation: NSKeyValueObservation?
+    
     /**
      Creates a new CarPlay navigation view controller for the given route controller and user interface.
      
      - parameter navigationService: The navigation service managing location updates for the navigation session.
      - parameter mapTemplate: The map template visible during the navigation session.
      - parameter interfaceController: The interface controller for CarPlay.
+     - parameter manager: The manager for CarPlay.
      
      - postcondition: Call `startNavigationSession(for:)` after initializing this object to begin navigation.
      */
-    @objc(initWithNavigationService:mapTemplate:interfaceController:)
+    @objc(initWithNavigationService:mapTemplate:interfaceController:manager:)
     public init(with navigationService: NavigationService,
                 mapTemplate: CPMapTemplate,
-                interfaceController: CPInterfaceController) {
+                interfaceController: CPInterfaceController, manager: CarPlayManager) {
         self.navService = navigationService
         self.mapTemplate = mapTemplate
         self.carInterfaceController = interfaceController
+        self.carPlayManager = manager
         
         super.init(nibName: nil, bundle: nil)
         carFeedbackTemplate = createFeedbackUI()
@@ -74,7 +80,6 @@ public class CarPlayNavigationViewController: UIViewController, MGLMapViewDelega
         mapView.compassView.isHidden = true
         mapView.logoView.isHidden = true
         mapView.attributionButton.isHidden = true
-        mapView.delegate = self
 
         mapView.defaultAltitude = 500
         mapView.zoomedOutMotorwayAltitude = 1000
@@ -82,6 +87,15 @@ public class CarPlayNavigationViewController: UIViewController, MGLMapViewDelega
 
         self.mapView = mapView
         view.addSubview(mapView)
+        
+        styleObservation = mapView.observe(\.style, options: .new) { [weak self] (mapView, change) in
+            guard change.newValue != nil else {
+                return
+            }
+            self?.mapView?.localizeLabels()
+            self?.updateRouteOnMap()
+            self?.mapView?.recenterMap()
+        }
         
         styleManager = StyleManager(self)
         styleManager.styles = [DayStyle(), NightStyle()]
@@ -94,6 +108,7 @@ public class CarPlayNavigationViewController: UIViewController, MGLMapViewDelega
     
     override public func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        styleObservation = nil
         suspendNotifications()
     }
     
@@ -180,11 +195,6 @@ public class CarPlayNavigationViewController: UIViewController, MGLMapViewDelega
         mapView?.enableFrameByFrameCourseViewTracking(for: 1)
     }
     
-    public func mapView(_ mapView: MGLMapView, didFinishLoading style: MGLStyle) {
-        updateRouteOnMap()
-        self.mapView?.recenterMap()
-    }
-    
     @objc func visualInstructionDidChange(_ notification: NSNotification) {
         let routeProgress = notification.userInfo![RouteControllerNotificationUserInfoKey.routeProgressKey] as! RouteProgress
         updateManeuvers(for: routeProgress)
@@ -198,7 +208,7 @@ public class CarPlayNavigationViewController: UIViewController, MGLMapViewDelega
         
         // Update the user puck
         mapView?.updatePreferredFrameRate(for: routeProgress)
-        let camera = MGLMapCamera(lookingAtCenter: location.coordinate, fromDistance: 120, pitch: 60, heading: location.course)
+        let camera = MGLMapCamera(lookingAtCenter: location.coordinate, altitude: 120, pitch: 60, heading: location.course)
         mapView?.updateCourseTracking(location: location, camera: camera, animated: true)
         
         let congestionLevel = routeProgress.averageCongestionLevelRemainingOnLeg ?? .unknown
@@ -266,10 +276,10 @@ public class CarPlayNavigationViewController: UIViewController, MGLMapViewDelega
             return CGRect(x: 0, y: 0, width: widthOfManeuverView, height: 30)
         }
         
-        if let attributedPrimary = visualInstruction.primaryInstruction.maneuverLabelAttributedText(bounds: bounds, shieldHeight: shieldHeight) {
+        if let attributedPrimary = visualInstruction.primaryInstruction.carPlayManeuverLabelAttributedText(bounds: bounds, shieldHeight: shieldHeight, window: carPlayManager.carWindow) {
             let instruction = NSMutableAttributedString(attributedString: attributedPrimary)
             
-            if let attributedSecondary = visualInstruction.secondaryInstruction?.maneuverLabelAttributedText(bounds: bounds, shieldHeight: shieldHeight) {
+            if let attributedSecondary = visualInstruction.secondaryInstruction?.carPlayManeuverLabelAttributedText(bounds: bounds, shieldHeight: shieldHeight, window: carPlayManager.carWindow) {
                 instruction.append(NSAttributedString(string: "\n"))
                 instruction.append(attributedSecondary)
             }
@@ -288,7 +298,7 @@ public class CarPlayNavigationViewController: UIViewController, MGLMapViewDelega
             if let text = tertiaryInstruction.text {
                 tertiaryManeuver.instructionVariants = [text]
             }
-            if let attributedTertiary = tertiaryInstruction.maneuverLabelAttributedText(bounds: bounds, shieldHeight: shieldHeight) {
+            if let attributedTertiary = tertiaryInstruction.carPlayManeuverLabelAttributedText(bounds: bounds, shieldHeight: shieldHeight, window: carPlayManager.carWindow) {
                 let attributedTertiary = NSMutableAttributedString(attributedString: attributedTertiary)
                 attributedTertiary.canonicalizeAttachments()
                 tertiaryManeuver.attributedInstructionVariants = [attributedTertiary]

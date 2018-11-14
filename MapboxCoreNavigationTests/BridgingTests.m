@@ -2,6 +2,7 @@
 #import "MapboxCoreNavigationTests-Swift.h"
 @import MapboxCoreNavigation;
 @import MapboxDirections;
+@import TestHelper;
 
 @interface BridgingTests : XCTestCase
 @property (nonatomic) MBRouteController *routeController;
