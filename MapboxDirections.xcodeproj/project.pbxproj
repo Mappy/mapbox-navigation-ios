@@ -35,6 +35,21 @@
 		35EFD00D207DFACA00BF3873 /* MBVisualInstruction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35EFD00A207DFACA00BF3873 /* MBVisualInstruction.swift */; };
 		35EFD00E207DFACA00BF3873 /* MBVisualInstruction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35EFD00A207DFACA00BF3873 /* MBVisualInstruction.swift */; };
 		366049BA211447390005B369 /* MappyDirectionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 366049B9211447390005B369 /* MappyDirectionsTests.swift */; };
+		36E1ADE921A864F0006A4896 /* MappyControlZoneInstruction.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3DCBA6F2146BB7800BB6203 /* MappyControlZoneInstruction.swift */; };
+		36E1ADEA21A864FB006A4896 /* MappyControlZoneType.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3DCBA712146BCF500BB6203 /* MappyControlZoneType.swift */; };
+		36E1ADEB21A864FC006A4896 /* MappyControlZoneType.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3DCBA712146BCF500BB6203 /* MappyControlZoneType.swift */; };
+		36E1ADEC21A864FD006A4896 /* MappyControlZoneType.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3DCBA712146BCF500BB6203 /* MappyControlZoneType.swift */; };
+		36E1ADED21A86501006A4896 /* MappyControlZoneInstruction.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3DCBA6F2146BB7800BB6203 /* MappyControlZoneInstruction.swift */; };
+		36E1ADEE21A86502006A4896 /* MappyControlZoneInstruction.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3DCBA6F2146BB7800BB6203 /* MappyControlZoneInstruction.swift */; };
+		36E1ADEF21A86508006A4896 /* MappyNavigationRouteOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3BAAC9620E0DEC4007B5D9A /* MappyNavigationRouteOptions.swift */; };
+		36E1ADF021A86509006A4896 /* MappyNavigationRouteOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3BAAC9620E0DEC4007B5D9A /* MappyNavigationRouteOptions.swift */; };
+		36E1ADF121A86509006A4896 /* MappyNavigationRouteOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3BAAC9620E0DEC4007B5D9A /* MappyNavigationRouteOptions.swift */; };
+		36E1ADF221A8650E006A4896 /* MappyRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29F7E94120E4E1B500A7B2A4 /* MappyRoute.swift */; };
+		36E1ADF321A8650F006A4896 /* MappyRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29F7E94120E4E1B500A7B2A4 /* MappyRoute.swift */; };
+		36E1ADF421A86510006A4896 /* MappyRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29F7E94120E4E1B500A7B2A4 /* MappyRoute.swift */; };
+		36E1ADF521A86519006A4896 /* MappySpokenInstructionType.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3DCBA6D2146AEA700BB6203 /* MappySpokenInstructionType.swift */; };
+		36E1ADF621A8651A006A4896 /* MappySpokenInstructionType.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3DCBA6D2146AEA700BB6203 /* MappySpokenInstructionType.swift */; };
+		36E1ADF721A8651B006A4896 /* MappySpokenInstructionType.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3DCBA6D2146AEA700BB6203 /* MappySpokenInstructionType.swift */; };
 		4E1A71BC20EF673800EF6422 /* MapboxDirections.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = DA6C9D881CAE442B00094FBC /* MapboxDirections.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		4E1A71BE20EF674300EF6422 /* Mapbox.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = DADD27F21E5ABD4300D31FAD /* Mapbox.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		8D381B611FD9F5B1008D5A58 /* noDestinationName.json in Resources */ = {isa = PBXBuildFile; fileRef = 8D381B601FD9F5B1008D5A58 /* noDestinationName.json */; };
@@ -1207,15 +1222,19 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				36E1ADEA21A864FB006A4896 /* MappyControlZoneType.swift in Sources */,
 				C5DAAC9B2019167C001F9261 /* MBMatch.swift in Sources */,
 				C52552C61FA162F900B1545C /* MBVisualInstructionComponent.swift in Sources */,
 				C53A02261E92C26E009837BD /* MBAttribute.swift in Sources */,
 				DA1A10C91D00F969009F82FA /* MBRouteLeg.swift in Sources */,
 				C52552BA1FA15D5E00B1545C /* MBVisualInstructionBanner.swift in Sources */,
+				36E1ADEF21A86508006A4896 /* MappyNavigationRouteOptions.swift in Sources */,
 				C5DAAC9F20195AAE001F9261 /* MBTracepoint.swift in Sources */,
 				C5990B4A2045E72800D7DFD4 /* MBDirectionsResult.swift in Sources */,
+				36E1ADF221A8650E006A4896 /* MappyRoute.swift in Sources */,
 				35EFD00C207DFACA00BF3873 /* MBVisualInstruction.swift in Sources */,
 				C584E3F71F201C7B00BBC9BB /* MBRoadClasses.swift in Sources */,
+				36E1ADF521A86519006A4896 /* MappySpokenInstructionType.swift in Sources */,
 				C5DAACA220195AB2001F9261 /* MBMatchOptions.swift in Sources */,
 				358D48871E2EAB4500F32A65 /* MBRouteOptions.m in Sources */,
 				DA1A10CC1D00F969009F82FA /* MBWaypoint.swift in Sources */,
@@ -1229,6 +1248,7 @@
 				C52CE38F1F6AF63C0069963D /* MBSpokenInstruction.swift in Sources */,
 				C58EA7AB1E9D7F73008F98CE /* MBCongestion.swift in Sources */,
 				8D381B6B1FDB3D8A008D5A58 /* String.swift in Sources */,
+				36E1ADE921A864F0006A4896 /* MappyControlZoneInstruction.swift in Sources */,
 				C56516851FE1AB8F00A0AD18 /* MBVisualInstructionType.swift in Sources */,
 				C54549FC2073F1EF002E273F /* Array.swift in Sources */,
 				C547EC691DB59F8F009817F3 /* MBLane.swift in Sources */,
@@ -1265,10 +1285,13 @@
 				DA1A10EF1D010247009F82FA /* MBRouteLeg.swift in Sources */,
 				C52552BB1FA15D5F00B1545C /* MBVisualInstructionBanner.swift in Sources */,
 				C5DAACA020195AAF001F9261 /* MBTracepoint.swift in Sources */,
+				36E1ADF021A86509006A4896 /* MappyNavigationRouteOptions.swift in Sources */,
 				C5990B4B2045E72900D7DFD4 /* MBDirectionsResult.swift in Sources */,
 				35EFD00D207DFACA00BF3873 /* MBVisualInstruction.swift in Sources */,
+				36E1ADF321A8650F006A4896 /* MappyRoute.swift in Sources */,
 				C584E3F81F201C7C00BBC9BB /* MBRoadClasses.swift in Sources */,
 				C5DAACA320195AB2001F9261 /* MBMatchOptions.swift in Sources */,
+				36E1ADF621A8651A006A4896 /* MappySpokenInstructionType.swift in Sources */,
 				358D48881E2EAB4500F32A65 /* MBRouteOptions.m in Sources */,
 				DA1A10F21D010247009F82FA /* MBWaypoint.swift in Sources */,
 				DA1A10F01D010247009F82FA /* MBRouteOptions.swift in Sources */,
@@ -1278,10 +1301,12 @@
 				AEDC211F20B612540052DED8 /* MBLaneIndicationComponent.swift in Sources */,
 				DA1A10F11D010247009F82FA /* MBRouteStep.swift in Sources */,
 				C57D55041DB566A800B94B74 /* MBIntersection.swift in Sources */,
+				36E1ADEB21A864FC006A4896 /* MappyControlZoneType.swift in Sources */,
 				C52CE3901F6AF63D0069963D /* MBSpokenInstruction.swift in Sources */,
 				C58EA7AC1E9D7F74008F98CE /* MBCongestion.swift in Sources */,
 				8D381B6C1FDB3D8B008D5A58 /* String.swift in Sources */,
 				C56516861FE1AB9000A0AD18 /* MBVisualInstructionType.swift in Sources */,
+				36E1ADED21A86501006A4896 /* MappyControlZoneInstruction.swift in Sources */,
 				C54549FD2073F1F0002E273F /* Array.swift in Sources */,
 				C547EC6A1DB59F90009817F3 /* MBLane.swift in Sources */,
 				AEDC212220B6125D0052DED8 /* MBComponentRepresentable.swift in Sources */,
@@ -1317,10 +1342,13 @@
 				DA1A11061D0103A3009F82FA /* MBRouteLeg.swift in Sources */,
 				C52552BC1FA15D6000B1545C /* MBVisualInstructionBanner.swift in Sources */,
 				C5DAACA120195AAF001F9261 /* MBTracepoint.swift in Sources */,
+				36E1ADF121A86509006A4896 /* MappyNavigationRouteOptions.swift in Sources */,
 				C5990B4C2045E72A00D7DFD4 /* MBDirectionsResult.swift in Sources */,
 				35EFD00E207DFACA00BF3873 /* MBVisualInstruction.swift in Sources */,
+				36E1ADF421A86510006A4896 /* MappyRoute.swift in Sources */,
 				C584E3F91F201C7D00BBC9BB /* MBRoadClasses.swift in Sources */,
 				C5DAACA420195AB3001F9261 /* MBMatchOptions.swift in Sources */,
+				36E1ADF721A8651B006A4896 /* MappySpokenInstructionType.swift in Sources */,
 				358D48891E2EAB4500F32A65 /* MBRouteOptions.m in Sources */,
 				DA1A11091D0103A3009F82FA /* MBWaypoint.swift in Sources */,
 				DA1A11071D0103A3009F82FA /* MBRouteOptions.swift in Sources */,
@@ -1330,10 +1358,12 @@
 				AEDC212020B612560052DED8 /* MBLaneIndicationComponent.swift in Sources */,
 				DA1A11081D0103A3009F82FA /* MBRouteStep.swift in Sources */,
 				C57D55051DB566A900B94B74 /* MBIntersection.swift in Sources */,
+				36E1ADEC21A864FD006A4896 /* MappyControlZoneType.swift in Sources */,
 				C52CE3911F6AF63E0069963D /* MBSpokenInstruction.swift in Sources */,
 				C58EA7AD1E9D7F75008F98CE /* MBCongestion.swift in Sources */,
 				8D381B6D1FDB3D8B008D5A58 /* String.swift in Sources */,
 				C56516871FE1AB9100A0AD18 /* MBVisualInstructionType.swift in Sources */,
+				36E1ADEE21A86502006A4896 /* MappyControlZoneInstruction.swift in Sources */,
 				C54549FE2073F1F1002E273F /* Array.swift in Sources */,
 				C547EC6B1DB59F91009817F3 /* MBLane.swift in Sources */,
 				AEDC212320B6125E0052DED8 /* MBComponentRepresentable.swift in Sources */,
