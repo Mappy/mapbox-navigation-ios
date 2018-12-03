@@ -697,6 +697,7 @@ extension RouteController: CLLocationManagerDelegate {
             guard forcedStepIndex < routeProgress.currentLeg.steps.count else { return }
             routeProgress.currentLegProgress.stepIndex = forcedStepIndex
         } else {
+			forceTriggerLastVisualInstructionOfCurrentStep()
             routeProgress.currentLegProgress.stepIndex += 1
         }
 
@@ -711,6 +712,21 @@ extension RouteController: CLLocationManagerDelegate {
             routeProgress.currentLegProgress.currentStepProgress.intersectionDistances = distances
         }
     }
+
+	private func forceTriggerLastVisualInstructionOfCurrentStep()
+	{
+		let currentStepProgress = routeProgress.currentLegProgress.currentStepProgress
+		if let remainingVisualInstructions = currentStepProgress.remainingVisualInstructions,
+			let instructionsDisplayedAlongStep = currentStepProgress.step.instructionsDisplayedAlongStep,
+			remainingVisualInstructions.count > 0
+		{
+			currentStepProgress.visualInstructionIndex = instructionsDisplayedAlongStep.count - 1
+			NotificationCenter.default.post(name: .routeControllerDidPassVisualInstructionPoint, object: self, userInfo: [
+				RouteControllerNotificationUserInfoKey.routeProgressKey: routeProgress
+				])
+			currentStepProgress.visualInstructionIndex += 1
+		}
+	}
 }
 
 //MARK: - Obsolete Interfaces
