@@ -1,6 +1,6 @@
 binary "https://www.mapbox.com/ios-sdk/Mapbox-iOS-SDK.json" ~> 4.3
 binary "https://www.mapbox.com/ios-sdk/MapboxNavigationNative.json" ~> 3.2
-github "Mappy/MapboxDirections.swift" "v0.24.1-mappy.0"
+github "Mappy/MapboxDirections.swift" "v0.24.1-mappy.3"
 github "mappy/turf-swift" "v0.2.1-mappy.0"
 github "mapbox/mapbox-events-ios" ~> 0.6
 github "ceeK/Solar" ~> 2.1.0
