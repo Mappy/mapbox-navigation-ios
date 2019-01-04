@@ -340,8 +340,10 @@ public class MappyNavigationRouteOptions: RouteOptions
 			congestionColors[label] = color
 		}
 
-		let routes = (json["routes"] as? [JSONDictionary])?.map {
-			MappyRoute(json: $0, waypoints: waypoints, congestionColors: congestionColors, options: self.copy() as! MappyNavigationRouteOptions)
+		let routes = (json["routes"] as? [JSONDictionary])?.map { (jsonRoute) -> MappyRoute in
+			let newOptions = self.copy() as! MappyNavigationRouteOptions
+			newOptions.forceBetterRoute = false
+			return MappyRoute(json: jsonRoute, waypoints: waypoints, congestionColors: congestionColors, options: newOptions)
 		}
 		return (waypoints, routes)
 	}
