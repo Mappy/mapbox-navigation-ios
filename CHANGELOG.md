@@ -1,5 +1,25 @@
 # Changes to the Mapbox Directions SDK for iOS
 
+## v0.26.0
+
+* Added a `Waypoint.targetCoordinate` property for specifying a more specific destination for arrival instructions. ([#326](https://github.com/mapbox/MapboxDirections.swift/pull/326))
+* Fixed an issue where the `Waypoint.allowsArrivingOnOppositeSide` property was not copied when copying a `Waypoint` object. ([#326](https://github.com/mapbox/MapboxDirections.swift/pull/326))
+
+## v0.25.2
+
+* Fixed an issue where `VisualInstructionComponent(json:)` would set `VisualInstructionComponent.imageURL` to an invalid URL when the JSON representation includes an empty image URL. ([#322](https://github.com/mapbox/MapboxDirections.swift/pull/322))
+
+## v0.25.1
+
+* Added the `Directions.apiEndpoint` and `Directions.accessToken` properties that reflect the values passed into the `Directions` class’s initializers. ([#313](https://github.com/mapbox/MapboxDirections.swift/pull/313))
+* Fixed an issue causing some requests with many waypoints or long waypoint names to fail. ([#311](https://github.com/mapbox/MapboxDirections.swift/pull/311))
+* Fixed an issue where some requests with very many waypoints would fail silently. ([#314](https://github.com/mapbox/MapboxDirections.swift/pull/314))
+
+## v0.25.0
+
+* Added `Directions.fetchAvailableOfflineVersions(completionHandler:)` for listing available offline versions. ([#303](https://github.com/mapbox/MapboxDirections.swift/pull/303))
+* Added `Directions.downloadTiles(in:version:session:completionHandler:)` for downloading a tile pack. ([#303](https://github.com/mapbox/MapboxDirections.swift/pull/303))
+
 ## v0.24.1
 
 * Added `RouteOptions.response(from:)` which can be used for deserializing a response from an external source. ([#300](https://github.com/mapbox/MapboxDirections.swift/pull/300))

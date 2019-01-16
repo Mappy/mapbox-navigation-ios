@@ -18,13 +18,13 @@ MapboxDirections.swift pairs well with [MapboxGeocoder.swift](https://github.com
 Specify the following dependency in your [Carthage](https://github.com/Carthage/Carthage) Cartfile:
 
 ```cartfile
-github "mapbox/MapboxDirections.swift" ~> 0.24
+github "mapbox/MapboxDirections.swift" ~> 0.26
 ```
 
 Or in your [CocoaPods](http://cocoapods.org/) Podfile:
 
 ```podspec
-pod 'MapboxDirections.swift', '~> 0.24'
+pod 'MapboxDirections.swift', '~> 0.26'
 ```
 
 Then `import MapboxDirections` or `@import MapboxDirections;`.
@@ -35,11 +35,11 @@ This repository contains example applications written in Swift and Objective-C t
 
 ## Usage
 
-**[API reference](https://www.mapbox.com/mapbox-navigation-ios/directions/)**
+**[API reference](https://www.mapbox.com/ios-sdk/api/directions/)**
 
 You’ll need a [Mapbox access token](https://www.mapbox.com/developers/api/#access-tokens) in order to use the API. If you’re already using the [Mapbox Maps SDK for iOS](https://www.mapbox.com/ios-sdk/) or [macOS SDK](https://mapbox.github.io/mapbox-gl-native/macos/), MapboxDirections.swift automatically recognizes your access token, as long as you’ve placed it in the `MGLMapboxAccessToken` key of your application’s Info.plist file.
 
-The examples below are each provided in Swift (denoted with `main.swift`), Objective-C (`main.m`), and AppleScript (`AppDelegate.applescript`). For further details, see the [MapboxDirections.swift API reference](https://www.mapbox.com/mapbox-navigation-ios/directions/).
+The examples below are each provided in Swift (denoted with `main.swift`), Objective-C (`main.m`), and AppleScript (`AppDelegate.applescript`). For further details, see the [MapboxDirections.swift API reference](https://www.mapbox.com/ios-sdk/api/directions/).
 
 ### Calculating directions between locations
 

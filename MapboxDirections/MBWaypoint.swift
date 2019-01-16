@@ -67,6 +67,9 @@ open class Waypoint: NSObject, NSCopying, NSSecureCoding {
         let longitude = decoder.decodeDouble(forKey: "longitude")
         coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
         coordinateAccuracy = decoder.decodeDouble(forKey: "coordinateAccuracy")
+        let targetLatitude = decoder.decodeDouble(forKey: "targetLatitude")
+        let targetLongitude = decoder.decodeDouble(forKey: "targetLongitude")
+        targetCoordinate = CLLocationCoordinate2D(latitude: targetLatitude, longitude: targetLongitude)
         heading = decoder.decodeDouble(forKey: "heading")
         headingAccuracy = decoder.decodeDouble(forKey: "headingAccuracy")
         name = decoder.decodeObject(of: NSString.self, forKey: "name") as String?
@@ -77,6 +80,8 @@ open class Waypoint: NSObject, NSCopying, NSSecureCoding {
         coder.encode(coordinate.latitude, forKey: "latitude")
         coder.encode(coordinate.longitude, forKey: "longitude")
         coder.encode(coordinateAccuracy, forKey: "coordinateAccuracy")
+        coder.encode(targetCoordinate.latitude, forKey: "targetLatitude")
+        coder.encode(targetCoordinate.longitude, forKey: "targetLongitude")
         coder.encode(heading, forKey: "heading")
         coder.encode(headingAccuracy, forKey: "headingAccuracy")
         coder.encode(name, forKey: "name")
@@ -85,8 +90,10 @@ open class Waypoint: NSObject, NSCopying, NSSecureCoding {
     
     open func copy(with zone: NSZone?) -> Any {
         let copy = Waypoint(coordinate: coordinate, coordinateAccuracy: coordinateAccuracy, name: name)
+        copy.targetCoordinate = targetCoordinate
         copy.heading = heading
         copy.headingAccuracy = headingAccuracy
+        copy.allowsArrivingOnOppositeSide = allowsArrivingOnOppositeSide
         return copy
     }
     
@@ -103,8 +110,21 @@ open class Waypoint: NSObject, NSCopying, NSSecureCoding {
      For a route to be considered viable, it must enter this waypoint’s circle of uncertainty. The `coordinate` property identifies the center of the circle, while this property indicates the circle’s radius. If the value of this property is negative, a route is considered viable regardless of whether it enters this waypoint’s circle of uncertainty, subject to an undefined maximum distance.
      
      By default, the value of this property is a negative number.
+     
+     This property corresponds to the [`radiuses`](https://www.mapbox.com/api-documentation/#retrieve-directions) query parameter in the Mapbox Directions API.
      */
     @objc open var coordinateAccuracy: CLLocationAccuracy = -1
+    
+    /**
+     The geographic coordinate of the waypoint’s target.
+     
+     The waypoint’s target affects arrival instructions without affecting the route’s shape. For example, a delivery or ride hailing application may specify a waypoint target that represents a drop-off location. The target determines whether the arrival visual and spoken instructions indicate that the destination is “on the left” or “on the right”.
+     
+     By default, this property is set to `kCLLocationCoordinate2DInvalid`, meaning the waypoint has no target. This property is ignored on the first waypoint of a `RouteOptions` object, on any waypoint of a `MatchOptions` object, or on any waypoint of a `RouteOptions` object if `DirectionsOptions.includesSteps` is set to `false`.
+     
+     This property corresponds to the [`waypoint_targets`](https://www.mapbox.com/api-documentation/#retrieve-directions) query parameter in the Mapbox Directions API.
+     */
+    @objc open var targetCoordinate: CLLocationCoordinate2D = kCLLocationCoordinate2DInvalid
     
     // MARK: Getting the Direction of Approach
     
@@ -120,17 +140,21 @@ open class Waypoint: NSObject, NSCopying, NSSecureCoding {
      You should be certain that the user is in motion before specifying a heading and heading accuracy; otherwise, you may be unnecessarily filtering out the best route. For example, suppose the user is sitting in a car parked in a driveway, facing due north, with the garage in front and the street to the rear. In that case, specifying a heading of 0 degrees and a heading accuracy of 90 degrees may result in a route that begins on the back alley or, worse, no route at all. For this reason, it is recommended that you only specify a heading and heading accuracy when automatically recalculating directions due to the user deviating from the route.
      
      By default, the value of this property is a negative number, meaning that a route is considered viable regardless of the direction of approach.
+     
+     This property corresponds to the angles in the [`bearings`](https://www.mapbox.com/api-documentation/#retrieve-directions) query parameter in the Mapbox Directions API.
      */
     @objc open var heading: CLLocationDirection = -1
     
     /**
-     The maximum amount, in degrees, by which a route’s approach to a waypoint may differ from `heading` in either direction in order to be considered viable.
+     The maximum tolerance, in degrees, within which a route’s approach to a waypoint may differ from `heading` in either direction but still be considered viable.
      
      A value of 0 degrees means that the approach must match the specified `heading` exactly – an unlikely scenario. A value of 180 degrees or more means that the approach may be as much as 180 degrees in either direction from the specified `heading`, effectively allowing a candidate route to approach the waypoint from any direction.
      
      If you set the `heading` property, you should set this property to a value such as 90 degrees, to avoid filtering out routes whose approaches differ only slightly from the specified `heading`. Otherwise, if the `heading` property is set to a negative value, this property is ignored.
      
      By default, the value of this property is a negative number, meaning that a route is considered viable regardless of the direction of approach.
+     
+     This property corresponds to the ranges in the [`bearings`](https://www.mapbox.com/api-documentation/#retrieve-directions) query parameter in the Mapbox Directions API.
      */
     @objc open var headingAccuracy: CLLocationDirection = -1
     
@@ -143,14 +167,18 @@ open class Waypoint: NSObject, NSCopying, NSSecureCoding {
     /**
      The name of the waypoint.
      
-     This parameter does not affect the route, but you can set the name of a waypoint you pass into a `RouteOptions` object to help you distinguish one waypoint from another in the array of waypoints passed into the completion handler of the `Directions.calculate(_:completionHandler:)` method.
+     This property does not affect the route, but you can set the name of a waypoint you pass into a `RouteOptions` object to help you distinguish one waypoint from another in the array of waypoints passed into the completion handler of the `Directions.calculate(_:completionHandler:)` method. This property has no effect if `DirectionsOptions.includesSteps` is set to `false`.
+     
+     This property corresponds to the [`waypoint_names`](https://www.mapbox.com/api-documentation/#retrieve-directions) query parameter in the Mapbox Directions API.
      */
     @objc open var name: String?
     
     /**
      A boolean value indicating whether arriving on opposite side is allowed.
      
-     This property has no effect if `RouteOptions.includesSteps` is set to `false`.
+     This property has no effect if `DirectionsOptions.includesSteps` is set to `false`.
+     
+     This property corresponds to the [`approaches`](https://www.mapbox.com/api-documentation/#retrieve-directions) query parameter in the Mapbox Directions API.
      */
     @objc open var allowsArrivingOnOppositeSide = true
     

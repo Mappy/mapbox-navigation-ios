@@ -1,7 +1,7 @@
 typealias JSONDictionary = [String: Any]
 
 /// Indicates that an error occurred in MapboxDirections.
-public let MBDirectionsErrorDomain = "MBDirectionsErrorDomain"
+public let MBDirectionsErrorDomain = "com.mapbox.directions.ErrorDomain"
 
 /// The Mapbox access token specified in the main application bundle’s Info.plist.
 let defaultAccessToken = Bundle.main.object(forInfoDictionaryKey: "MGLMapboxAccessToken") as? String
@@ -52,40 +52,6 @@ let userAgent: String = {
     return components.joined(separator: " ")
 }()
 
-extension CLLocationCoordinate2D {
-    /**
-     Initializes a coordinate pair based on the given GeoJSON coordinates array.
-     */
-    internal init(geoJSON array: [Double]) {
-        assert(array.count == 2)
-        self.init(latitude: array[1], longitude: array[0])
-    }
-    
-    /**
-     Initializes a coordinate pair based on the given GeoJSON point object.
-     */
-    internal init(geoJSON point: JSONDictionary) {
-        assert(point["type"] as? String == "Point")
-        self.init(geoJSON: point["coordinates"] as! [Double])
-    }
-    
-    internal static func coordinates(geoJSON lineString: JSONDictionary) -> [CLLocationCoordinate2D] {
-        let type = lineString["type"] as? String
-        assert(type == "LineString" || type == "Point")
-        let coordinates = lineString["coordinates"] as! [[Double]]
-        return coordinates.map { self.init(geoJSON: $0) }
-    }
-}
-
-extension CLLocation {
-    /**
-     Initializes a CLLocation object with the given coordinate pair.
-     */
-    internal convenience init(coordinate: CLLocationCoordinate2D) {
-        self.init(latitude: coordinate.latitude, longitude: coordinate.longitude)
-    }
-}
-
 public protocol GPSMappyDirectionDebugDelegate: AnyObject {
 	func directionWillRequest(urlRequest: URLRequest)
 	func directionDidReceive(data: Data?, response: URLResponse?, error: Error?)
@@ -132,11 +98,15 @@ open class Directions: NSObject {
     @objc(sharedDirections)
     public static let shared = Directions(accessToken: nil)
     
-    /// The API endpoint to request the directions from.
-    internal var apiEndpoint: URL
+    /**
+     The API endpoint to use when requesting directions.
+     */
+    @objc public private(set) var apiEndpoint: URL
     
-    /// The Mapbox access token to associate the request with.
-    internal let accessToken: String
+    /**
+     The Mapbox access token to associate with the request.
+     */
+    @objc public let accessToken: String
     
     /**
      Initializes a newly created directions object with an optional access token and host.
@@ -294,7 +264,7 @@ open class Directions: NSObject {
             let apiStatusCode = json["code"] as? String
             let apiMessage = json["message"] as? String
 			let mappyErrorDictionary = json["error"] as? JSONDictionary
-            guard data != nil && error == nil
+            guard !json.isEmpty, data != nil, error == nil
 				&& ((apiStatusCode == nil && apiMessage == nil) || apiStatusCode == "Ok")
 				&& mappyErrorDictionary == nil else {
 					let apiError: NSError
@@ -352,6 +322,11 @@ open class Directions: NSObject {
             case (404, "ProfileNotFound"):
                 failureReason = "Unrecognized profile identifier."
                 recoverySuggestion = "Make sure the profileIdentifier option is set to one of the provided constants, such as MBDirectionsProfileIdentifierAutomobile."
+                
+            case (413, _):
+                failureReason = "The request is too large."
+                recoverySuggestion = "Try specifying fewer waypoints or giving the waypoints shorter names."
+                
             case (429, _):
                 if let timeInterval = response.rateLimitInterval, let maximumCountOfRequests = response.rateLimit {
                     let intervalFormatter = DateComponentsFormatter()
@@ -395,29 +370,3 @@ open class Directions: NSObject {
 	}
 }
 
-extension HTTPURLResponse {
-    var rateLimit: UInt? {
-        guard let limit = allHeaderFields["X-Rate-Limit-Limit"] as? String else {
-            return nil
-        }
-        return UInt(limit)
-    }
-    
-    var rateLimitInterval: TimeInterval? {
-        guard let interval = allHeaderFields["X-Rate-Limit-Interval"] as? String else {
-            return nil
-        }
-        return TimeInterval(interval)
-    }
-    
-    var rateLimitResetTime: Date? {
-        guard let resetTime = allHeaderFields["X-Rate-Limit-Reset"] as? String else {
-            return nil
-        }
-        guard let resetTimeNumber = Double(resetTime) else {
-            return nil
-        }
-        return Date(timeIntervalSince1970: resetTimeNumber)
-    }
-
-}
