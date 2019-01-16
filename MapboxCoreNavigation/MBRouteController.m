@@ -18,6 +18,7 @@ const MBRouteControllerNotificationUserInfoKey MBRouteControllerIsProactiveKey  
 
 NSString *const MBErrorDomain = @"ErrorDomain";
 
+
 @implementation NSString (MD5)
 - (NSString * _Nonnull)md5 {
     const char *cStr = [self UTF8String];
@@ -32,3 +33,4 @@ NSString *const MBErrorDomain = @"ErrorDomain";
     return  output;
 }
 @end
+

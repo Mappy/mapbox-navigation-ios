@@ -385,7 +385,7 @@ class RouteMapViewController: UIViewController {
         let defaultAltitude = mapView.defaultAltitude
         let isLongRoad = routeProgress.distanceRemaining >= mapView.longManeuverDistance
         let currentStep = routeProgress.currentLegProgress.currentStep
-        let upComingStep = routeProgress.currentLegProgress.upComingStep
+        let upComingStep = routeProgress.currentLegProgress.upcomingStep
 
         //If the user is at the last turn maneuver, the map should zoom in to the default altitude.
         let currentInstruction = routeProgress.currentLegProgress.currentStepProgress.currentSpokenInstruction
@@ -776,14 +776,14 @@ extension RouteMapViewController: NavigationViewDelegate {
 
         // Add Mapbox Streets if the map does not already have it
         if streetsSources.isEmpty {
-            let source = MGLVectorTileSource(identifier: "mapboxStreetsv7", configurationURL: URL(string: "mapbox://mapbox.mapbox-streets-v7")!)
+            let source = MGLVectorTileSource(identifier: "com.mapbox.MapboxStreets", configurationURL: URL(string: "mapbox://mapbox.mapbox-streets-v8")!)
             style.addSource(source)
             streetsSources.append(source)
         }
 
-        if let mapboxSteetsSource = streetsSources.first, style.layer(withIdentifier: roadLabelLayerIdentifier) == nil {
-            let streetLabelLayer = MGLLineStyleLayer(identifier: roadLabelLayerIdentifier, source: mapboxSteetsSource)
-            streetLabelLayer.sourceLayerIdentifier = "road_label"
+        if let mapboxStreetsSource = streetsSources.first, style.layer(withIdentifier: roadLabelLayerIdentifier) == nil {
+            let streetLabelLayer = MGLLineStyleLayer(identifier: roadLabelLayerIdentifier, source: mapboxStreetsSource)
+            streetLabelLayer.sourceLayerIdentifier = mapboxStreetsSource.roadLabelLayerIdentifier
             streetLabelLayer.lineOpacity = NSExpression(forConstantValue: 1)
             streetLabelLayer.lineWidth = NSExpression(forConstantValue: 20)
             streetLabelLayer.lineColor = NSExpression(forConstantValue: UIColor.white)
@@ -935,7 +935,7 @@ extension RouteMapViewController: NavigationViewDelegate {
         guard let stepIndex = leg.steps.index(of: step) else { return }
         
         let legProgress = RouteLegProgress(leg: leg, stepIndex: stepIndex)
-        guard let upcomingStep = legProgress.upComingStep else { return }
+        guard let upcomingStep = legProgress.upcomingStep else { return }
         addPreviewInstructions(step: legProgress.currentStep, maneuverStep: upcomingStep, distance: instructionsBannerView.distance)
         
         mapView.enableFrameByFrameCourseViewTracking(for: 1)
@@ -973,7 +973,7 @@ extension RouteMapViewController: StepsViewControllerDelegate {
         
         let legProgress = RouteLegProgress(leg: router.route.legs[legIndex], stepIndex: stepIndex)
         let step = legProgress.currentStep
-        guard let upcomingStep = legProgress.upComingStep else { return }
+        guard let upcomingStep = legProgress.upcomingStep else { return }
 
         currentPreviewInstructionBannerStepIndex = router.routeProgress.remainingSteps.index(of: step)
         

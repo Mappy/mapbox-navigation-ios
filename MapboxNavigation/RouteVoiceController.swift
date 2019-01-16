@@ -31,7 +31,7 @@ extension SpokenInstruction {
     @available(iOS 10.0, *)
     func attributedText(for legProgress: RouteLegProgress) -> NSAttributedString {
         let attributedText = NSMutableAttributedString(string: text)
-        if let step = legProgress.upComingStep,
+        if let step = legProgress.upcomingStep,
             let name = step.names?.first,
             let phoneticName = step.phoneticNames?.first {
             let nameRange = attributedText.mutableString.range(of: name)
@@ -136,11 +136,11 @@ open class RouteVoiceController: NSObject, AVSpeechSynthesizerDelegate {
     }
     
     @objc func pauseSpeechAndPlayReroutingDing(notification: NSNotification) {
-        speechSynth.stopSpeaking(at: .word)
-        
         guard playRerouteSound && !NavigationSettings.shared.voiceMuted else {
             return
         }
+        
+        speechSynth.stopSpeaking(at: .word)
         
         do {
             try mixAudio()
