@@ -481,6 +481,8 @@ extension RouteController: CLLocationManagerDelegate {
 
         let durationRemaining = routeProgress.durationRemaining
 
+		self.lastLocationDate = nil
+
         getDirections(from: location, along: routeProgress) { [weak self] (route, mappyRoutes, error) in
             guard let strongSelf = self else {
                 return
@@ -490,8 +492,6 @@ extension RouteController: CLLocationManagerDelegate {
 			{
 				if let upToDateRoute = routes.first(where: { $0.routeType == .current })
 				{
-					strongSelf.lastLocationDate = nil
-
 					guard let firstLeg = upToDateRoute.legs.first, let firstStep = firstLeg.steps.first else {
 						return
 					}
