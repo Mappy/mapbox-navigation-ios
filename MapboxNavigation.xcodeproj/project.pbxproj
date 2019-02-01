@@ -240,6 +240,9 @@
 		492B6F85213703EE0076D2C6 /* MapboxGeocoder.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 3507F9F92134305C0086B39E /* MapboxGeocoder.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		6441B16A1EFC64E50076499F /* WaypointConfirmationViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6441B1691EFC64E50076499F /* WaypointConfirmationViewController.swift */; };
 		64847A041F04629D003F3A69 /* Feedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64847A031F04629D003F3A69 /* Feedback.swift */; };
+		7C7AEBE922047D7400365583 /* MappyEventLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C7AEBE822047D7400365583 /* MappyEventLogger.swift */; };
+		7C7AEBEC22047E7B00365583 /* MBMappyEventLogger.h in Headers */ = {isa = PBXBuildFile; fileRef = 7C7AEBEA22047E7B00365583 /* MBMappyEventLogger.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		7C7AEBED22047E7B00365583 /* MBMappyEventLogger.m in Sources */ = {isa = PBXBuildFile; fileRef = 7C7AEBEB22047E7B00365583 /* MBMappyEventLogger.m */; };
 		8D07C5A820B612310093D779 /* EmptyStyle.json in Resources */ = {isa = PBXBuildFile; fileRef = 8D07C5A720B612310093D779 /* EmptyStyle.json */; };
 		8D1A5CD2212DDFCD0059BA4A /* DispatchTimer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D1A5CD1212DDFCD0059BA4A /* DispatchTimer.swift */; };
 		8D24A2F62040960C0098CBF8 /* UIEdgeInsets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D24A2F52040960C0098CBF8 /* UIEdgeInsets.swift */; };
@@ -799,6 +802,9 @@
 		3EA93EBD6E6BEC966BBE51D6 /* NavigationServiceTestDoubles.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavigationServiceTestDoubles.swift; sourceTree = "<group>"; };
 		6441B1691EFC64E50076499F /* WaypointConfirmationViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = WaypointConfirmationViewController.swift; path = Example/WaypointConfirmationViewController.swift; sourceTree = "<group>"; };
 		64847A031F04629D003F3A69 /* Feedback.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Feedback.swift; sourceTree = "<group>"; };
+		7C7AEBE822047D7400365583 /* MappyEventLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MappyEventLogger.swift; sourceTree = "<group>"; };
+		7C7AEBEA22047E7B00365583 /* MBMappyEventLogger.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MBMappyEventLogger.h; sourceTree = "<group>"; };
+		7C7AEBEB22047E7B00365583 /* MBMappyEventLogger.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MBMappyEventLogger.m; sourceTree = "<group>"; };
 		8D07C5A720B612310093D779 /* EmptyStyle.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = EmptyStyle.json; sourceTree = "<group>"; };
 		8D1A5CD1212DDFCD0059BA4A /* DispatchTimer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DispatchTimer.swift; sourceTree = "<group>"; };
 		8D24A2F52040960C0098CBF8 /* UIEdgeInsets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIEdgeInsets.swift; sourceTree = "<group>"; };
@@ -1580,6 +1586,9 @@
 				353E69031EF0C4E5007B2AE5 /* SimulatedLocationManager.swift */,
 				35C98730212E02B500808B82 /* PortableRouteController.swift */,
 				35E102652166360300A07109 /* OfflineDirections.swift */,
+				7C7AEBE822047D7400365583 /* MappyEventLogger.swift */,
+				7C7AEBEA22047E7B00365583 /* MBMappyEventLogger.h */,
+				7C7AEBEB22047E7B00365583 /* MBMappyEventLogger.m */,
 			);
 			path = MapboxCoreNavigation;
 			sourceTree = "<group>";
@@ -1635,6 +1644,7 @@
 			files = (
 				DADAD828203504C6002E25CA /* MBNavigationSettings.h in Headers */,
 				35D457A71E2D253100A89946 /* MBRouteController.h in Headers */,
+				7C7AEBEC22047E7B00365583 /* MBMappyEventLogger.h in Headers */,
 				C5C94C1B1DDCD22B0097296A /* MapboxCoreNavigation.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -2496,10 +2506,12 @@
 				35BF8CA21F28EB60003F6125 /* Array.swift in Sources */,
 				3654FEE420B5A88D00B8E825 /* GPSReplayLocationManager.swift in Sources */,
 				3582A25220EFA9680029C5DE /* RouterDelegate.swift in Sources */,
+				7C7AEBED22047E7B00365583 /* MBMappyEventLogger.m in Sources */,
 				353E68FC1EF0B7F8007B2AE5 /* NavigationLocationManager.swift in Sources */,
 				353E68FE1EF0B985007B2AE5 /* BundleAdditions.swift in Sources */,
 				354A9BCD20EA9C8100F03325 /* CoreFeedbackEvent.swift in Sources */,
 				3582A25020EEC46B0029C5DE /* Router.swift in Sources */,
+				7C7AEBE922047D7400365583 /* MappyEventLogger.swift in Sources */,
 				8D75F991212B5C7F00F99CF3 /* TunnelAuthority.swift in Sources */,
 				C5E7A31C1F4F6828001CB015 /* NavigationRouteOptions.swift in Sources */,
 				352F464D20EB74C200147886 /* NavigationEventsManager.swift in Sources */,

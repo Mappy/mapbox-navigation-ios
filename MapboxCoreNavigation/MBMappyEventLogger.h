@@ -1,0 +1,7 @@
+#import <Foundation/Foundation.h>
+
+typedef NSString *MBMappyEventLoggerNotificationUserInfoKey NS_EXTENSIBLE_STRING_ENUM;
+
+extern const MBMappyEventLoggerNotificationUserInfoKey MBMappyEventLoggerMessageKey;
+
+extern const NSNotificationName MBMappyEventLoggerDidSendMessageNotification;

@@ -8,6 +8,7 @@ FOUNDATION_EXPORT const unsigned char MapboxCoreNavigationVersionString[];
 
 #import "MBNavigationSettings.h"
 #import "MBRouteController.h"
+#import "MBMappyEventLogger.h"
 
 /**
  Constant representing the domain in which errors created in this library will live under.
