@@ -186,7 +186,7 @@ extension CLLocation {
         if course >= 0 &&
             (speed >= RouteSnappingMinimumSpeed || isWithinDepatureStep) &&
             (horizontalAccuracy < RouteSnappingMinimumHorizontalAccuracy || isWithinDepatureStep) &&
-            course.difference(from: self.course) > RouteSnappingMaxManipulatedCourseAngle {
+            (self.course >= 0 && course.difference(from: self.course) > RouteSnappingMaxManipulatedCourseAngle) {
             return false
         }
         return true
