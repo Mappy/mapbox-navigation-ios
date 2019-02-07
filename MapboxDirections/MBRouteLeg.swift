@@ -22,6 +22,7 @@ open class RouteLeg: NSObject, NSSecureCoding {
         var segmentDistances: [CLLocationDistance]?
         var expectedSegmentTravelTimes: [TimeInterval]?
         var segmentSpeeds: [CLLocationSpeed]?
+        var segmentMaxSpeeds: [MaxSpeed]?
         var congestionLevels: [CongestionLevel]?
         
         if let jsonAttributes = json["annotation"] as? [String: Any] {
@@ -34,6 +35,11 @@ open class RouteLeg: NSObject, NSSecureCoding {
             if let speed = jsonAttributes["speed"] {
                 segmentSpeeds = speed as? [CLLocationSpeed] ?? []
             }
+            if let maxSpeeds = jsonAttributes["maxspeed"] as? [JSONDictionary] {
+                segmentMaxSpeeds = maxSpeeds.map {
+                    MaxSpeed(json: $0)
+                }
+            }
             if let congestion = jsonAttributes["congestion"] as? [String] {
                 congestionLevels = congestion.map {
                     CongestionLevel(description: $0)!
@@ -44,6 +50,7 @@ open class RouteLeg: NSObject, NSSecureCoding {
         self.segmentDistances = segmentDistances
         self.expectedSegmentTravelTimes = expectedSegmentTravelTimes
         self.segmentSpeeds = segmentSpeeds
+        self.segmentMaxSpeeds = segmentMaxSpeeds
         self.segmentCongestionLevels = congestionLevels
     }
     
@@ -92,6 +99,7 @@ open class RouteLeg: NSObject, NSSecureCoding {
         segmentDistances = decoder.decodeObject(of: [NSArray.self, NSNumber.self], forKey: "segmentDistances") as? [CLLocationDistance]
         expectedSegmentTravelTimes = decoder.decodeObject(of: [NSArray.self, NSNumber.self], forKey: "expectedSegmentTravelTimes") as? [TimeInterval]
         segmentSpeeds = decoder.decodeObject(of: [NSArray.self, NSNumber.self], forKey: "segmentSpeeds") as? [CLLocationSpeed]
+        segmentMaxSpeeds = decoder.decodeObject(of: [NSArray.self, MaxSpeed.self], forKey: "segmentMaxSpeeds") as? [MaxSpeed]
         segmentCongestionLevels = decoder.decodeObject(of: [NSArray.self, NSNumber.self], forKey: "segmentCongestionLevels") as? [CongestionLevel]
     }
     
@@ -108,6 +116,7 @@ open class RouteLeg: NSObject, NSSecureCoding {
         coder.encode(segmentDistances, forKey: "segmentDistances")
         coder.encode(expectedSegmentTravelTimes, forKey: "expectedSegmentTravelTimes")
         coder.encode(segmentSpeeds, forKey: "segmentSpeeds")
+        coder.encode(segmentMaxSpeeds, forKey: "segmentMaxSpeeds")
         coder.encode(segmentCongestionLevels, forKey: "segmentCongestionLevels")
     }
     
@@ -161,6 +170,13 @@ open class RouteLeg: NSObject, NSSecureCoding {
      This property is set if the `RouteOptions.attributeOptions` property contains `.speed`.
      */
     @objc public let segmentSpeeds: [CLLocationSpeed]?
+    
+    /**
+     An array containing the expected speed limits between each coordinate in the route leg geometry.
+     
+     This property is set if the `RouteOptions.attributeOptions` property contains `.maxSpeed`.
+     */
+    @objc public let segmentMaxSpeeds: [MaxSpeed]?
     
     /**
      An array containing the traffic congestion level along each road segment in the route leg geometry.
