@@ -185,7 +185,7 @@ open class SimulatedLocationManager: NavigationLocationManager {
             currentSpeed =  max(distance / time, 2)
         } else if let stepTime = routeProgress?.currentLegProgress.currentStep.expectedTravelTime,
 			let stepDistance = routeProgress?.currentLegProgress.currentStep.distance {
-			let meanSpeed = stepDistance / stepTime
+			let meanSpeed = stepTime > 0 ? stepDistance / stepTime : 0
 			currentSpeed = min(max(meanSpeed, minimumSpeed), maximumSpeed)
         } else {
             currentSpeed = calculateCurrentSpeed(distance: distance, coordinatesNearby: coordinatesNearby, closestLocation: closestLocation)
