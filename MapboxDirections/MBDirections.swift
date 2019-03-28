@@ -330,10 +330,7 @@ open class Directions: NSObject {
     open func urlRequest(forCalculating options: DirectionsOptions) -> URLRequest {
         let getURL = self.url(forCalculating: options, httpMethod: "GET")
         var request = URLRequest(url: getURL)
-        if let data = options.data {
-            request.url = url(forCalculating: options, httpMethod: "POST")
-            
-            let contentType = options.contentType ?? "application/x-www-form-urlencoded"
+        if let data = options.data, let contentType = options.contentType {
             request.setValue(contentType, forHTTPHeaderField: "Content-Type")
             request.httpMethod = "POST"
             request.httpBody = data

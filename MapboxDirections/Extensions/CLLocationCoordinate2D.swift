@@ -41,6 +41,6 @@ extension CLLocationCoordinate2D {
         guard CLLocationCoordinate2DIsValid(self) else {
             return nil
         }
-        return "\(longitude.rounded(to: 1e6)),\(latitude.rounded(to: 1e6))"
+        return String(format: "%.6f,%.6f", arguments: [longitude, latitude])
     }
 }

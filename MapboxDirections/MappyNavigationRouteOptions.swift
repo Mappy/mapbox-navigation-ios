@@ -216,23 +216,16 @@ public class MappyNavigationRouteOptions: RouteOptions
 	// MARK: - Overrides
 
 	/**
-	An array of directions query strings to include in the request URL.
-	*/
-	internal override var queries: [String]
-	{
-		return waypoints.map { String(format: "%.6f,%.6f", arguments: [$0.coordinate.longitude, $0.coordinate.latitude]) }
-	}
-
-	/**
 	The path of the request URL, not including the hostname or any parameters.
 	*/
 	internal override var path: String
 	{
-		assert(!queries.isEmpty, "No query")
-
-		let queryComponent = queries.joined(separator: ";")
-		return "gps/\(apiVersion)/\(provider)/\(queryComponent)"
+        return super.path.replacingOccurrences(of: ".json", with: "")
 	}
+    
+    internal override var abridgedPath: String {
+        return "gps/\(apiVersion)/\(provider)"
+    }
 
 	/**
 	An array of URL parameters to include in the request URL.
@@ -326,7 +319,10 @@ public class MappyNavigationRouteOptions: RouteOptions
 				let coordinate = CLLocationCoordinate2D(geoJSON: location)
 				let possibleAPIName = api["name"] as? String
 				let apiName = possibleAPIName?.nonEmptyString
-				return Waypoint(coordinate: coordinate, name: local.name ?? apiName)
+                let waypoint = local.copy() as! Waypoint
+                waypoint.coordinate = coordinate
+                waypoint.name = waypoint.name ?? apiName
+                return waypoint
 			}
 		}
 
