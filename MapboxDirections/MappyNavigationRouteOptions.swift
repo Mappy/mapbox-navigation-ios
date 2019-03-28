@@ -237,7 +237,7 @@ public class MappyNavigationRouteOptions: RouteOptions
 	/**
 	An array of URL parameters to include in the request URL.
 	*/
-	internal override var params: [URLQueryItem]
+	override open var urlQueryItems: [URLQueryItem]
 	{
 		var params: [URLQueryItem] = [
 			URLQueryItem(name: "geometries", value: String(describing: shapeFormat)),

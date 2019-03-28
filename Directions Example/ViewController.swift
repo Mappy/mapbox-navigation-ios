@@ -4,7 +4,7 @@ import MapboxDirections
 import Mapbox
 
 // A Mapbox access token is required to use the Directions API.
-// https://www.mapbox.com/help/create-api-access-token/
+// https://docs.mapbox.com/help/how-mapbox-works/access-tokens/#creating-and-managing-access-tokens
 let MapboxAccessToken = "pk.eyJ1IjoibWFwcHlpb3MiLCJhIjoiY2pqaWh5OGZuMTJ2MzN2cm1heHpmZmVjbCJ9.zT4TP13qJsNthxAUuYMYmg"
 
 class ViewController: UIViewController, MBDrawingViewDelegate {
@@ -128,8 +128,8 @@ class ViewController: UIViewController, MBDrawingViewDelegate {
 			return options
 		}
 
-//		let options = makeOptionsWithExplicitParams()
-		let options = makeOptionsWithUntypedQueryParams()
+        let options = makeOptionsWithExplicitParams()
+//        let options = makeOptionsWithUntypedQueryParams()
 
 		Directions(accessToken: "", host: "routemm.mappyrecette.net")
 //		Directions(accessToken: "", host: "routemm.mappysnap.net")
