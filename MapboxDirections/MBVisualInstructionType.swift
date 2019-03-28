@@ -29,18 +29,18 @@ public enum VisualInstructionComponentType: Int, CustomStringConvertible {
      This component may appear before or after an `.exitNumber` component, depending on the language.
      */
     case exit
-    
+     
     /**
      A component contains an exit number.
      */
     case exitCode
 
-	/**
+    /**
      The component contains a colored label.
-
+     
      The foreground and background colors are specified by the `VisualInstructionComponent.textHexaColors` property.
      */
-	case coloredText
+    case coloredText
     
     public init?(description: String) {
         let type: VisualInstructionComponentType
@@ -55,8 +55,8 @@ public enum VisualInstructionComponentType: Int, CustomStringConvertible {
             type = .exit
         case "exit-number":
             type = .exitCode
-		case "colored_label":
-			type = .coloredText
+        case "colored_label":
+            type = .coloredText
         default:
             return nil
         }
@@ -75,8 +75,8 @@ public enum VisualInstructionComponentType: Int, CustomStringConvertible {
             return "exit"
         case .exitCode:
             return "exit-number"
-		case .coloredText:
-			return "colored_label"
+        case .coloredText:
+            return "colored_label"
         }
     }
 }

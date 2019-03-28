@@ -31,11 +31,11 @@ open class VisualInstructionComponent: NSObject, ComponentRepresentable {
      */
     @objc public var abbreviationPriority: Int = NSNotFound
 
-	/**
-	 Mappy text colors as hexadecimal string.
-	 Ex: "#C9242A"
-	 */
-	public var textHexaColors: (foreground: String, background: String)?
+    /**
+     Mappy text colors as hexadecimal string.
+     Ex: "#C9242A"
+     */
+    public var textHexaColors: (foreground: String, background: String)?
     
     /**
      The plain text representation of this component.
@@ -79,12 +79,12 @@ open class VisualInstructionComponent: NSObject, ComponentRepresentable {
 
         self.init(type: type, text: text, imageURL: imageURL, abbreviation: abbreviation, abbreviationPriority: abbreviationPriority)
 
-		if self.type == .coloredText {
-			if let foreground = json["foreground_color"] as? String,
-				let background = json["background_color"] as? String {
-				self.textHexaColors = (foreground, background)
-			}
-		}
+        if self.type == .coloredText {
+            if let foreground = json["foreground_color"] as? String,
+                let background = json["background_color"] as? String {
+                self.textHexaColors = (foreground, background)
+            }
+        }
     }
 
     /**
@@ -125,10 +125,10 @@ open class VisualInstructionComponent: NSObject, ComponentRepresentable {
 
         abbreviationPriority = decoder.decodeInteger(forKey: "abbreviationPriority")
 
-		if let colorForeground = decoder.decodeObject(of: NSString.self, forKey: "textHexaColorsForeground") as String?,
-			let colorBackground = decoder.decodeObject(of: NSString.self, forKey: "textHexaColorsBackground") as String? {
-			self.textHexaColors = (colorForeground, colorBackground)
-		}
+        if let colorForeground = decoder.decodeObject(of: NSString.self, forKey: "textHexaColorsForeground") as String?,
+            let colorBackground = decoder.decodeObject(of: NSString.self, forKey: "textHexaColorsBackground") as String? {
+            self.textHexaColors = (colorForeground, colorBackground)
+        }
     }
 
     public func encode(with coder: NSCoder) {
@@ -137,9 +137,9 @@ open class VisualInstructionComponent: NSObject, ComponentRepresentable {
         coder.encode(imageURL, forKey: "imageURL")
         coder.encode(abbreviation, forKey: "abbreviation")
         coder.encode(abbreviationPriority, forKey: "abbreviationPriority")
-		if let textHexaColors = textHexaColors {
-			coder.encode(textHexaColors.foreground, forKey: "textHexaColorsForeground")
-			coder.encode(textHexaColors.background, forKey: "textHexaColorsBackground")
-		}
+        if let textHexaColors = textHexaColors {
+            coder.encode(textHexaColors.foreground, forKey: "textHexaColorsForeground")
+            coder.encode(textHexaColors.background, forKey: "textHexaColorsBackground")
+        }
     }
 }

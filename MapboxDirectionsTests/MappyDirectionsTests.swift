@@ -14,18 +14,18 @@ class MappyDirectionsTests: XCTestCase {
         super.tearDown()
     }
     
-	func testMappyErrorParsing() {
-		let error: NSError? = nil
-		var errorJson: [String: Any] = ["status": 400,
-										"message": "No QID provided (None)"]
-		var resultError = Directions.informativeMappyError(describing: errorJson, underlyingError: error)
-		XCTAssertEqual(resultError.localizedFailureReason, "Status: 400 - message: No QID provided (None) - id: no id")
-
-		errorJson = ["status": 502,
-					 "message": "Could not find GPS initial route",
-					 "id": "GPS:find_initial_route"]
-		resultError = Directions.informativeMappyError(describing: errorJson, underlyingError: error)
-		XCTAssertEqual(resultError.localizedFailureReason, "Status: 502 - message: Could not find GPS initial route - id: GPS:find_initial_route")
-	}
+    func testMappyErrorParsing() {
+        let error: NSError? = nil
+        var errorJson: [String: Any] = ["status": 400,
+                                        "message": "No QID provided (None)"]
+        var resultError = Directions.informativeMappyError(describing: errorJson, underlyingError: error)
+        XCTAssertEqual(resultError.localizedFailureReason, "Status: 400 - message: No QID provided (None) - id: no id")
+        
+        errorJson = ["status": 502,
+                     "message": "Could not find GPS initial route",
+                     "id": "GPS:find_initial_route"]
+        resultError = Directions.informativeMappyError(describing: errorJson, underlyingError: error)
+        XCTAssertEqual(resultError.localizedFailureReason, "Status: 502 - message: Could not find GPS initial route - id: GPS:find_initial_route")
+    }
     
 }

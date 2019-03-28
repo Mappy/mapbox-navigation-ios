@@ -53,8 +53,8 @@ let userAgent: String = {
 }()
 
 public protocol GPSMappyDirectionDebugDelegate: AnyObject {
-	func directionWillRequest(urlRequest: URLRequest)
-	func directionDidReceive(data: Data?, response: URLResponse?, error: Error?)
+    func directionWillRequest(urlRequest: URLRequest)
+    func directionDidReceive(data: Data?, response: URLResponse?, error: Error?)
 }
 
 /**
@@ -64,9 +64,9 @@ public protocol GPSMappyDirectionDebugDelegate: AnyObject {
  */
 @objc(MBDirections)
 open class Directions: NSObject {
-	/// Mappy GPS debug interface url
-	public weak var mappyGPSDebugDelegate: GPSMappyDirectionDebugDelegate?
-
+    /// Mappy GPS debug interface url
+    public weak var mappyGPSDebugDelegate: GPSMappyDirectionDebugDelegate?
+    
     /**
      A closure (block) to be called when a directions request is complete.
 
@@ -256,19 +256,19 @@ open class Directions: NSObject {
 
             let apiStatusCode = json["code"] as? String
             let apiMessage = json["message"] as? String
-			let mappyErrorDictionary = json["error"] as? JSONDictionary
+            let mappyErrorDictionary = json["error"] as? JSONDictionary
             guard !json.isEmpty, data != nil, error == nil
-				&& ((apiStatusCode == nil && apiMessage == nil) || apiStatusCode == "Ok")
-				&& mappyErrorDictionary == nil else {
-					let apiError: NSError
-					if let mappyJson = mappyErrorDictionary {
-						apiError = Directions.informativeMappyError(describing: mappyJson, underlyingError: error as NSError?)
-					}
-					else {
-						apiError = Directions.informativeError(describing: json, response: response, underlyingError: error as NSError?)
-					}
-                DispatchQueue.main.async {
-                    errorHandler(apiError)
+                && ((apiStatusCode == nil && apiMessage == nil) || apiStatusCode == "Ok")
+                && mappyErrorDictionary == nil else {
+                    let apiError: NSError
+                    if let mappyJson = mappyErrorDictionary {
+                        apiError = Directions.informativeMappyError(describing: mappyJson, underlyingError: error as NSError?)
+                    }
+                    else {
+                        apiError = Directions.informativeError(describing: json, response: response, underlyingError: error as NSError?)
+                    }
+                    DispatchQueue.main.async {
+                        errorHandler(apiError)
                 }
                 return
             }
@@ -350,7 +350,7 @@ open class Directions: NSObject {
     /**
      Returns an error that supplements the given underlying error with additional information from the an HTTP response’s body or headers.
      */
-	static func informativeError(describing json: JSONDictionary, response: URLResponse?, underlyingError error: NSError?, locale: Locale? = Locale.current) -> NSError {
+    static func informativeError(describing json: JSONDictionary, response: URLResponse?, underlyingError error: NSError?, locale: Locale? = Locale.current) -> NSError {
         let apiStatusCode = json["code"] as? String
         var userInfo = error?.userInfo ?? [:]
         if let response = response as? HTTPURLResponse {
@@ -380,10 +380,10 @@ open class Directions: NSObject {
                     failureReason = "More than \(formattedCount) requests have been made with this access token within a period of \(formattedInterval)."
                 }
                 if let rolloverTime = response.rateLimitResetTime {
-					let dateFormatter = DateFormatter()
-					dateFormatter.locale = locale
-					dateFormatter.dateStyle = .long
-					dateFormatter.timeStyle = .long
+                    let dateFormatter = DateFormatter()
+                    dateFormatter.locale = locale
+                    dateFormatter.dateStyle = .long
+                    dateFormatter.timeStyle = .long
                     let formattedDate = dateFormatter.string(from: rolloverTime)
                     recoverySuggestion = "Wait until \(formattedDate) before retrying."
                 }
@@ -400,18 +400,18 @@ open class Directions: NSObject {
         return NSError(domain: error?.domain ?? MBDirectionsErrorDomain, code: error?.code ?? -1, userInfo: userInfo)
     }
 
-	static func informativeMappyError(describing json: JSONDictionary, underlyingError error: NSError?) -> NSError {
-		var userInfo: [String:Any] = [:]
-		let status = json["status"] as? Int ?? -1
-		let message = json["message"] as? String ?? "no message"
-		let errorId = json["id"] as? String ?? "no id"
-		let failureReason = "Status: \(status) - message: \(message) - id: \(errorId)"
-		userInfo[NSLocalizedFailureReasonErrorKey] = failureReason
-		if let error = error {
-			userInfo[NSUnderlyingErrorKey] = error
-		}
-		return NSError(domain: error?.domain ?? MBDirectionsErrorDomain, code: error?.code ?? -1, userInfo: userInfo)
-	}
+    static func informativeMappyError(describing json: JSONDictionary, underlyingError error: NSError?) -> NSError {
+        var userInfo: [String:Any] = [:]
+        let status = json["status"] as? Int ?? -1
+        let message = json["message"] as? String ?? "no message"
+        let errorId = json["id"] as? String ?? "no id"
+        let failureReason = "Status: \(status) - message: \(message) - id: \(errorId)"
+        userInfo[NSLocalizedFailureReasonErrorKey] = failureReason
+        if let error = error {
+            userInfo[NSUnderlyingErrorKey] = error
+        }
+        return NSError(domain: error?.domain ?? MBDirectionsErrorDomain, code: error?.code ?? -1, userInfo: userInfo)
+    }
     
     /**
      Adds request- or response-specific information to each result in a response.

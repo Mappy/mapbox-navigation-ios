@@ -32,13 +32,13 @@ open class SpokenInstruction: NSObject, NSSecureCoding {
      This representation is appropriate for speech synthesizers that support the [Speech Synthesis Markup Language](https://en.wikipedia.org/wiki/Speech_Synthesis_Markup_Language) (SSML), such as [Amazon Polly](https://aws.amazon.com/polly/). Numbers and names are marked up to ensure correct pronunciation. For speech synthesizers that lack SSML support, use the `text` property instead.
      */
     @objc public let ssmlText: String
-
-	/**
-	The type of the instruction when returned by the Mappy Directions API.
-
-	The default value for non-Mappy API is .maneuver.
-	*/
-	public let mappyType: MappySpokenInstructionType
+    
+    /**
+     The type of the instruction when returned by the Mappy Directions API.
+     
+     The default value for non-Mappy API is .maneuver.
+     */
+    public let mappyType: MappySpokenInstructionType
     
     /**
      Initializes a new spoken instruction object based on the given JSON dictionary representation.
@@ -49,10 +49,10 @@ open class SpokenInstruction: NSObject, NSSecureCoding {
     public convenience init(json: [String: Any]) {
         let distanceAlongStep = json["distanceAlongGeometry"] as! CLLocationDistance
         let text = json["announcement"] as! String
-		let ssmlText = json["ssmlAnnouncement"] as? String ?? ""
-		let mappyType = MappySpokenInstructionType(description: json["instructionType"] as? String ?? "") ?? .maneuver
-
-		self.init(distanceAlongStep: distanceAlongStep, text: text, ssmlText: ssmlText, mappyType: mappyType)
+        let ssmlText = json["ssmlAnnouncement"] as? String ?? ""
+        let mappyType = MappySpokenInstructionType(description: json["instructionType"] as? String ?? "") ?? .maneuver
+        
+        self.init(distanceAlongStep: distanceAlongStep, text: text, ssmlText: ssmlText, mappyType: mappyType)
     }
 
     /**
@@ -62,18 +62,18 @@ open class SpokenInstruction: NSObject, NSSecureCoding {
      - parameter text: A plain-text representation of the speech-optimized instruction.
      - parameter ssmlText: A formatted representation of the speech-optimized instruction.
      */
-	@objc public init(distanceAlongStep: CLLocationDistance, text: String, ssmlText: String, mappyType: MappySpokenInstructionType = .maneuver) {
+    @objc public init(distanceAlongStep: CLLocationDistance, text: String, ssmlText: String, mappyType: MappySpokenInstructionType = .maneuver) {
         self.distanceAlongStep = distanceAlongStep
         self.text = text
         self.ssmlText = ssmlText
-		self.mappyType = mappyType
+        self.mappyType = mappyType
     }
 
     public required init?(coder decoder: NSCoder) {
         distanceAlongStep = decoder.decodeDouble(forKey: "distanceAlongStep")
         text = decoder.decodeObject(of: NSString.self, forKey: "text")! as String
         ssmlText = decoder.decodeObject(of: NSString.self, forKey: "ssmlText")! as String
-		mappyType = MappySpokenInstructionType(description: decoder.decodeObject(of: NSString.self, forKey: "mappyType") as String? ?? "") ?? .maneuver
+        mappyType = MappySpokenInstructionType(description: decoder.decodeObject(of: NSString.self, forKey: "mappyType") as String? ?? "") ?? .maneuver
     }
 
     public static var supportsSecureCoding = true
@@ -82,6 +82,6 @@ open class SpokenInstruction: NSObject, NSSecureCoding {
         coder.encode(distanceAlongStep, forKey: "distanceAlongStep")
         coder.encode(text, forKey: "text")
         coder.encode(ssmlText, forKey: "ssmlText")
-		coder.encode(mappyType.description, forKey: "mappyType")
+        coder.encode(mappyType.description, forKey: "mappyType")
     }
 }

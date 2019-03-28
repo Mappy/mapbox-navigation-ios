@@ -47,7 +47,7 @@ open class VisualInstruction: NSObject, NSSecureCoding {
     /**
      Initializes a new visual instruction banner object that displays the given information.
      */
-	@objc public init(text: String?, maneuverType: ManeuverType, maneuverDirection: ManeuverDirection, components: [ComponentRepresentable], degrees: CLLocationDegrees = 180, exitNumber: Int = 0) {
+    @objc public init(text: String?, maneuverType: ManeuverType, maneuverDirection: ManeuverDirection, components: [ComponentRepresentable], degrees: CLLocationDegrees = 180, exitNumber: Int = 0) {
         self.text = text
         self.maneuverType = maneuverType
         self.maneuverDirection = maneuverDirection
@@ -90,14 +90,14 @@ open class VisualInstruction: NSObject, NSSecureCoding {
         }
 
         let degrees = json["degrees"] as? CLLocationDegrees ?? 180
-		let exitNumber = json["exit-number"] as? Int ?? 0
+        let exitNumber = json["exit-number"] as? Int ?? 0
 
-		self.text = text
-		self.maneuverType = maneuverType
-		self.maneuverDirection = maneuverDirection
-		self.components = components
-		self.finalHeading = degrees
-		self.exitNumber = exitNumber
+        self.text = text
+        self.maneuverType = maneuverType
+        self.maneuverDirection = maneuverDirection
+        self.components = components
+        self.finalHeading = degrees
+        self.exitNumber = exitNumber
     }
 
     @objc public required init?(coder decoder: NSCoder) {
@@ -119,7 +119,7 @@ open class VisualInstruction: NSObject, NSSecureCoding {
         self.components = components
 
         self.finalHeading = decoder.decodeDouble(forKey: "degrees")
-		self.exitNumber = decoder.decodeInteger(forKey: "exitNumber")
+        self.exitNumber = decoder.decodeInteger(forKey: "exitNumber")
     }
 
     public func encode(with coder: NSCoder) {
@@ -127,7 +127,7 @@ open class VisualInstruction: NSObject, NSSecureCoding {
         coder.encode(maneuverType.description, forKey: "maneuverType")
         coder.encode(maneuverDirection.description, forKey: "maneuverDirection")
         coder.encode(finalHeading, forKey: "degrees")
-		coder.encode(exitNumber, forKey: "exitNumber")
+        coder.encode(exitNumber, forKey: "exitNumber")
         coder.encode(components, forKey: "components")
     }
 }
