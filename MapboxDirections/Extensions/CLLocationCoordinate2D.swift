@@ -41,6 +41,16 @@ extension CLLocationCoordinate2D {
         guard CLLocationCoordinate2DIsValid(self) else {
             return nil
         }
+        return "\(longitude.rounded(to: 1e6)),\(latitude.rounded(to: 1e6))"
+    }
+
+    /**
+     String representation of the coordinate suitable for insertion in the Mappy RouteMM GPS API.
+     */
+    internal var mappyStringForRequestURL: String? {
+        guard CLLocationCoordinate2DIsValid(self) else {
+            return nil
+        }
         return String(format: "%.6f,%.6f", arguments: [longitude, latitude])
     }
 }

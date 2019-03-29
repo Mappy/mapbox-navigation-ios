@@ -271,13 +271,24 @@ public class MappyNavigationRouteOptions: RouteOptions
     // MARK: - Overrides
 
     /**
+     An array of directions query strings to include in the request URL.
+     */
+    internal override var queries: [String] {
+        return waypoints.compactMap{ $0.coordinate.mappyStringForRequestURL }
+    }
+
+    /**
      The path of the request URL, not including the hostname or any parameters.
      */
     internal override var path: String
     {
         return super.path.replacingOccurrences(of: ".json", with: "")
     }
-    
+
+    /**
+     The path of the request URL, not including the hostname, query components,
+     or any parameters.
+     */
     internal override var abridgedPath: String {
         return "gps/\(apiVersion)/\(provider)"
     }
