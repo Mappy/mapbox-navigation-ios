@@ -5,9 +5,36 @@ import Foundation
 
  Only used for pedestrian itineraries.
  */
-public enum MappyWalkSpeed: String
+@objc(MBMappyWalkSpeed)
+public enum MappyWalkSpeed: Int, CustomStringConvertible
 {
     case slow, normal, fast
+
+    public init?(description: String) {
+        let type: MappyWalkSpeed
+        switch description {
+        case "slow":
+            type = .slow
+        case "normal":
+            type = .normal
+        case "fast":
+            type = .fast
+        default:
+            return nil
+        }
+        self.init(rawValue: type.rawValue)
+    }
+
+    public var description: String {
+        switch self {
+        case .slow:
+            return "slow"
+        case .normal:
+            return "normal"
+        case .fast:
+            return "fast"
+        }
+    }
 }
 
 /**
@@ -15,11 +42,39 @@ public enum MappyWalkSpeed: String
 
  Only used for bike itineraries.
  */
-public enum MappyBikeSpeed: String
+@objc(MBMappyBikeSpeed)
+public enum MappyBikeSpeed: Int, CustomStringConvertible
 {
     case slow, normal, fast
+
+    public init?(description: String) {
+        let type: MappyBikeSpeed
+        switch description {
+        case "slow":
+            type = .slow
+        case "normal":
+            type = .normal
+        case "fast":
+            type = .fast
+        default:
+            return nil
+        }
+        self.init(rawValue: type.rawValue)
+    }
+
+    public var description: String {
+        switch self {
+        case .slow:
+            return "slow"
+        case .normal:
+            return "normal"
+        case .fast:
+            return "fast"
+        }
+    }
 }
 
+@objc(MBMappyNavigationRouteOptions)
 public class MappyNavigationRouteOptions: RouteOptions
 {
     // MARK: - Initializers
@@ -59,10 +114,10 @@ public class MappyNavigationRouteOptions: RouteOptions
         self.carVehicle = params["vehicle"]
         self.motorbikeVehicule = params["motorbike_vehicle"]
         if let walkSpeed = params["walk_speed"] {
-            self.walkSpeed = MappyWalkSpeed(rawValue: walkSpeed)
+            self.walkSpeed = MappyWalkSpeed(description: walkSpeed)
         }
         if let bikeSpeed = params["bike_speed"] {
-            self.bikeSpeed = MappyBikeSpeed(rawValue: bikeSpeed)
+            self.bikeSpeed = MappyBikeSpeed(description: bikeSpeed)
         }
 
         var cleanedParams = params
@@ -135,8 +190,8 @@ public class MappyNavigationRouteOptions: RouteOptions
         self.routeSignature = decoder.decodeObject(of: NSString.self, forKey: "routeSignature") as String?
         self.carVehicle = decoder.decodeObject(of: NSString.self, forKey: "carVehicle") as String?
         self.motorbikeVehicule = decoder.decodeObject(of: NSString.self, forKey: "motorbikeVehicule") as String?
-        self.walkSpeed = MappyWalkSpeed(rawValue: decoder.decodeObject(of: NSString.self, forKey: "walkSpeed") as String? ?? "")
-        self.bikeSpeed = MappyBikeSpeed(rawValue: decoder.decodeObject(of: NSString.self, forKey: "bikeSpeed") as String? ?? "")
+        self.walkSpeed = MappyWalkSpeed(description: decoder.decodeObject(of: NSString.self, forKey: "walkSpeed") as String? ?? "")
+        self.bikeSpeed = MappyBikeSpeed(description: decoder.decodeObject(of: NSString.self, forKey: "bikeSpeed") as String? ?? "")
         self.forceBetterRoute = decoder.decodeBool(forKey: "forceBetterRoute")
 
         super.init(coder: decoder)
@@ -263,11 +318,11 @@ public class MappyNavigationRouteOptions: RouteOptions
         }
         if let walkSpeed = walkSpeed
         {
-            params.append(URLQueryItem(name: "walk_speed", value: walkSpeed.rawValue))
+            params.append(URLQueryItem(name: "walk_speed", value: walkSpeed.description))
         }
         if let bikeSpeed = bikeSpeed
         {
-            params.append(URLQueryItem(name: "bike_speed", value: bikeSpeed.rawValue))
+            params.append(URLQueryItem(name: "bike_speed", value: bikeSpeed.description))
         }
 
         if !waypoints.compactMap({ $0.name }).isEmpty

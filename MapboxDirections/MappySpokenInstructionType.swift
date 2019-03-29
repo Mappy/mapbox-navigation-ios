@@ -3,7 +3,7 @@ import Foundation
 /**
  A `MappySpokenInstructionType` indentifies the type of a SpokenInstruction instruction returned by the Mappy Directions API.
  */
-@objc
+@objc(MBMappySpokenInstructionType)
 public enum MappySpokenInstructionType: Int, CustomStringConvertible
 {
     /**

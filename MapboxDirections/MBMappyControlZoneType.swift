@@ -3,7 +3,7 @@ import Foundation
 /**
  `MappyControlZoneType` describes the type of `MappyControlZoneInstruction`.
  */
-@objc
+@objc(MBMappyControlZoneType)
 public enum MappyControlZoneType: Int, CustomStringConvertible
 {
     /**

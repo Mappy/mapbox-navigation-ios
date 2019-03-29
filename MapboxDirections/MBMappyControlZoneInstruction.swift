@@ -3,7 +3,7 @@ import Foundation
 /**
  The contents of an additional instruction that can be displayed to inform the user about a zone along which controls of his driving can occur.
  */
-@objc
+@objc(MBMappyControlZoneInstruction)
 open class MappyControlZoneInstruction: VisualInstruction
 {
     /**

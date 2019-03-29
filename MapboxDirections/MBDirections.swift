@@ -64,7 +64,9 @@ public protocol GPSMappyDirectionDebugDelegate: AnyObject {
  */
 @objc(MBDirections)
 open class Directions: NSObject {
-    /// Mappy GPS debug interface url
+    /**
+     Mappy GPS debug interface url
+     */
     public weak var mappyGPSDebugDelegate: GPSMappyDirectionDebugDelegate?
     
     /**
