@@ -7,9 +7,6 @@
 /* Message on arrival action sheet */
 "CARPLAY_ARRIVED_MESSAGE" = "What would you like to do?";
 
-/* Title on continue button in CarPlay */
-"CARPLAY_CONTINUE" = "Continue";
-
 /* Name of the waypoint associated with the current location */
 "CARPLAY_CURRENT_LOCATION" = "Current Location";
 
@@ -34,9 +31,6 @@
 /* Title for mute button */
 "CARPLAY_MUTE" = "Mute";
 
-/* CPNavigationAlert OK button title */
-"CARPLAY_OK" = "OK";
-
 /* Title for overview button in CPTripPreviewTextConfiguration */
 "CARPLAY_OVERVIEW" = "Overview";
 
@@ -49,9 +43,6 @@
 /* Message when search returned zero results in CarPlay */
 "CARPLAY_SEARCH_NO_RESULTS" = "No results";
 
-/* Title in search template when search is unimplemented */
-"CARPLAY_SEARCH_NOT_IMPLEMENTED" = "Search not implemented";
-
 /* Alert title that shows when feedback has been submitted */
 "CARPLAY_SUBMITTED_FEEDBACK" = "Submitted";
 
@@ -63,9 +54,6 @@
 
 /* Dismiss button title on the steps view */
 "DISMISS_STEPS_TITLE" = "Close";
-
-/* End Navigation Button Text */
-"END_NAVIGATION" = "End Navigation";
 
 /* Title used for arrival */
 "END_OF_ROUTE_ARRIVED" = "You have arrived";
@@ -87,12 +75,6 @@
 
 /* Feedback type for Other Map Issue Issue */
 "FEEDBACK_GENERAL_ISSUE" = "Other\nMap Issue";
-
-/* Feedback type for Missing Exit */
-"FEEDBACK_MISSING_EXIT" = "Missing\nExit";
-
-/* Feedback type for Missing Road */
-"FEEDBACK_MISSING_ROAD" = "Missing\nRoad";
 
 /* Feedback type for a maneuver that is Not Allowed */
 "FEEDBACK_NOT_ALLOWED" = "Not\nAllowed";

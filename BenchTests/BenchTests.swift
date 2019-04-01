@@ -52,16 +52,18 @@ class BenchTests: XCTestCase, CLLocationManagerDelegate {
     func navigationViewController(route: Route, locationManager: ReplayLocationManager) -> NavigationViewController {
         
         let speechAPI = SpeechAPISpy(accessToken: token)
-        let voiceController = MapboxVoiceController(speechClient: speechAPI, audioPlayerType: AudioPlayerDummy.self)
         let directions = DirectionsSpy(accessToken: token)
         let service = MapboxNavigationService(route: route,
                                               directions: directions,
                                               locationSource: locationManager,
                                               eventsManagerType: NavigationEventsManagerSpy.self,
                                               simulating: .never,
-                                              routerType: PortableRouteController.self)
+                                              routerType: RouteController.self)
+        let voiceController = MapboxVoiceController(navigationService: service, speechClient: speechAPI, audioPlayerType: AudioPlayerDummy.self)
         
-        return NavigationViewController(for: route, navigationService: service, voiceController: voiceController)
+        let options = NavigationOptions(navigationService: service, voiceController: voiceController)
+        
+        return NavigationViewController(for: route, options: options)
     }
 }
 

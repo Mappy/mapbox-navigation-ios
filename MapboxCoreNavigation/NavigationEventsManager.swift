@@ -2,12 +2,14 @@ import Foundation
 import MapboxMobileEvents
 import MapboxDirections
 
+let NavigationEventTypeRouteRetrieval = "mobile.performance_trace"
+
  /**
  The `EventsManagerDataSource` protocol declares values required for recording route following events.
  */
 @objc public protocol EventsManagerDataSource: class {
     var routeProgress: RouteProgress { get }
-    var location: CLLocation? { get }
+    var router: Router! { get }
     var desiredAccuracy: CLLocationAccuracy { get }
     var locationProvider: NavigationLocationManager.Type { get }
 }
@@ -89,11 +91,11 @@ open class NavigationEventsManager: NSObject {
         //mobileEventsManager.sendTurnstileEvent()
     }
     
-    func navigationCancelEvent(rating potentialRating: Int? = nil, comment: String? = nil) -> EventDetails? {
+    func navigationCancelEvent(rating potentialRating: Int? = nil, comment: String? = nil) -> NavigationEventDetails? {
         guard let dataSource = dataSource, let sessionState = sessionState else { return nil }
         
         let rating = potentialRating ?? MMEEventsManager.unrated
-        var event = EventDetails(dataSource: dataSource, session: sessionState, defaultInterface: usesDefaultUserInterface)
+        var event = NavigationEventDetails(dataSource: dataSource, session: sessionState, defaultInterface: usesDefaultUserInterface)
         event.event = MMEEventTypeNavigationCancel
         event.arrivalTimestamp = sessionState.arrivalTimestamp
         
@@ -107,19 +109,37 @@ open class NavigationEventsManager: NSObject {
         return event
     }
     
-    func navigationDepartEvent() -> EventDetails? {
+    func navigationRouteRetrievalEvent() -> PerformanceEventDetails? {
+        guard let sessionState = sessionState,
+            let responseEndDate = sessionState.currentRoute.responseEndDate,
+            let fetchStartDate = sessionState.currentRoute.fetchStartDate else {
+            return nil
+        }
+
+        var event = PerformanceEventDetails(event: NavigationEventTypeRouteRetrieval, session: sessionState, createdOn: sessionState.currentRoute.responseEndDate)
+        event.counters.append(PerformanceEventDetails.Counter(name: "elapsed_time",
+                                                              value: responseEndDate.timeIntervalSince(fetchStartDate)))
+        if let routeIdentifier = sessionState.currentRoute.routeIdentifier {
+            event.attributes.append(PerformanceEventDetails.Attribute(name: "route_uuid", value: routeIdentifier))
+        }
+        return event
+    }
+    
+    func navigationDepartEvent() -> NavigationEventDetails? {
         guard let dataSource = dataSource, let sessionState = sessionState else { return nil }
 
-        var event = EventDetails(dataSource: dataSource, session: sessionState, defaultInterface: usesDefaultUserInterface)
+        var event = NavigationEventDetails(dataSource: dataSource, session: sessionState, defaultInterface: usesDefaultUserInterface)
         event.event = MMEEventTypeNavigationDepart
         return event
     }
     
-    func navigationArriveEvent() -> EventDetails? {
+    func navigationArriveEvent() -> NavigationEventDetails? {
         guard let dataSource = dataSource, let sessionState = sessionState else { return nil }
 
-        var event = EventDetails(dataSource: dataSource, session: sessionState, defaultInterface: usesDefaultUserInterface)
+        var event = NavigationEventDetails(dataSource: dataSource, session: sessionState, defaultInterface: usesDefaultUserInterface)
         event.event = MMEEventTypeNavigationArrive
+        
+        event.arrivalTimestamp = dataSource.router.rawLocation?.timestamp ?? Date()
         return event
     }
     
@@ -131,10 +151,10 @@ open class NavigationEventsManager: NSObject {
         return eventDictionary
     }
     
-    func navigationFeedbackEvent(type: FeedbackType, description: String?) -> EventDetails? {
+    func navigationFeedbackEvent(type: FeedbackType, description: String?) -> NavigationEventDetails? {
         guard let dataSource = dataSource, let sessionState = sessionState else { return nil }
 
-        var event = EventDetails(dataSource: dataSource, session: sessionState, defaultInterface: usesDefaultUserInterface)
+        var event = NavigationEventDetails(dataSource: dataSource, session: sessionState, defaultInterface: usesDefaultUserInterface)
         event.event = MMEEventTypeNavigationFeedback
         
         event.userId = UIDevice.current.identifierForVendor?.uuidString
@@ -146,12 +166,15 @@ open class NavigationEventsManager: NSObject {
         return event
     }
     
-    func navigationRerouteEvent(eventType: String = MMEEventTypeNavigationReroute) -> EventDetails? {
+    func navigationRerouteEvent(eventType: String = MMEEventTypeNavigationReroute) -> NavigationEventDetails? {
         guard let dataSource = dataSource, let sessionState = sessionState else { return nil }
 
-        let timestamp = Date()
-        var event = EventDetails(dataSource: dataSource, session: sessionState, defaultInterface: usesDefaultUserInterface)
+        let timestamp = dataSource.router.rawLocation?.timestamp ?? Date()
+        
+        var event = NavigationEventDetails(dataSource: dataSource, session: sessionState, defaultInterface: usesDefaultUserInterface)
         event.event = eventType
+        event.created = timestamp
+        
         if let lastRerouteDate = sessionState.lastRerouteDate {
             event.secondsSinceLastReroute = round(timestamp.timeIntervalSince(lastRerouteDate))
         } else {
@@ -176,6 +199,12 @@ open class NavigationEventsManager: NSObject {
     public func sendCarPlayDisconnectEvent() {
         let date = Date()
         mobileEventsManager.enqueueEvent(withName: MMEventTypeNavigationCarplayDisconnect, attributes: [MMEEventKeyEvent: MMEventTypeNavigationCarplayDisconnect, MMEEventKeyCreated: date.ISO8601])
+        mobileEventsManager.flush()
+    }
+    
+    func sendRouteRetrievalEvent() {
+        guard let attributes = try? navigationRouteRetrievalEvent()?.asDictionary() else { return }
+        mobileEventsManager.enqueueEvent(withName: NavigationEventTypeRouteRetrieval, attributes: attributes ?? [:])
         mobileEventsManager.flush()
     }
 
@@ -221,12 +250,12 @@ open class NavigationEventsManager: NSObject {
 
     func enqueueRerouteEvent() {
         guard let eventDictionary = try? navigationRerouteEvent()?.asDictionary() else { return }
-        let timestamp = Date()
+        let timestamp = dataSource?.router.location?.timestamp ?? Date()
         
         sessionState?.lastRerouteDate = timestamp
         sessionState?.numberOfReroutes += 1
         
-        let event = RerouteEvent(timestamp: Date(), eventDictionary: eventDictionary ?? [:])
+        let event = RerouteEvent(timestamp: timestamp, eventDictionary: eventDictionary ?? [:])
         
         outstandingFeedbackEvents.append(event)
     }
@@ -239,7 +268,7 @@ open class NavigationEventsManager: NSObject {
     }
 
     func enqueueFoundFasterRouteEvent() {
-        guard let eventDictionary = try? navigationRerouteEvent()?.asDictionary() else { return }
+        guard let eventDictionary = try? navigationRerouteEvent(eventType: FasterRouteFoundEvent)?.asDictionary() else { return }
 
         let timestamp = Date()
         sessionState?.lastRerouteDate = timestamp
@@ -341,17 +370,22 @@ open class NavigationEventsManager: NSObject {
     }
     
     @objc func update(progress: RouteProgress) {
-        if sessionState?.departureTimestamp == nil {
-            sessionState?.departureTimestamp = Date()
-            sendDepartEvent()
+        defer {
+            // ensure we always flush, irrespective of how the method exits
+            sendOutstandingFeedbackEvents(forceAll: false)
         }
         
         if sessionState?.arrivalTimestamp == nil,
             progress.currentLegProgress.userHasArrivedAtWaypoint {
-            sessionState?.arrivalTimestamp = Date()
+            sessionState?.arrivalTimestamp = dataSource?.router.location?.timestamp ?? Date()
             sendArriveEvent()
+            
+            return
         }
         
-        sendOutstandingFeedbackEvents(forceAll: false)
+        if sessionState?.departureTimestamp == nil {
+            sessionState?.departureTimestamp = dataSource?.router.location?.timestamp ?? Date()
+            sendDepartEvent()
+        }
     }
 }

@@ -4,9 +4,6 @@ import AVFoundation
 import MapboxDirections
 import MapboxCoreNavigation
 
-extension ErrorUserInfoKey {
-    static let spokenInstructionErrorCode = MBSpokenInstructionErrorCodeKey
-}
 
 extension NSAttributedString {
     @available(iOS 10.0, *)
@@ -85,14 +82,20 @@ open class RouteVoiceController: NSObject, AVSpeechSynthesizerDelegate {
     /**
      Default initializer for `RouteVoiceController`.
      */
-    override public init() {
+    @objc
+    public init(navigationService: NavigationService) {
         super.init()
 
         verifyBackgroundAudio()
 
         speechSynth.delegate = self
         
-        resumeNotifications()
+        observeNotifications(by: navigationService)
+    }
+    
+    @available(*, unavailable, message: "Use init(navigationService:) instead.")
+    public override init() {
+        fatalError()
     }
 
     private func verifyBackgroundAudio() {
@@ -110,10 +113,10 @@ open class RouteVoiceController: NSObject, AVSpeechSynthesizerDelegate {
         speechSynth.stopSpeaking(at: .immediate)
     }
     
-    func resumeNotifications() {
-        NotificationCenter.default.addObserver(self, selector: #selector(didPassSpokenInstructionPoint(notification:)), name: .routeControllerDidPassSpokenInstructionPoint, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(pauseSpeechAndPlayReroutingDing(notification:)), name: .routeControllerWillReroute, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(didReroute(notification:)), name: .routeControllerDidReroute, object: nil)
+    func observeNotifications(by service: NavigationService) {
+        NotificationCenter.default.addObserver(self, selector: #selector(didPassSpokenInstructionPoint(notification:)), name: .routeControllerDidPassSpokenInstructionPoint, object: service.router)
+        NotificationCenter.default.addObserver(self, selector: #selector(pauseSpeechAndPlayReroutingDing(notification:)), name: .routeControllerWillReroute, object: service.router)
+        NotificationCenter.default.addObserver(self, selector: #selector(didReroute(notification:)), name: .routeControllerDidReroute, object: service.router)
         
         muteToken = NavigationSettings.shared.observe(\.voiceMuted) { [weak self] (settings, change) in
             if settings.voiceMuted {
@@ -159,9 +162,12 @@ open class RouteVoiceController: NSObject, AVSpeechSynthesizerDelegate {
     }
     
     func duckAudio() throws {
-        let categoryOptions: AVAudioSessionCategoryOptions = [.duckOthers, .interruptSpokenAudioAndMixWithOthers]
-        try AVAudioSession.sharedInstance().setMode(AVAudioSessionModeSpokenAudio)
-        try AVAudioSession.sharedInstance().setCategory(AVAudioSessionCategoryPlayback, with: categoryOptions)
+        if #available(iOS 12.0, *) {
+            try AVAudioSession.sharedInstance().setCategory(AVAudioSessionCategoryPlayback, mode: AVAudioSessionModeVoicePrompt, options: [.duckOthers, .mixWithOthers])
+        } else {
+            try AVAudioSession.sharedInstance().setMode(AVAudioSessionModeSpokenAudio)
+            try AVAudioSession.sharedInstance().setCategory(AVAudioSessionCategoryPlayback, with: [.duckOthers, .mixWithOthers])
+        }
         try AVAudioSession.sharedInstance().setActive(true)
     }
     

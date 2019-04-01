@@ -27,6 +27,7 @@ fileprivate class SimulatedLocation: CLLocation {
  
  The route will be replaced upon a `RouteControllerDidReroute` notification.
  */
+
 @objc(MBSimulatedLocationManager)
 open class SimulatedLocationManager: NavigationLocationManager {
     internal var currentDistance: CLLocationDistance = 0
@@ -69,7 +70,7 @@ open class SimulatedLocationManager: NavigationLocationManager {
         return copy
     }
     
-    var routeProgress: RouteProgress?
+    private var routeProgress: RouteProgress?
 
 	public var shouldDeviateRoute: Bool = false
 	fileprivate var routeDeviationDeltaCoordinates: CLLocationCoordinate2D?
@@ -132,13 +133,13 @@ open class SimulatedLocationManager: NavigationLocationManager {
     }
     
     @objc private func didReroute(_ notification: Notification) {
-        guard let routeController = notification.object as? RouteController else {
+        guard let router = notification.object as? Router else {
             return
         }
 
-        self.currentDistance = calculateCurrentDistance(routeController.routeProgress.distanceTraveled)
-        routeProgress = routeController.routeProgress
-        route = routeController.routeProgress.route
+        self.currentDistance = calculateCurrentDistance(router.routeProgress.distanceTraveled)
+        routeProgress = router.routeProgress
+        route = router.routeProgress.route
     }
     
     deinit {

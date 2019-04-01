@@ -5,15 +5,60 @@ import UIKit
 import AVFoundation
 import MapboxDirections
 
+protocol EventDetails: Encodable {
+    var event: String? { get }
+    var created: Date { get }
+    var sessionIdentifier: String { get }
+}
 
-struct EventDetails: Encodable {
+struct PerformanceEventDetails: EventDetails {
+    let event: String?
+    let created: Date
+    let sessionIdentifier: String
+    var counters: [Counter] = []
+    var attributes: [Attribute] = []
+    
+    private enum CodingKeys: String, CodingKey {
+        case event
+        case created
+        case sessionIdentifier = "sessionId"
+        case counters
+        case attributes
+    }
+    
+    struct Counter: Encodable {
+        let name: String
+        let value: Double
+    }
+    
+    struct Attribute: Encodable {
+        let name: String
+        let value: String
+    }
+    
+    init(event: String?, session: SessionState, createdOn created: Date?) {
+        self.event = event
+        sessionIdentifier = session.identifier.uuidString
+        self.created = created ?? Date()
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(event, forKey: .event)
+        try container.encode(created.ISO8601, forKey: .created)
+        try container.encode(sessionIdentifier, forKey: .sessionIdentifier)
+        try container.encode(counters, forKey: .counters)
+        try container.encode(attributes, forKey: .attributes)
+    }
+}
+
+struct NavigationEventDetails: EventDetails {
     
     let audioType: String = AVAudioSession.sharedInstance().audioType
     let applicationState: UIApplicationState = UIApplication.shared.applicationState
     let batteryLevel: Int = UIDevice.current.batteryLevel >= 0 ? Int(UIDevice.current.batteryLevel * 100) : -1
     let batteryPluggedIn: Bool = [.charging, .full].contains(UIDevice.current.batteryState)
     let coordinate: CLLocationCoordinate2D?
-    let created: Date = Date()
     let device: String = UIDevice.current.machine
     let distance: CLLocationDistance?
     let distanceCompleted: CLLocationDistance
@@ -50,6 +95,7 @@ struct EventDetails: Encodable {
     let legCount: Int
     let totalStepCount: Int
     
+    var created: Date = Date()
     var event: String?
     var arrivalTimestamp: Date?
     var rating: Int?
@@ -64,7 +110,7 @@ struct EventDetails: Encodable {
     var newGeometry: String?
     
     init(dataSource: EventsManagerDataSource, session: SessionState, defaultInterface: Bool) {
-        coordinate = dataSource.location?.coordinate
+        coordinate = dataSource.router.rawLocation?.coordinate
         startTimestamp = session.departureTimestamp ?? nil
         sdkIdentifier = defaultInterface ? "mapbox-navigation-ui-ios" : "mapbox-navigation-ios"
         profile = dataSource.routeProgress.route.routeOptions.profileIdentifier.rawValue
@@ -74,7 +120,7 @@ struct EventDetails: Encodable {
         originalRequestIdentifier = session.originalRoute.routeIdentifier
         requestIdentifier = dataSource.routeProgress.route.routeIdentifier
                 
-        if let location = dataSource.location,
+        if let location = dataSource.router.rawLocation,
            let coordinates = dataSource.routeProgress.route.coordinates,
            let lastCoord = coordinates.last {
             userAbsoluteDistanceToDestination = location.distance(from: CLLocation(latitude: lastCoord.latitude, longitude: lastCoord.longitude))
@@ -286,12 +332,11 @@ extension RouteLegProgress: Encodable {
     }
 }
 
+enum EventDetailsError: Error {
+    case EncodingError(String)
+}
+
 extension EventDetails {
-    
-    enum EventDetailsError: Error {
-        case EncodingError(String)
-    }
-    
     func asDictionary() throws -> [String: Any] {
         let data = try JSONEncoder().encode(self)
         if let dictionary = try JSONSerialization.jsonObject(with: data, options: .allowFragments) as? [String: Any] {

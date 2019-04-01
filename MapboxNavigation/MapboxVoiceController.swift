@@ -7,6 +7,8 @@ import MapboxDirections
 
 /**
  `MapboxVoiceController` extends the default `RouteVoiceController` by providing a more robust speech synthesizer via the Mapbox Speech API. `RouteVoiceController` will be used as a fallback during poor network conditions.
+ 
+ If you need text-to-speech functionality without NavigationService, use SpeechSynthesizer directly.
  */
 @objc(MBMapboxVoiceController)
 open class MapboxVoiceController: RouteVoiceController, AVAudioPlayerDelegate {
@@ -35,11 +37,11 @@ open class MapboxVoiceController: RouteVoiceController, AVAudioPlayerDelegate {
     
     let localizedErrorMessage = NSLocalizedString("FAILED_INSTRUCTION", bundle: .mapboxNavigation, value: "Unable to read instruction aloud.", comment: "Error message when the SDK is unable to read a spoken instruction.")
 
-    @objc public init(speechClient: SpeechSynthesizer = SpeechSynthesizer(accessToken: nil), dataCache: BimodalDataCache = DataCache(), audioPlayerType: AVAudioPlayer.Type? = nil) {
+    @objc public init(navigationService: NavigationService, speechClient: SpeechSynthesizer = SpeechSynthesizer(accessToken: nil), dataCache: BimodalDataCache = DataCache(), audioPlayerType: AVAudioPlayer.Type? = nil) {
         speech = speechClient
         cache = dataCache
         self.audioPlayerType = audioPlayerType ?? AVAudioPlayer.self
-        super.init()
+        super.init(navigationService: navigationService)
         
         audioPlayer?.delegate = self
         
@@ -50,12 +52,24 @@ open class MapboxVoiceController: RouteVoiceController, AVAudioPlayerDelegate {
         muteToken = NavigationSettings.shared.observe(\.voiceMuted) { [weak self] (settings, change) in
             if settings.voiceMuted {
                 self?.audioPlayer?.stop()
+             
+                guard let strongSelf = self else { return }
+                do {
+                    try strongSelf.unDuckAudio()
+                } catch {
+                    strongSelf.voiceControllerDelegate?.voiceController?(strongSelf, spokenInstructionsDidFailWith: error)
+                }
             }
         }
     }
     
     deinit {
         audioPlayer?.stop()
+        do {
+            try unDuckAudio()
+        } catch {
+            voiceControllerDelegate?.voiceController?(self, spokenInstructionsDidFailWith: error)
+        }
         audioPlayer?.delegate = nil
     }
     
@@ -72,25 +86,11 @@ open class MapboxVoiceController: RouteVoiceController, AVAudioPlayerDelegate {
         locale = routeProgresss.route.routeOptions.locale
         let currentLegProgress: RouteLegProgress = routeProgresss.currentLegProgress
 
-        for (stepIndex, step) in currentLegProgress.leg.steps.suffix(from: currentLegProgress.stepIndex).enumerated() {
-            let adjustedStepIndex = stepIndex + currentLegProgress.stepIndex
-
-            guard adjustedStepIndex < currentLegProgress.stepIndex + stepsAheadToCache else {
-                continue
-            }
-
-            guard let instructions = step.instructionsSpokenAlongStep else {
-                continue
-            }
-
-            for instruction in instructions {
-                guard !hasCachedSpokenInstructionForKey(instruction.ssmlText) else {
-                    continue
-                }
-
-                downloadAndCacheSpokenInstruction(instruction: instruction)
-            }
-        }
+        let instructionSets = currentLegProgress.remainingSteps.prefix(stepsAheadToCache).compactMap { $0.instructionsSpokenAlongStep }
+        let instructions = instructionSets.flatMap { $0 }
+        let unfetchedInstructions = instructions.filter { !hasCachedSpokenInstructionForKey($0.ssmlText) }
+        
+        unfetchedInstructions.forEach( downloadAndCacheSpokenInstruction(instruction:) )
         
         super.didPassSpokenInstructionPoint(notification: notification)
     }
