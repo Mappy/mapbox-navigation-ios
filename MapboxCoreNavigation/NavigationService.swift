@@ -439,10 +439,6 @@ extension MapboxNavigationService: RouterDelegate {
         delegate?.navigationService?(self, didReceiveFasterRoute: route)
     }
     
-    public func router(_ router: Router, willRerouteAlong route: Route) {
-        delegate?.navigationService?(self, willRerouteAlong: route)
-    }
-    
     public func router(_ router: Router, didRerouteAlong route: Route, at location: CLLocation?, proactive: Bool) {
         
         //notify the events manager that the route has changed

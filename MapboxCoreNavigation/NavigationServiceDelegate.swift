@@ -48,17 +48,6 @@ import MapboxDirections
     optional func navigationService(_ service: NavigationService, didReceiveFasterRoute route: Route)
     
     /**
-     Called before the navigation service starts using a new route.
-     
-     This method is called before `navigationService(_:didRerouteAlong:)`.
-     
-     - parameter service: The navigation service that has received a new route.
-     - parameter route: The new route that will be used.
-     */
-    @objc(navigationService:willRerouteAlongRoute:)
-    optional func navigationService(_ service: NavigationService, willRerouteAlong route: Route)
-    
-    /**
      Called immediately after the navigation service receives a new route.
      
      This method is called after `navigationService(_:willRerouteFrom:)` and simultaneously with the `NavigationServiceDidReroute` notification being posted.

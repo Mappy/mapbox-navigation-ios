@@ -19,13 +19,6 @@ extern const NSNotificationName MBRouteControllerProgressDidChangeNotification;
 extern const NSNotificationName MBRouteControllerWillRerouteNotification;
 
 /**
- Posted when `MBRouteController` is about to use a new route.
-
- :nodoc:
- */
-extern const NSNotificationName MBRouteControllerWillRerouteAlongNotification;
-
-/**
  Posted when `MBRouteController` obtains a new route in response to the user diverging from a previous route.
  
  The user info dictionary contains the keys `MBRouteControllerLocationKey` and `MBRouteControllerIsProactiveKey`.
@@ -65,11 +58,6 @@ typedef NSString *MBRouteControllerNotificationUserInfoKey NS_EXTENSIBLE_STRING_
  A key in the user info dictionary of a `MBRouteControllerProgressDidChangeNotification`, `MBRouteControllerDidPassVisualInstructionPointNotification`, or `MBRouteControllerDidPassVisualInstructionPointNotification` notification. The corresponding value is a `RouteProgress` object representing the current route progress.
  */
 extern const MBRouteControllerNotificationUserInfoKey MBRouteControllerRouteProgressKey;
-
-/**
- A key in the user info dictionary of a `Notification.Name.RouteControllerWillRerouteAlong` notification. The corresponding value is a `MBRoute` object.
- */
-extern const MBRouteControllerNotificationUserInfoKey MBRouteControllerRouteKey;
 
 /**
  A key in the user info dictionary of an `MBRouteControllerDidPassVisualInstructionPointNotification`. The corresponding value is an `MBVisualInstruction` object representing the current visual instruction.

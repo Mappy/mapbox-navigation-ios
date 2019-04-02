@@ -48,9 +48,6 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
             if let location = self.location {
                 delegate?.router?(self, willRerouteFrom: location)
             }
-            self.delegate?.router?(self, willRerouteAlong: newValue.route)
-            NotificationCenter.default.post(name: .routeControllerWillRerouteAlong, object: self, userInfo: [
-                RouteControllerNotificationUserInfoKey.routeKey: newValue.route])
             _routeProgress = newValue
             announce(reroute: routeProgress.route, at: location, proactive: didFindFasterRoute)
         }
@@ -382,10 +379,6 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
             }
 
             guard let route = route ?? mappyRoutes?.first else { return }
-
-            strongSelf.delegate?.router?(strongSelf, willRerouteAlong: route)
-            NotificationCenter.default.post(name: .routeControllerWillRerouteAlong, object: strongSelf, userInfo: [
-                RouteControllerNotificationUserInfoKey.routeKey: route])
 
             strongSelf.isRerouting = false
             strongSelf._routeProgress = RouteProgress(route: route, legIndex: 0)

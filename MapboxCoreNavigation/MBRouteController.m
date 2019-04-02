@@ -5,12 +5,10 @@ const NSNotificationName MBRouteControllerProgressDidChangeNotification         
 const NSNotificationName MBRouteControllerDidPassSpokenInstructionPointNotification = @"RouteControllerDidPassSpokenInstructionPoint";
 const NSNotificationName MBRouteControllerDidPassVisualInstructionPointNotification = @"MBRouteControllerDidPassVisualInstructionPoint";
 const NSNotificationName MBRouteControllerWillRerouteNotification                   = @"RouteControllerWillReroute";
-const NSNotificationName MBRouteControllerWillRerouteAlongNotification              = @"RouteControllerWillRerouteAlong";
 const NSNotificationName MBRouteControllerDidRerouteNotification                    = @"RouteControllerDidReroute";
 const NSNotificationName MBRouteControllerDidFailToRerouteNotification              = @"RouteControllerDidFailToReroute";
 
 const MBRouteControllerNotificationUserInfoKey MBRouteControllerRouteProgressKey              = @"progress";
-const MBRouteControllerNotificationUserInfoKey MBRouteControllerRouteKey                      = @"route";
 const MBRouteControllerNotificationUserInfoKey MBRouteControllerLocationKey                   = @"location";
 const MBRouteControllerNotificationUserInfoKey MBRouteControllerRawLocationKey                = @"rawLocation";
 const MBRouteControllerNotificationUserInfoKey MBRouteControllerRoutingErrorKey               = @"error";
