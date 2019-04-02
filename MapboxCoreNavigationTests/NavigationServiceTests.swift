@@ -418,7 +418,7 @@ class NavigationServiceTests: XCTestCase {
             
             service.locationManager!(service.locationManager, didUpdateLocations: [location])
             
-            if index < 33 {
+            if index < 28 {
                 XCTAssert(routeController.routeProgress.legIndex == 0)
             } else {
                 XCTAssert(routeController.routeProgress.legIndex == 1)
