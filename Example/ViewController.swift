@@ -256,9 +256,8 @@ class ViewController: UIViewController {
     
     func startNavigation(styles: [Style]) {
         guard let route = routes?.first else { return }
-
-        let service = navigationService(route: route)
-        let options = NavigationOptions(styles: styles, navigationService: service)
+        
+        let options = NavigationOptions(styles: styles, navigationService: navigationService(route: route))
         let navigationViewController = NavigationViewController(for: route, options: options)
         navigationViewController.delegate = self
         
