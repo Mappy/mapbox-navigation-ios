@@ -1624,6 +1624,7 @@
 				35A43F75223BD5C3000CB367 /* Recovered References */,
 			);
 			sourceTree = "<group>";
+			usesTabs = 0;
 		};
 		C5ADFBCA1DDCC7840011824B /* Products */ = {
 			isa = PBXGroup;
