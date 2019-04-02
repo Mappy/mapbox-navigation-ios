@@ -218,10 +218,9 @@ extension InternalRouter where Self: Router {
         
         if proactive {
             didFindFasterRoute = true
-            
-            defer {
-                didFindFasterRoute = false
-            }
+        }
+        defer {
+            didFindFasterRoute = false
         }
         
         routeProgress = RouteProgress(route: route, legIndex: 0, spokenInstructionIndex: spokenInstructionIndex)
