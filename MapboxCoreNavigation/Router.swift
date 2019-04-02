@@ -157,11 +157,11 @@ extension InternalRouter where Self: Router {
                         return
                     }
                     let routeIsValid = (firstStep.expectedTravelTime >= RouteControllerMediumAlertInterval &&
-						currentUpcomingManeuver == firstLeg.steps[1])
+                        currentUpcomingManeuver == firstLeg.steps[1])
 
-					if routeIsValid || forceApplyReceivedRoute {
-	                    strongSelf.setRoute(route: upToDateRoute, proactive: true, spokenInstructionIndex: 0)
-					}
+                    if routeIsValid || forceApplyReceivedRoute {
+                        strongSelf.setRoute(route: upToDateRoute, proactive: true, spokenInstructionIndex: 0)
+                    }
                 }
 
                 if let fasterRoute = routes.first(where: { $0.routeType == .best })

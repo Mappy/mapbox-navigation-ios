@@ -49,7 +49,7 @@ class ViewController: UIViewController {
     
     weak var activeNavigationViewController: NavigationViewController?
 
-	var directions: Directions!
+    var directions: Directions!
     
     enum directionHost {
         case mapbox, mappyRecette, mappySnap
@@ -206,11 +206,11 @@ class ViewController: UIViewController {
         waypoints.insert(userWaypoint, at: 0)
 
 //        let options = NavigationRouteOptions(waypoints: waypoints)
-		let options = MappyNavigationRouteOptions(waypoints: waypoints, provider: "car", routeCalculationType: "fastest", qid: "1ad02a47-0e87-48f4-d190-a794fbbb6aac")
-		options.shapeFormat = .polyline6
-		options.carVehicle = "comcar"
-		options.walkSpeed = .normal
-		options.bikeSpeed = .fast
+        let options = MappyNavigationRouteOptions(waypoints: waypoints, provider: "car", routeCalculationType: "fastest", qid: "1ad02a47-0e87-48f4-d190-a794fbbb6aac")
+        options.shapeFormat = .polyline6
+        options.carVehicle = "comcar"
+        options.walkSpeed = .normal
+        options.bikeSpeed = .fast
 
         requestRoute(with: options, success: defaultSuccess, failure: defaultFailure)
     }
@@ -232,7 +232,7 @@ class ViewController: UIViewController {
         case .mappySnap:
             self.directions = Directions(accessToken: "", host: "routemm.mappysnap.net")
         }
-		self.directions.calculate(options, completionHandler: handler)
+        self.directions.calculate(options, completionHandler: handler)
 
         // Calculate route offline if an offline version is selected
 //        let shouldUseOfflineRouting = Settings.selectedOfflineVersion != nil
