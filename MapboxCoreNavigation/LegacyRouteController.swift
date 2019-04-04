@@ -540,8 +540,10 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
             remainingVisualInstructions.count > 0
         {
             currentStepProgress.visualInstructionIndex = instructionsDisplayedAlongStep.count - 1
+            let visualInstruction = currentStepProgress.currentVisualInstruction!
             NotificationCenter.default.post(name: .routeControllerDidPassVisualInstructionPoint, object: self, userInfo: [
-                RouteControllerNotificationUserInfoKey.routeProgressKey: routeProgress
+                RouteControllerNotificationUserInfoKey.routeProgressKey: routeProgress,
+                RouteControllerNotificationUserInfoKey.visualInstructionKey: visualInstruction,
                 ])
             currentStepProgress.visualInstructionIndex += 1
         }
