@@ -65,7 +65,7 @@ extern const MBRouteControllerNotificationUserInfoKey MBRouteControllerRouteProg
 extern const MBRouteControllerNotificationUserInfoKey MBRouteControllerVisualInstructionKey;
 
 /**
- A key in the user info dictionary of a `MBRouteControllerDidPassSpokenInstructionPointNotification` notification. The corresponding value is an `MBVisualInstruction` object representing the current visual instruction.
+ A key in the user info dictionary of a `MBRouteControllerDidPassSpokenInstructionPointNotification` notification. The corresponding value is an `MBSpokenInstruction` object representing the current spoken instruction.
  */
 extern const MBRouteControllerNotificationUserInfoKey MBRouteControllerSpokenInstructionKey;
 
