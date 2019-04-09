@@ -366,6 +366,8 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
             mappyOptions.routeSignature = nil
         }
         getDirections(from: location, along: progress) { [weak self] (route, mappyRoutes, error) in
+            self?.isRerouting = false
+
             guard let strongSelf = self else {
                 return
             }
@@ -380,7 +382,6 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
 
             guard let route = route ?? mappyRoutes?.first else { return }
 
-            strongSelf.isRerouting = false
             strongSelf._routeProgress = RouteProgress(route: route, legIndex: 0)
             strongSelf._routeProgress.currentLegProgress.stepIndex = 0
             strongSelf.announce(reroute: route, at: location, proactive: false)
