@@ -501,8 +501,10 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
         let currentStepProgress = routeProgress.currentLegProgress.currentStepProgress
         guard let visualInstructions = currentStepProgress.remainingVisualInstructions else { return }
         
+        let firstInstructionOnFirstStep = routeProgress.currentLegProgress.stepIndex == 0 && currentStepProgress.visualInstructionIndex == 0
+
         for visualInstruction in visualInstructions {
-            if userSnapToStepDistanceFromManeuver <= visualInstruction.distanceAlongStep || isFirstLocation {
+            if userSnapToStepDistanceFromManeuver <= visualInstruction.distanceAlongStep || firstInstructionOnFirstStep {
                 let currentVisualInstruction = currentStepProgress.currentVisualInstruction!
                 delegate?.router?(self, didPassVisualInstructionPoint: currentVisualInstruction, routeProgress: routeProgress)
                 NotificationCenter.default.post(name: .routeControllerDidPassVisualInstructionPoint, object: self, userInfo: [
