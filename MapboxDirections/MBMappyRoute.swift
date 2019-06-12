@@ -49,14 +49,18 @@ public class MappyRoute: Route
     public let routeType: MappyRouteType
     public let signature: String
     public let congestionColors: [String: String]?
+    public let isInLowEmissionZone: Bool
     
     init(json: JSONDictionary, waypoints: [Waypoint], congestionColors: [String: String]?, options: MappyNavigationRouteOptions)
     {
         self.routeType = MappyRouteType(description: json["mappy_designation"] as? String ?? "") ?? .current
+
         let routeSignature = json["mappy_signature"] as? String ?? ""
         self.signature = routeSignature
         options.routeSignature = routeSignature
+
         self.congestionColors = congestionColors
+        self.isInLowEmissionZone = (json["route_in_low_emission_zone"] as? Bool) ?? false
         
         super.init(json: json, waypoints: waypoints, options: options)
     }
@@ -66,6 +70,7 @@ public class MappyRoute: Route
         self.routeType = MappyRouteType(description: decoder.decodeObject(of: NSString.self, forKey: "routeType") as String? ?? "") ?? .current
         self.signature = decoder.decodeObject(of: NSString.self, forKey: "signature") as String? ?? ""
         self.congestionColors = decoder.decodeObject(of: [NSDictionary.self, NSString.self, NSString.self], forKey: "congestionColors") as? [String: String]
+        self.isInLowEmissionZone = decoder.decodeBool(forKey: "isInLowEmissionZone")
         
         super.init(coder: decoder)
     }
@@ -75,6 +80,7 @@ public class MappyRoute: Route
         coder.encode(routeType.description, forKey: "routeType")
         coder.encode(signature, forKey: "signature")
         coder.encode(congestionColors, forKey: "congestionColors")
+        coder.encode(isInLowEmissionZone, forKey: "isInLowEmissionZone")
         
         super.encode(with: coder)
     }
