@@ -393,7 +393,6 @@ public class MappyNavigationRouteOptions: RouteOptions
         }
 
         let waypoints = namedWaypoints ?? self.waypoints
-
         var congestionColors = [String: String]()
         (json["mappy_congestion_colors"] as? [[String: String]])?.forEach
             {
@@ -401,11 +400,14 @@ public class MappyNavigationRouteOptions: RouteOptions
                 let color = $0["color"] ?? "#000000"
                 congestionColors[label] = color
         }
+        waypoints.first?.separatesLegs = true
+        waypoints.last?.separatesLegs = true
+        let legSeparators = waypoints.filter { $0.separatesLegs }
 
         let routes = (json["routes"] as? [JSONDictionary])?.map { (jsonRoute) -> MappyRoute in
             let newOptions = self.copy() as! MappyNavigationRouteOptions
             newOptions.forceBetterRoute = false
-            return MappyRoute(json: jsonRoute, waypoints: waypoints, congestionColors: congestionColors, options: newOptions)
+            return MappyRoute(json: jsonRoute, waypoints: legSeparators, congestionColors: congestionColors, options: newOptions)
         }
         return (waypoints, routes)
     }
