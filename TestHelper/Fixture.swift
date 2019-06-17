@@ -73,6 +73,7 @@ public class Fixture: NSObject {
         return locations.map { CLLocation($0) }
     }
     
+    @objc(routeFromJSONFileName:)
     public class func route(from jsonFile: String) -> Route {
         let response = JSONFromFileNamed(name: jsonFile)
         let waypoints = Fixture.waypoints(from: jsonFile)
@@ -125,11 +126,12 @@ public class Fixture: NSObject {
         }
     }
     
-    public class func generateTrace(for route: Route) -> [CLLocation] {
+    public class func generateTrace(for route: Route, speedMultiplier: Double = 1) -> [CLLocation] {
         
         let traceCollector = TraceCollector()
         let locationManager = SimulatedLocationManager(route: route)
         locationManager.delegate = traceCollector
+        locationManager.speedMultiplier = speedMultiplier
         
         while locationManager.currentDistance < route.distance {
             locationManager.tick()

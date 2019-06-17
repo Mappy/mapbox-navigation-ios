@@ -231,9 +231,19 @@ extension InternalRouter where Self: Router {
         if let location = location {
             userInfo[.locationKey] = location
         }
-        userInfo[.isProactiveKey] = didFindFasterRoute
+        userInfo[.isProactiveKey] = proactive
         NotificationCenter.default.post(name: .routeControllerDidReroute, object: self, userInfo: userInfo)
-        delegate?.router?(self, didRerouteAlong: routeProgress.route, at: location, proactive: didFindFasterRoute)
+        delegate?.router?(self, didRerouteAlong: routeProgress.route, at: location, proactive: proactive)
     }
 }
 
+extension Array where Element: MapboxDirections.Route {
+    func mostSimilar(to route: Route) -> Route? {
+        let target = route.description
+        return self.min { (left, right) -> Bool in
+            let leftDistance = left.description.minimumEditDistance(to: target)
+            let rightDistance = right.description.minimumEditDistance(to: target)
+            return leftDistance < rightDistance
+        }
+    }
+}

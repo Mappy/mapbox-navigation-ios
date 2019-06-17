@@ -1,7 +1,7 @@
-binary "https://www.mapbox.com/ios-sdk/Mapbox-iOS-SDK.json" ~> 4.3
-binary "https://www.mapbox.com/ios-sdk/MapboxNavigationNative.json" ~> 5.0.0
-github "mappy/MapboxDirections.swift" "v0.27.2-mappy.2"
+binary "https://www.mapbox.com/ios-sdk/Mapbox-iOS-SDK.json" ~> 5.0.0
+binary "https://www.mapbox.com/ios-sdk/MapboxNavigationNative.json" ~> 6.2.1
+github "mappy/MapboxDirections.swift" "v0.28.0-mappy.0"
 github "mappy/turf-swift" "v0.3.0-mappy.0"
-github "mapbox/mapbox-events-ios" ~> 0.8.1
+github "mapbox/mapbox-events-ios" ~> 0.9.3
 github "ceeK/Solar" ~> 2.1.0
 github "mapbox/mapbox-speech-swift" ~> 0.1.0
