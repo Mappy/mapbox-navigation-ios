@@ -62,6 +62,7 @@
 		35EFD00C207DFACA00BF3873 /* MBVisualInstruction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35EFD00A207DFACA00BF3873 /* MBVisualInstruction.swift */; };
 		35EFD00D207DFACA00BF3873 /* MBVisualInstruction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35EFD00A207DFACA00BF3873 /* MBVisualInstruction.swift */; };
 		35EFD00E207DFACA00BF3873 /* MBVisualInstruction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35EFD00A207DFACA00BF3873 /* MBVisualInstruction.swift */; };
+		3615847522B787DA006D6FDD /* MBMaxSpeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C4942C7224D318E00280237 /* MBMaxSpeed.swift */; };
 		366049BA211447390005B369 /* MappyDirectionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 366049B9211447390005B369 /* MappyDirectionsTests.swift */; };
 		36E1ADE921A864F0006A4896 /* MBMappyControlZoneInstruction.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3DCBA6F2146BB7800BB6203 /* MBMappyControlZoneInstruction.swift */; };
 		36E1ADEA21A864FB006A4896 /* MBMappyControlZoneType.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3DCBA712146BCF500BB6203 /* MBMappyControlZoneType.swift */; };
@@ -1103,6 +1104,7 @@
 					};
 					DA6C9D871CAE442B00094FBC = {
 						CreatedOnToolsVersion = 7.3;
+						DevelopmentTeam = 68X36QQGGD;
 						LastSwiftMigration = 1020;
 					};
 					DA6C9D901CAE442B00094FBC = {
@@ -1344,6 +1346,7 @@
 				C52CE38F1F6AF63C0069963D /* MBSpokenInstruction.swift in Sources */,
 				C58EA7AB1E9D7F73008F98CE /* MBCongestion.swift in Sources */,
 				35DBF00B217E172C0009D2AE /* CLLocationCoordinate2D.swift in Sources */,
+				3615847522B787DA006D6FDD /* MBMaxSpeed.swift in Sources */,
 				8D381B6B1FDB3D8A008D5A58 /* String.swift in Sources */,
 				36E1ADE921A864F0006A4896 /* MBMappyControlZoneInstruction.swift in Sources */,
 				C56516851FE1AB8F00A0AD18 /* MBVisualInstructionType.swift in Sources */,
