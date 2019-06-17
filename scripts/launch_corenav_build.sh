@@ -2,5 +2,5 @@
 
 set -e
 
-carthage update --platform iOS
+carthage bootstrap --platform ios
 xcodebuild -scheme MapboxCoreNavigationUniversal -configuration Release -UseModernBuildSystem=NO
