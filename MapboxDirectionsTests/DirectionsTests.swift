@@ -78,7 +78,7 @@ class DirectionsTests: XCTestCase {
     }
     
     func testKnownBadResponse() {
-        let pass = "The operation couldn’t be completed. The request is too large."
+        let pass = "The request is too large."
         
         OHHTTPStubs.stubRequests(passingTest: { (request) -> Bool in
             return request.url!.absoluteString.contains("https://api.mapbox.com/directions")
@@ -96,13 +96,13 @@ class DirectionsTests: XCTestCase {
             XCTAssertNil(routes, "Unexpected route response")
             XCTAssertNotNil(error, "No error returned")
             XCTAssertNil(error?.userInfo[NSUnderlyingErrorKey])
-            XCTAssertEqual(error?.localizedDescription, pass, "Wrong type of error received")
+            XCTAssertEqual(error?.localizedFailureReason, pass, "Wrong type of error received")
         })
         wait(for: [expectation], timeout: 2.0)
     }
     
     func testUnknownBadResponse() {
-        let pass = "The operation couldn’t be completed. server error"
+        let pass = "server error"
         
         OHHTTPStubs.stubRequests(passingTest: { (request) -> Bool in
             return request.url!.absoluteString.contains("https://api.mapbox.com/directions")
@@ -121,7 +121,7 @@ class DirectionsTests: XCTestCase {
             XCTAssertNil(routes, "Unexpected route response")
             XCTAssertNotNil(error, "No error returned")
             XCTAssertNil(error?.userInfo[NSUnderlyingErrorKey])
-            XCTAssertEqual(error?.localizedDescription, pass, "Wrong type of error received")
+            XCTAssertEqual(error?.localizedFailureReason, pass, "Wrong type of error received")
         })
         wait(for: [expectation], timeout: 2.0)
     }
