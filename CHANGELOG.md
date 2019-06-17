@@ -1,5 +1,14 @@
 # Changes to MapboxDirections.swift
 
+## v0.28.0
+
+* Added the `RouteOptions.alleyPriority`, `RouteOptions.walkwayPriority`, and `RouteOptions.speed` properties for fine-tuning walking directions. ([#370](https://github.com/mapbox/MapboxDirections.swift/pull/370))
+* Added the `MBStringFromManeuverType()`, `MBStringFromManeuverDirection()`, `MBStringFromDrivingSide()`, and `MBStringFromTransportType()` functions, which are intended for use in Objective-C. ([#369](https://github.com/mapbox/MapboxDirections.swift/pull/369))
+
+## v0.27.3
+
+* Fixed compatibility issues with Xcode 10.2 when the SDK is installed using Carthage. ([#363](https://github.com/mapbox/MapboxDirections.swift/pull/363))
+
 ## v0.27.2
 
 * Fixed an issue where `Waypoint.separatesLegs` caused the resulting `RouteLeg.source` and `RouteLeg.destination` to have mismatched coordinates and names. ([#358](https://github.com/mapbox/MapboxDirections.swift/pull/358))
