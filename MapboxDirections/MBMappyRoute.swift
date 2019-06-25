@@ -51,7 +51,7 @@ public class MappyRoute: Route
     public let congestionColors: [String: String]?
     public let isInLowEmissionZone: Bool
     
-    init(json: JSONDictionary, waypoints: [Waypoint], congestionColors: [String: String]?, options: MappyNavigationRouteOptions)
+    public init(json: [String: Any], waypoints: [Waypoint], congestionColors: [String: String]?, options: MappyNavigationRouteOptions)
     {
         self.routeType = MappyRouteType(description: json["mappy_designation"] as? String ?? "") ?? .current
 
