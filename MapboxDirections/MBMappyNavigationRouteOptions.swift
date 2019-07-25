@@ -219,24 +219,24 @@ public class MappyNavigationRouteOptions: RouteOptions
     /**
      Route provider.
      */
-    open private(set) var provider: String
+    open var provider: String
 
     /**
      Type of metric to use to calculate the itineary.
      */
-    open private(set) var routeCalculationType: String
+    open var routeCalculationType: String
 
     /**
      QID used in initial transport/routes requests.
      */
-    open private(set) var qid: String
+    open var qid: String
 
     /**
      Additional params to be passed in request URL.
 
      Known params are removed from this array and set to the corresponding property.
      */
-    open private(set) var additionalQueryParams: [String:String]
+    open var additionalQueryParams: [String:String]
 
     /**
      Opaque `Route` signature if requesting the server an updated version of an existing route.
