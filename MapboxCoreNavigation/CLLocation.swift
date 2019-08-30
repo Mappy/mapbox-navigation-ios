@@ -48,7 +48,7 @@ extension CLLocation {
     }
     
     //MARK: - Route Snapping
-
+    
     func snapped(to routeProgress: RouteProgress) -> CLLocation? {
         let legProgress = routeProgress.currentLegProgress
         guard let coords = coordinates(for: routeProgress) else { return nil }
