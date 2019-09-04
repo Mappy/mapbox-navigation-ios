@@ -6,7 +6,9 @@ import Turf
 extension CLLocation {
     
     var isQualified: Bool {
-        return 0...100 ~= horizontalAccuracy
+        let isWithinHorizontalAccuracy = (0...80 ~= horizontalAccuracy)
+        let isTrustable = (speed != -1 && course != -1)
+        return isWithinHorizontalAccuracy && isTrustable
     }
     
     var isQualifiedForStartingRoute: Bool {
