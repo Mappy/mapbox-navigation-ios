@@ -54,7 +54,7 @@ open class NavigationEventsManager: NSObject {
             accessToken = tokenOverride
         }
         self.mobileEventsManager = mobileEventsManager
-        start()
+        //start()
         resumeNotifications()
     }
     
@@ -80,15 +80,15 @@ open class NavigationEventsManager: NSObject {
     @objc public var delaysEventFlushing = true
 
     func start() {
-        let eventLoggingEnabled = false
+        let eventLoggingEnabled = UserDefaults.standard.bool(forKey: NavigationMetricsDebugLoggingEnabled)
 
         mobileEventsManager.isDebugLoggingEnabled = eventLoggingEnabled
-        mobileEventsManager.isMetricsEnabledInSimulator = false
-        mobileEventsManager.isMetricsEnabledForInUsePermissions = false
+        mobileEventsManager.isMetricsEnabledInSimulator = true
+        mobileEventsManager.isMetricsEnabledForInUsePermissions = true
         let userAgent = usesDefaultUserInterface ? "mapbox-navigation-ui-ios" : "mapbox-navigation-ios"
         mobileEventsManager.initialize(withAccessToken: accessToken, userAgentBase: userAgent, hostSDKVersion: String(describing: Bundle.mapboxCoreNavigation.object(forInfoDictionaryKey: "CFBundleShortVersionString")!))
         mobileEventsManager.disableLocationMetrics()
-        //mobileEventsManager.sendTurnstileEvent()
+        mobileEventsManager.sendTurnstileEvent()
     }
     
     func navigationCancelEvent(rating potentialRating: Int? = nil, comment: String? = nil) -> NavigationEventDetails? {

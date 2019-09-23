@@ -6,12 +6,12 @@ import MapboxMobileEvents
 
 class NavigationEventsManagerTests: XCTestCase {
 
-    func testMobileEventsManagerIsInitializedImmediately() {
-        let mobileEventsManagerSpy = MMEEventsManagerSpy()
-        let _ = NavigationEventsManager(dataSource: nil, accessToken: "example token", mobileEventsManager: mobileEventsManagerSpy)
-
-        XCTAssertEqual(mobileEventsManagerSpy.accessToken, "example token")
-    }
+//    func testMobileEventsManagerIsInitializedImmediately() {
+//        let mobileEventsManagerSpy = MMEEventsManagerSpy()
+//        let _ = NavigationEventsManager(dataSource: nil, accessToken: "example token", mobileEventsManager: mobileEventsManagerSpy)
+//
+//        XCTAssertEqual(mobileEventsManagerSpy.accessToken, "example token")
+//    }
     
     func testDepartRerouteArrive() {
         
