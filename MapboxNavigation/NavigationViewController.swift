@@ -3,6 +3,8 @@ import MapboxCoreNavigation
 import MapboxDirections
 import MapboxSpeech
 import AVFoundation
+import UserNotifications
+import MobileCoreServices
 import Mapbox
 
 /**
@@ -198,7 +200,6 @@ open class NavigationViewController: UIViewController, NavigationStatusPresenter
         super.init(nibName: nil, bundle: nil)
         
         self.navigationService = options?.navigationService ?? MapboxNavigationService(route: route)
-        self.navigationService.usesDefaultUserInterface = true
         self.navigationService.delegate = self
         self.voiceController = options?.voiceController ?? MapboxVoiceController(navigationService: navigationService, speechClient: SpeechSynthesizer(accessToken: navigationService?.directions.accessToken))
 
@@ -306,7 +307,7 @@ open class NavigationViewController: UIViewController, NavigationStatusPresenter
         guard !NavigationSettings.shared.voiceMuted else { return }
         guard AVAudioSession.sharedInstance().outputVolume <= NavigationViewMinimumVolumeForWarning else { return }
         
-        let title = String.localizedStringWithFormat(NSLocalizedString("DEVICE_VOLUME_LOW", bundle: .mapboxNavigation, value: "%@ Volume Low", comment: "Format string for indicating the device volume is low; 1 = device model"), UIDevice.current.model)
+        let title = NSLocalizedString("INAUDIBLE_INSTRUCTIONS_CTA", bundle: .mapboxNavigation, value: "Adjust Volume to Hear Instructions", comment: "Label indicating the device volume is too low to hear spoken instructions and needs to be manually increased")
         showStatus(title: title, spinner: false, duration: 3, animated: true, interactive: false)
     }
     
@@ -324,28 +325,31 @@ open class NavigationViewController: UIViewController, NavigationStatusPresenter
     
     // MARK: Route controller notifications
     
-    func scheduleLocalNotification(about step: RouteStep) {
+    func scheduleLocalNotification(about step: RouteStep, identifier: String) {
         guard sendsNotifications else { return }
         guard UIApplication.shared.applicationState == .background else { return }
-        guard let text = step.instructionsSpokenAlongStep?.last?.text else { return }
+        guard let instruction = step.instructionsDisplayedAlongStep?.last else { return }
         
-        let notification = UILocalNotification()
-        notification.alertBody = text
-        notification.fireDate = Date()
+        let content = UNMutableNotificationContent()
+        if let primaryText = instruction.primaryInstruction.text {
+            content.title = primaryText
+        }
+        if let secondaryText = instruction.secondaryInstruction?.text {
+            content.subtitle = secondaryText
+        }
         
-        clearStaleNotifications()
+        if let image = instruction.primaryInstruction.maneuverImage(side: instruction.drivingSide, color: .black, size: CGSize(width: 72, height: 72)),
+            let imageData = image.pngData() {
+            let temporaryURL = FileManager.default.temporaryDirectory.appendingPathComponent("com.mapbox.navigation.notification-icon.png")
+            do {
+                try imageData.write(to: temporaryURL)
+                let iconAttachment = try UNNotificationAttachment(identifier: "maneuver", url: temporaryURL, options: [UNNotificationAttachmentOptionsTypeHintKey: kUTTypePNG])
+                content.attachments = [iconAttachment]
+            } catch {}
+        }
         
-        UIApplication.shared.cancelAllLocalNotifications()
-        UIApplication.shared.scheduleLocalNotification(notification)
-    }
-    
-    func clearStaleNotifications() {
-        guard sendsNotifications else { return }
-        // Remove all outstanding notifications from notification center.
-        // This will only work if it's set to 1 and then back to 0.
-        // This way, there is always just one notification.
-        UIApplication.shared.applicationIconBadgeNumber = 1
-        UIApplication.shared.applicationIconBadgeNumber = 0
+        let notificationRequest = UNNotificationRequest(identifier: identifier, content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(notificationRequest, withCompletionHandler: nil)
     }
     
     public func showStatus(title: String, spinner: Bool, duration: TimeInterval, animated: Bool, interactive: Bool) {
@@ -495,6 +499,9 @@ extension NavigationViewController: NavigationServiceDelegate {
             userHasArrivedAndShouldPreventRerouting {
             mapViewController?.mapView.updateCourseTracking(location: location, animated: true)
         }
+        
+        // Finally, pass the message onto the NVC delegate.
+        delegate?.navigationViewController?(self, didUpdate: progress, with: location, rawLocation: rawLocation)
     }
     
     @objc public func navigationService(_ service: NavigationService, didPassSpokenInstructionPoint instruction: SpokenInstruction, routeProgress: RouteProgress) {
@@ -502,10 +509,14 @@ extension NavigationViewController: NavigationServiceDelegate {
             component.navigationService?(service, didPassSpokenInstructionPoint: instruction, routeProgress: routeProgress)
         }
         
-        clearStaleNotifications()
+        // Remove any notification about an already complete maneuver, even if there isn’t another notification to replace it with yet.
+        let notificationIdentifier = "instruction"
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [notificationIdentifier])
+        UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [notificationIdentifier])
         
-        if routeProgress.currentLegProgress.currentStepProgress.durationRemaining <= RouteControllerHighAlertInterval {
-            scheduleLocalNotification(about: routeProgress.currentLegProgress.currentStep)
+        let legProgress = routeProgress.currentLegProgress
+        if legProgress.currentStepProgress.currentSpokenInstruction == legProgress.currentStep.instructionsSpokenAlongStep?.last {
+            scheduleLocalNotification(about: legProgress.currentStep, identifier: notificationIdentifier)
         }
     }
     
@@ -638,21 +649,20 @@ extension NavigationViewController: TopBannerViewControllerDelegate {
     public func topBanner(_ banner: TopBannerViewController, didSwipeInDirection direction: UISwipeGestureRecognizer.Direction) {
         let progress = navigationService.routeProgress
         let route = progress.route
+        switch direction {
         
-        if direction == .down {
+        case .up where banner.isDisplayingSteps:
+            banner.dismissStepsTable()
+        
+        case .down where !banner.isDisplayingSteps:
             banner.displayStepsTable()
             
             
             if banner.isDisplayingPreviewInstructions {
                 mapViewController?.recenter(self)
             }
-            
-        } else if direction == .right {
-            // prevent swiping when step list is visible
-            if banner.isDisplayingSteps {
-                return
-            }
-            
+        
+        case .right where !banner.isDisplayingSteps:
             guard let currentStepIndex = banner.currentPreviewStep?.1 else { return }
             let remainingSteps = progress.remainingSteps
             let prevStepIndex = currentStepIndex.advanced(by: -1)
@@ -660,12 +670,8 @@ extension NavigationViewController: TopBannerViewControllerDelegate {
             
             let prevStep = remainingSteps[prevStepIndex]
             preview(step: prevStep, in: banner, remaining: remainingSteps, route: route)
-        } else if direction == .left {
-            // prevent swiping when step list is visible
-            if banner.isDisplayingSteps {
-                return
-            }
             
+        case .left where !banner.isDisplayingSteps:
             let remainingSteps = navigationService.router.routeProgress.remainingSteps
             let currentStepIndex = banner.currentPreviewStep?.1
             let nextStepIndex = currentStepIndex?.advanced(by: 1) ?? 0
@@ -673,13 +679,16 @@ extension NavigationViewController: TopBannerViewControllerDelegate {
             
             let nextStep = remainingSteps[nextStepIndex]
             preview(step: nextStep, in: banner, remaining: remainingSteps, route: route)
+            
+        default:
+            return
         }
     }
     
     public func preview(step: RouteStep, in banner: TopBannerViewController, remaining: [RouteStep], route: Route, animated: Bool = true) {
         guard let leg = route.leg(containing: step) else { return }
-        guard let legIndex = route.legs.index(of: leg) else { return }
-        guard let stepIndex = leg.steps.index(of: step) else { return }
+        guard let legIndex = route.legs.firstIndex(of: leg) else { return }
+        guard let stepIndex = leg.steps.firstIndex(of: step) else { return }
         let nextStepIndex = stepIndex + 1
         
         let legProgress = RouteLegProgress(leg: leg, stepIndex: stepIndex)
