@@ -5,99 +5,100 @@ import MapboxDirections
 /**
  A router data source, also known as a location manager, supplies location data to a `Router` instance. For example, a `MapboxNavigationService` supplies location data to a `RouteController` or `LegacyRouteController`.
  */
-@objc (MBRouterDataSource)
-public protocol RouterDataSource {
-    
+public protocol RouterDataSource: class {
     /**
-    The location provider for the `Router.` This class is designated as the object that will provide location updates when requested.
-    */
+     The location provider for the `Router.` This class is designated as the object that will provide location updates when requested.
+     */
     var locationProvider: NavigationLocationManager.Type { get }
 }
+
+/**
+ A route and its index in a `RouteResponse` that sorts routes from most optimal to least optimal.
+ */
+public typealias IndexedRoute = (Route, Int)
 
 /**
  A class conforming to the `Router` protocol tracks the user’s progress as they travel along a predetermined route. It calls methods on its `delegate`, which conforms to the `RouterDelegate` protocol, whenever significant events or decision points occur along the route. Despite its name, this protocol does not define the interface of a routing engine.
  
  There are two concrete implementations of the `Router` protocol. `RouteController`, the default implementation, is capable of client-side routing and depends on the Mapbox Navigation Native framework. `LegacyRouteController` is an alternative implementation that does not have this dependency but must be used in conjunction with the Mapbox Directions API over a network connection.
  */
-@objc public protocol Router: class, CLLocationManagerDelegate {
-    
+public protocol Router: class, CLLocationManagerDelegate {
     /**
      The route controller’s associated location manager.
      */
-    @objc unowned var dataSource: RouterDataSource { get }
+    var dataSource: RouterDataSource { get }
     
     /**
      The route controller’s delegate.
      */
-    @objc var delegate: RouterDelegate? { get set }
+    var delegate: RouterDelegate? { get set }
     
     /**
      Intializes a new `RouteController`.
      
      - parameter route: The route to follow.
+     - parameter routeIndex: The index of the route within the original `RouteResponse` object.
      - parameter directions: The Directions object that created `route`.
      - parameter source: The data source for the RouteController.
      */
-    @objc(initWithRoute:directions:dataSource:)
-    init(along route: Route, directions: Directions, dataSource source: RouterDataSource)
+    init(along route: Route, routeIndex: Int, options: RouteOptions, directions: Directions, dataSource source: RouterDataSource)
     
     /**
      Details about the user’s progress along the current route, leg, and step.
      */
-    @objc var routeProgress: RouteProgress { get }
+    var routeProgress: RouteProgress { get }
     
-    @objc var route: Route { get set }
+    var indexedRoute: IndexedRoute { get set }
+    
+    var route: Route { get }
     
     /**
      Given a users current location, returns a Boolean whether they are currently on the route.
      
      If the user is not on the route, they should be rerouted.
      */
-    @objc func userIsOnRoute(_ location: CLLocation) -> Bool
-    @objc func reroute(from: CLLocation, along: RouteProgress)
+    func userIsOnRoute(_ location: CLLocation) -> Bool
+    func reroute(from: CLLocation, along: RouteProgress)
     
     /**
      The idealized user location. Snapped to the route line, if applicable, otherwise raw or nil.
      */
-    @objc var location: CLLocation? { get }
+    var location: CLLocation? { get }
     
     /**
      The most recently received user location.
      - note: This is a raw location received from `locationManager`. To obtain an idealized location, use the `location` property.
      */
-    @objc var rawLocation: CLLocation? { get }
-    
+    var rawLocation: CLLocation? { get }
     
     /**
-     If true, the `RouteController` attempts to calculate a more optimal route for the user on an interval defined by `RouteControllerProactiveReroutingInterval`.
+     If true, the `RouteController` attempts to calculate a more optimal route for the user on an interval defined by `RouteControllerProactiveReroutingInterval`. If `refreshesRoute` is enabled too, reroute attempt will be fired after route refreshing.
      */
-    @objc var reroutesProactively: Bool { get set }
-
+    var reroutesProactively: Bool { get set }
+    
     /**
-     Force the `Router` to request a route update from the server when receiving next location update.
-
-     This is a Mappy debug feature. This works by bypassing all usual checks that determine if a proactive rerouting should occur.
-     `reroutesProactively` must be set to true otherwise this parameter is ignored.
-     This property reverts to false once forced request has been sent.
-     - note: Implemented only for `LegacyRouteController`.
+     If true, the `RouteController` attempts to update ETA and route congestion on an interval defined by `RouteControllerProactiveReroutingInterval`.
+     
+     Refreshing will be used only if route's mode of transportation profile is set to `.automobileAvoidingTraffic`. If `reroutesProactively` is enabled too, rerouting will be checked after route is refreshed.
      */
-    @objc var forceProactiveReroutingAtNextUpdate: Bool { get set }
+    var refreshesRoute: Bool { get set }
     
     /**
      Advances the leg index.
      
      This is a convienence method provided to advance the leg index of any given router without having to worry about the internal data structure of the router.
      */
-    @objc(advanceLegIndexWithLocation:)
-    func advanceLegIndex(location: CLLocation)
+    func advanceLegIndex()
     
-    @objc optional func enableLocationRecording()
-    @objc optional func disableLocationRecording()
-    @objc optional func locationHistory() -> String
+    func enableLocationRecording()
+    func disableLocationRecording()
+    func locationHistory() -> String?
 }
 
 protocol InternalRouter: class {
     var lastProactiveRerouteDate: Date? { get set }
+    
+    var lastRouteRefresh: Date? { get set }
     
     var routeTask: URLSessionDataTask? { get set }
     
@@ -105,9 +106,11 @@ protocol InternalRouter: class {
     
     var lastRerouteLocation: CLLocation? { get set }
     
-    func setRoute(route: Route, proactive: Bool, spokenInstructionIndex: Int?)
+    func setRoute(route: Route, routeIndex: Int, proactive: Bool)
     
     var isRerouting: Bool { get set }
+    
+    var isRefreshing: Bool { get set }
     
     var directions: Directions { get }
     
@@ -116,75 +119,95 @@ protocol InternalRouter: class {
 
 extension InternalRouter where Self: Router {
     
+    func refreshAndCheckForFasterRoute(from location: CLLocation, routeProgress: RouteProgress) {
+        if refreshesRoute {
+            refreshRoute(from: location, legIndex: routeProgress.legIndex) {
+                self.checkForFasterRoute(from: location, routeProgress: routeProgress)
+            }
+        } else {
+            checkForFasterRoute(from: location, routeProgress: routeProgress)
+        }
+    }
+    
+    func refreshRoute(from location: CLLocation, legIndex: Int, completion: @escaping ()->()) {
+        guard refreshesRoute, let routeIdentifier = route.routeIdentifier else {
+            completion()
+            return
+        }
+        
+        guard let lastRouteRefresh = lastRouteRefresh else {
+            self.lastRouteRefresh = location.timestamp
+            completion()
+            return
+        }
+        
+        guard location.timestamp.timeIntervalSince(lastRouteRefresh) >= RouteControllerProactiveReroutingInterval else {
+            completion()
+            return
+        }
+        
+        if isRefreshing {
+            completion()
+            return
+        }
+        isRefreshing = true
+        
+        directions.refreshRoute(responseIdentifier: routeIdentifier, routeIndex: indexedRoute.1, fromLegAtIndex: legIndex) { [weak self] (session, result) in
+            defer {
+                self?.isRefreshing = false
+                self?.lastRouteRefresh = nil
+                completion()
+            }
+            
+            guard case let .success(response) = result, let self = self else {
+                return
+            }
+            
+            self.routeProgress.refreshRoute(with: response.route, at: location)
+            
+            var userInfo = [RouteController.NotificationUserInfoKey: Any]()
+            userInfo[.routeProgressKey] = self.routeProgress
+            NotificationCenter.default.post(name: .routeControllerDidRefreshRoute, object: self, userInfo: userInfo)
+            self.delegate?.router(self, didRefresh: self.routeProgress)
+        }
+    }
+    
     func checkForFasterRoute(from location: CLLocation, routeProgress: RouteProgress) {
         // Check for faster route given users current location
         guard reroutesProactively else { return }
         
         // Only check for faster alternatives if the user has plenty of time left on the route.
-        guard routeProgress.durationRemaining > RouteControllerMinimumDurationRemainingForProactiveRerouting
-            || self.forceProactiveReroutingAtNextUpdate == true else { return }
+        guard routeProgress.durationRemaining > RouteControllerMinimumDurationRemainingForProactiveRerouting else { return }
         // If the user is approaching a maneuver, don't check for a faster alternatives
-        guard routeProgress.currentLegProgress.currentStepProgress.durationRemaining > RouteControllerMediumAlertInterval
-            || self.forceProactiveReroutingAtNextUpdate == true else { return }
+        guard routeProgress.currentLegProgress.currentStepProgress.durationRemaining > RouteControllerMediumAlertInterval else { return }
         
         guard let currentUpcomingManeuver = routeProgress.currentLegProgress.upcomingStep else {
             return
         }
         
-        guard let lastProactiveRerouteDate = lastProactiveRerouteDate else {
+        guard let lastRouteValidationDate = lastProactiveRerouteDate else {
             self.lastProactiveRerouteDate = location.timestamp
             return
         }
         
         // Only check every so often for a faster route.
-        guard location.timestamp.timeIntervalSince(lastProactiveRerouteDate) >= RouteControllerProactiveReroutingInterval
-            || self.forceProactiveReroutingAtNextUpdate == true else {
+        guard location.timestamp.timeIntervalSince(lastRouteValidationDate) >= RouteControllerProactiveReroutingInterval else {
             return
-        }
-
-        var forceApplyReceivedRoute = false
-        if self.forceProactiveReroutingAtNextUpdate {
-            self.forceProactiveReroutingAtNextUpdate = false
-            forceApplyReceivedRoute = true
         }
         
         let durationRemaining = routeProgress.durationRemaining
-
+        
         // Avoid interrupting an ongoing reroute
         if isRerouting { return }
         isRerouting = true
         
-        getDirections(from: location, along: routeProgress) { [weak self] (route, mappyRoutes, error) in
+        getDirections(from: location, along: routeProgress) { [weak self] (session, result) in
             self?.isRerouting = false
-
-            if let routes = mappyRoutes
-            {
-                guard let strongSelf = self else { return }
-
-                strongSelf.lastProactiveRerouteDate = nil
-
-                if let upToDateRoute = routes.first(where: { $0.routeType == .current })
-                {
-                    guard let firstLeg = upToDateRoute.legs.first, let firstStep = firstLeg.steps.first else {
-                        return
-                    }
-                    let routeIsValid = (firstStep.expectedTravelTime >= RouteControllerMediumAlertInterval &&
-                        currentUpcomingManeuver == firstLeg.steps[1])
-
-                    if routeIsValid || forceApplyReceivedRoute {
-                        strongSelf.setRoute(route: upToDateRoute, proactive: true, spokenInstructionIndex: 0)
-                    }
-                }
-
-                if let fasterRoute = routes.first(where: { $0.routeType == .best })
-                {
-                    strongSelf.delegate?.router?(strongSelf, didReceiveFasterRoute: fasterRoute)
-                }
-
+            
+            guard case let .success(response) = result else {
                 return
             }
-
-            guard let route = route else { return }
+            guard let route = response.routes?.first else { return }
             
             self?.lastProactiveRerouteDate = nil
             
@@ -196,37 +219,37 @@ extension InternalRouter where Self: Router {
                 currentUpcomingManeuver == firstLeg.steps[1] && route.expectedTravelTime <= 0.9 * durationRemaining
             
             if routeIsFaster {
-                self?.setRoute(route: route, proactive: true)
-                
+                self?.setRoute(route: route, routeIndex: 0, proactive: true)
             }
         }
     }
     
-    func getDirections(from location: CLLocation, along progress: RouteProgress, completion: @escaping (_ route: Route?, _ mappyRoutes: [MappyRoute]?, _ error: Error?)->Void) {
+    func getDirections(from location: CLLocation, along progress: RouteProgress, completion: @escaping Directions.RouteCompletionHandler) {
         routeTask?.cancel()
         let options = progress.reroutingOptions(with: location)
         
         lastRerouteLocation = location
         
-        routeTask = directions.calculate(options) {(waypoints, routes, error) in
+        routeTask = directions.calculate(options) {(session, result) in
             
-            guard let routes = routes else {
-                return completion(nil, nil, error)
-            }
-
-            if routes.count > 0,
-                let mappyRoutes = routes as? [MappyRoute]
-            {
-                return completion(nil, mappyRoutes, error)
+            guard case let .success(response) = result else {
+                return completion(session, result)
             }
             
-            let mostSimilar = routes.mostSimilar(to: progress.route)
-            return completion(mostSimilar ?? routes.first, nil, error)
+            guard let mostSimilar = response.routes?.mostSimilar(to: progress.route) else {
+                return completion(session, result)
+            }
+            
+            var modifiedResponse = response
+            modifiedResponse.routes?.removeAll { $0 == mostSimilar }
+            modifiedResponse.routes?.insert(mostSimilar, at: 0)
+            
+            return completion(session, .success(modifiedResponse))
         }
     }
     
-    func setRoute(route: Route, proactive: Bool, spokenInstructionIndex: Int? = nil) {
-        let spokenInstructionIndex = spokenInstructionIndex ?? routeProgress.currentLegProgress.currentStepProgress.spokenInstructionIndex
+    func setRoute(route: Route, routeIndex: Int, proactive: Bool) {
+        let spokenInstructionIndex = routeProgress.currentLegProgress.currentStepProgress.spokenInstructionIndex
         
         if proactive {
             didFindFasterRoute = true
@@ -235,17 +258,17 @@ extension InternalRouter where Self: Router {
             didFindFasterRoute = false
         }
         
-        routeProgress = RouteProgress(route: route, legIndex: 0, spokenInstructionIndex: spokenInstructionIndex)
+        routeProgress = RouteProgress(route: route, routeIndex: routeIndex, options: routeProgress.routeOptions, legIndex: 0, spokenInstructionIndex: spokenInstructionIndex)
     }
     
     func announce(reroute newRoute: Route, at location: CLLocation?, proactive: Bool) {
-        var userInfo = [RouteControllerNotificationUserInfoKey: Any]()
+        var userInfo = [RouteController.NotificationUserInfoKey: Any]()
         if let location = location {
             userInfo[.locationKey] = location
         }
         userInfo[.isProactiveKey] = proactive
         NotificationCenter.default.post(name: .routeControllerDidReroute, object: self, userInfo: userInfo)
-        delegate?.router?(self, didRerouteAlong: routeProgress.route, at: location, proactive: proactive)
+        delegate?.router(self, didRerouteAlong: routeProgress.route, at: location, proactive: proactive)
     }
 }
 

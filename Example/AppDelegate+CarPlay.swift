@@ -19,7 +19,6 @@ let CarPlayWaypointKey: String = "MBCarPlayWaypoint"
  */
 @available(iOS 12.0, *)
 extension AppDelegate: CPApplicationDelegate {
-    
     // MARK: CPApplicationDelegate
     
     func application(_ application: UIApplication, didConnectCarInterfaceController interfaceController: CPInterfaceController, to window: CPWindow) {
@@ -45,20 +44,22 @@ extension AppDelegate: CPApplicationDelegate {
 
 @available(iOS 12.0, *)
 extension AppDelegate: CarPlayManagerDelegate {
-    func carPlayManager(_ carPlayManager: CarPlayManager, navigationServiceAlong route: Route, desiredSimulationMode: SimulationMode) -> NavigationService {
-
+    func carPlayManager(_ carPlayManager: CarPlayManager, navigationServiceAlong route: Route, routeIndex: Int, routeOptions: RouteOptions, desiredSimulationMode: SimulationMode) -> NavigationService {
+ 
         if let nvc = self.window?.rootViewController?.presentedViewController as? NavigationViewController, let service = nvc.navigationService {
             //Do not set simulation mode if we already have an active navigation session.
             return service
         }
-        return MapboxNavigationService(route: route, simulating: desiredSimulationMode)
+        return MapboxNavigationService(route: route, routeIndex: routeIndex, routeOptions: routeOptions,  simulating: desiredSimulationMode)
     }
-    
     
     // MARK: CarPlayManagerDelegate
     func carPlayManager(_ carPlayManager: CarPlayManager, didBeginNavigationWith service: NavigationService) {
         currentAppRootViewController?.beginNavigationWithCarplay(navigationService: service)
         carPlayManager.currentNavigator?.compassView.isHidden = false
+        
+        // Render part of the route that has been traversed with full transparency, to give the illusion of a disappearing route.
+        carPlayManager.currentNavigator?.routeLineTracksTraversal = true
     }
     
     func carPlayManagerDidEndNavigation(_ carPlayManager: CarPlayManager) {
@@ -78,7 +79,6 @@ extension AppDelegate: CarPlayManagerDelegate {
     }
     
     func carPlayManager(_ carPlayManager: CarPlayManager, leadingNavigationBarButtonsCompatibleWith traitCollection: UITraitCollection, in template: CPTemplate, for activity: CarPlayActivity) -> [CPBarButton]? {
-        
         guard let interfaceController = self.carPlayManager.interfaceController else {
             return nil
         }
@@ -94,11 +94,11 @@ extension AppDelegate: CarPlayManagerDelegate {
         }
     }
     
-    func carPlayManager(_ carPlayManager: CarPlayManager, didFailToFetchRouteBetween waypoints: [Waypoint]?, options: RouteOptions, error: NSError) -> CPNavigationAlert? {
+    func carPlayManager(_ carPlayManager: CarPlayManager, didFailToFetchRouteBetween waypoints: [Waypoint]?, options: RouteOptions, error: DirectionsError) -> CPNavigationAlert? {
         let okTitle = NSLocalizedString("CARPLAY_OK", bundle: .main, value: "OK", comment: "CPAlertTemplate OK button title")
         let action = CPAlertAction(title: okTitle, style: .default, handler: {_ in })
         let alert = CPNavigationAlert(titleVariants: [error.localizedDescription],
-                                      subtitleVariants: [error.localizedFailureReason ?? ""],
+                                      subtitleVariants: [error.failureReason ?? ""],
                                       imageSet: nil,
                                       primaryAction: action,
                                       secondaryAction: nil,
@@ -107,7 +107,6 @@ extension AppDelegate: CarPlayManagerDelegate {
     }
     
     func carPlayManager(_ carPlayManager: CarPlayManager, trailingNavigationBarButtonsCompatibleWith traitCollection: UITraitCollection, in template: CPTemplate, for activity: CarPlayActivity) -> [CPBarButton]? {
-        
         switch activity {
         case .previewing:
             let disableSimulateText = "Disable Simulation"
@@ -133,11 +132,10 @@ extension AppDelegate: CarPlayManagerDelegate {
     }
     
     func carPlayManager(_ carPlayManager: CarPlayManager, mapButtonsCompatibleWith traitCollection: UITraitCollection, in template: CPTemplate, for activity: CarPlayActivity) -> [CPMapButton]? {
-        
         switch activity {
         case .browsing:
             guard let mapViewController = carPlayManager.carPlayMapViewController,
-                  let mapTemplate = template as? CPMapTemplate else {
+                let mapTemplate = template as? CPMapTemplate else {
                 return nil
             }
             var mapButtons = [mapViewController.recenterButton,
@@ -175,7 +173,6 @@ extension AppDelegate: CarPlaySearchControllerDelegate {
 
 @available(iOS 12.0, *)
 extension AppDelegate: CPListTemplateDelegate {
-    
     func listTemplate(_ listTemplate: CPListTemplate, didSelect item: CPListItem, completionHandler: @escaping () -> Void) {
         // Selected a favorite
         if let userInfo = item.userInfo as? [String: Any],

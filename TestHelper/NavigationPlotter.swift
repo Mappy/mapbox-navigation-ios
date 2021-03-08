@@ -98,13 +98,13 @@ public struct MatchPlotter: Plotter {
 
 extension RoutePlotter {
     public func draw(on plotter: NavigationPlotter) {
-        plotter.drawLines(between: route.coordinates!, color: color, lineWidth: lineWidth, drawDotIndicator: drawDotIndicator, drawTextIndicator: drawTextIndicator)
+        plotter.drawLines(between: route.shape!.coordinates, color: color, lineWidth: lineWidth, drawDotIndicator: drawDotIndicator, drawTextIndicator: drawTextIndicator)
     }
 }
 
 extension MatchPlotter {
     public func draw(on plotter: NavigationPlotter) {
-        plotter.drawLines(between: match.coordinates!, color: color, lineWidth: lineWidth, drawDotIndicator: drawDotIndicator, drawTextIndicator: drawTextIndicator)
+        plotter.drawLines(between: match.shape!.coordinates, color: color, lineWidth: lineWidth, drawDotIndicator: drawDotIndicator, drawTextIndicator: drawTextIndicator)
     }
 }
 
@@ -146,7 +146,6 @@ extension LinePlotter {
 }
 
 public class NavigationPlotter: UIView {
-    
     var mapView: NavigationMapView?
     var coordinateBounds: MGLCoordinateBounds?
     public var routePlotters: [RoutePlotter]? { didSet { setNeedsDisplay() } }
@@ -174,11 +173,11 @@ public class NavigationPlotter: UIView {
         var coordinates = [CLLocationCoordinate2D]()
         
         routePlotters?.forEach({ (plotter) in
-            coordinates += plotter.route.coordinates!
+            coordinates += plotter.route.shape!.coordinates
         })
         
         matchPlotters?.forEach({ (plotter) in
-            coordinates += plotter.match.coordinates!
+            coordinates += plotter.match.shape!.coordinates
         })
         
         coordinatePlotters?.forEach({ (plotter) in
@@ -286,7 +285,7 @@ extension UIView {
         ]
         
         let boundingRect = text.boundingRect(with: CGSize(width: textRect.width, height: CGFloat.infinity),
-                                     options: .usesLineFragmentOrigin, attributes: attributes, context: nil)
+                                             options: .usesLineFragmentOrigin, attributes: attributes, context: nil)
         
         context.saveGState()
         let rect = CGRect(x: point.x - boundingRect.midX + Constants.dotSize.width / 2,
@@ -329,7 +328,6 @@ extension UIView {
 }
 
 extension Array where Element == CLLocationCoordinate2D {
-    
     fileprivate var bounds: MGLCoordinateBounds {
         var maximumLatitude: CLLocationDegrees = -80
         var minimumLatitude: CLLocationDegrees = 80

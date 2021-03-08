@@ -15,7 +15,7 @@ public class GenericRouteShield: StylableView {
             setNeedsDisplay()
         }
     }
-     
+    
     //The label that contains the route code.
     lazy var routeLabel: UILabel = {
         let label: UILabel = .forAutoLayout()
@@ -96,7 +96,23 @@ public class GenericRouteShield: StylableView {
      */
     static func criticalHash(dataSource: DataSource) -> String {
         let proxy = GenericRouteShield.appearance()
-        let criticalProperties: [AnyHashable?] = [dataSource.font.pointSize, proxy.backgroundColor, proxy.foregroundColor, proxy.borderWidth, proxy.cornerRadius]
+        var backgroundColor = proxy.backgroundColor
+        var foregroundColor = proxy.foregroundColor
+
+        let performAsCurrentSelector = Selector(("performAsCurrentTraitCollection:" as NSString) as String)
+
+        if #available(iOS 13.0, *) {
+            if let currentTraitCollection = UIApplication.shared.keyWindow?.traitCollection, currentTraitCollection.responds(to: performAsCurrentSelector), let backgroundCGColor = backgroundColor?.cgColor, let foregroundCGColor = foregroundColor?.cgColor {
+
+                let colorCopyingClosure = {
+                    backgroundColor = UIColor(cgColor: backgroundCGColor)
+                    foregroundColor = UIColor(cgColor: foregroundCGColor)
+                }
+                let colorCopyingBlock: @convention(block) () -> Void = colorCopyingClosure
+                currentTraitCollection.perform(performAsCurrentSelector, with: colorCopyingBlock)
+            }
+        }
+        let criticalProperties: [AnyHashable?] = [dataSource.font.pointSize, backgroundColor, foregroundColor, proxy.borderWidth, proxy.cornerRadius]
         return String(describing: criticalProperties.reduce(0, { $0 ^ ($1?.hashValue ?? 0)}))
     }
 }

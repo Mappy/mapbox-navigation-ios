@@ -3,8 +3,6 @@ import CoreLocation
 import MapboxDirections
 @testable import MapboxCoreNavigation
 
-
-@objc(MBFixture)
 public class Fixture: NSObject {
     public class func stringFromFileNamed(name: String) -> String {
         guard let path = Bundle(for: self).path(forResource: name, ofType: "json") else {
@@ -19,35 +17,30 @@ public class Fixture: NSObject {
         }
     }
     
-    @objc
-    public class func JSONFromFileNamed(name: String) -> [String: Any] {
+    public class func JSONFromFileNamed(name: String) -> Data {
         guard let path = Bundle(for: Fixture.self).path(forResource: name, ofType: "json") else {
-            assert(false, "Fixture \(name) not found.")
-            return [:]
+            preconditionFailure("Fixture \(name) not found.")
         }
         guard let data = NSData(contentsOfFile: path) as Data? else {
-            assert(false, "No data found at \(path).")
-            return [:]
+            preconditionFailure("No data found at \(path).")
         }
-        do {
-            return try JSONSerialization.jsonObject(with: data, options: []) as! [String: Any]
-        } catch {
-            assert(false, "Unable to decode JSON fixture at \(path): \(error).")
-            return [:]
-        }
+        return data
     }
     
     public class func downloadRouteFixture(coordinates: [CLLocationCoordinate2D], fileName: String, completion: @escaping () -> Void) {
         let accessToken = "<# Mapbox Access Token #>"
-        let directions = Directions(accessToken: accessToken)
+        let credentials = DirectionsCredentials(accessToken: accessToken)
+        let directions = Directions(credentials: credentials)
         
         let options = RouteOptions(coordinates: coordinates, profileIdentifier: .automobileAvoidingTraffic)
         options.includesSteps = true
         options.routeShapeResolution = .full
         let filePath = (NSTemporaryDirectory() as NSString).appendingPathComponent(fileName)
         
-        _ = directions.calculate(options, completionHandler: { (waypoints, routes, error) in
-            guard let _ = routes?.first else { return }
+        _ = directions.calculate(options, completionHandler: { (session, result) in
+            guard case let .success(response) = result else { return }
+ 
+            guard let routes = response.routes, !routes.isEmpty else { return }
             print("Route downloaded to \(filePath)")
             completion()
         })
@@ -73,15 +66,38 @@ public class Fixture: NSObject {
         return locations.map { CLLocation($0) }
     }
     
-    @objc(routeFromJSONFileName:)
-    public class func route(from jsonFile: String) -> Route {
-        let response = JSONFromFileNamed(name: jsonFile)
-        let waypoints = Fixture.waypoints(from: jsonFile)
-        let jsonRoute = (response["routes"] as! [AnyObject]).first as! [String : Any]
-        let route = Route(json: jsonRoute, waypoints: waypoints, options: NavigationRouteOptions(waypoints: waypoints))
+    public class func routeResponse(from jsonFile: String, options: RouteOptions) -> RouteResponse {
+        let responseData = JSONFromFileNamed(name: jsonFile)
+        do {
+            let decoder = JSONDecoder()
+            decoder.userInfo[.options] = options
+            decoder.userInfo[.credentials] = Fixture.credentials
+            return try decoder.decode(RouteResponse.self, from: responseData)
+        } catch {
+            preconditionFailure("Unable to decode JSON fixture: \(error)")
+        }
+    }
+    
+    public class func mapMatchingResponse(from jsonFile: String, options: MatchOptions) -> MapMatchingResponse {
+        let responseData = JSONFromFileNamed(name: jsonFile)
+        do {
+            let decoder = JSONDecoder()
+            decoder.userInfo[.options] = options
+            decoder.userInfo[.credentials] = Fixture.credentials
+            return try decoder.decode(MapMatchingResponse.self, from: responseData)
+        } catch {
+            preconditionFailure("Unable to decode JSON fixture: \(error)")
+        }
+    }
+    
+    public class func route(from jsonFile: String, options: RouteOptions) -> Route {
+        let response = routeResponse(from: jsonFile, options: options)
+        guard let route = response.routes?.first else {
+            preconditionFailure("No routes")
+        }
         
         // Like `Directions.postprocess(_:fetchStartDate:uuid:)`
-        route.routeIdentifier = response["uuid"] as? String
+        route.routeIdentifier = response.identifier
         let fetchStartDate = Date(timeIntervalSince1970: 3600)
         route.fetchStartDate = fetchStartDate
         route.responseEndDate = Date(timeInterval: 1, since: fetchStartDate)
@@ -89,45 +105,25 @@ public class Fixture: NSObject {
         return route
     }
     
-    public class func waypoints(from jsonFile: String) -> [Waypoint] {
-        let response = JSONFromFileNamed(name: jsonFile)
-        let waypointsArray = response["waypoints"] as! [[String: Any]]
-        let waypoints = waypointsArray.map { (waypointDict) -> Waypoint in
-            let location = waypointDict["location"] as! [CLLocationDegrees]
-            let longitude = location[0]
-            let latitude = location[1]
-            return Waypoint(coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude))
+    public class func waypoints(from jsonFile: String, options: RouteOptions) -> [Waypoint] {
+        let response = routeResponse(from: jsonFile, options: options)
+        guard let waypoints = response.waypoints else {
+            preconditionFailure("No waypoints")
         }
         return waypoints
     }
     
     // Returns `Route` objects from a match response
-    public class func routesFromMatches(at filePath: String) -> [Route]? {
-        let path = Bundle(for: Fixture.self).path(forResource: filePath, ofType: "json")
-        let url = URL(fileURLWithPath: path!)
-        let data = try! Data(contentsOf: url)
-        let json = try! JSONSerialization.jsonObject(with: data, options: []) as! [String: Any]
-        let tracepoints = json["tracepoints"] as! [Any]
-        let coordinates = Array(repeating: CLLocationCoordinate2D(latitude: 0, longitude: 0), count: tracepoints.count)
-        
-        // Adapted from MatchOptions.response(containingRoutesFrom:) in MapboxDirections.
-        let jsonWaypoints = json["tracepoints"] as! [Any]
-        // Assume MatchOptions.waypointIndices contains the first and last indices only.
-        let waypoints = [jsonWaypoints.first!, jsonWaypoints.last!].map { jsonWaypoint -> Waypoint in
-            let jsonWaypoint = jsonWaypoint as! [String: Any]
-            let location = jsonWaypoint["location"] as! [Double]
-            let coordinate = CLLocationCoordinate2D(latitude: location[1], longitude: location[0])
-            return Waypoint(coordinate: coordinate, name: jsonWaypoint["name"] as? String)
+    public class func routesFromMatches(at filePath: String, options: MatchOptions) -> [Route]? {
+        let response = mapMatchingResponse(from: filePath, options: options)
+        let routeResponse = try! RouteResponse(matching: response, options: options, credentials: Fixture.credentials)
+        guard let routes = routeResponse.routes else {
+            preconditionFailure("No routes")
         }
-        let opts = RouteOptions(coordinates: coordinates, profileIdentifier: .automobile)
-        
-        return (json["matchings"] as? [[String: Any]])?.map {
-            Route(json: $0, waypoints: waypoints, options: opts)
-        }
+        return routes
     }
     
     public class func generateTrace(for route: Route, speedMultiplier: Double = 1) -> [CLLocation] {
-        
         let traceCollector = TraceCollector()
         let locationManager = SimulatedLocationManager(route: route)
         locationManager.delegate = traceCollector
@@ -139,10 +135,26 @@ public class Fixture: NSObject {
         
         return traceCollector.locations
     }
+    
+    public class func routeLegProgress() -> RouteLegProgress {
+        let routeStep = RouteStep(transportType: .automobile,
+                                  maneuverLocation: .init(),
+                                  maneuverType: .arrive,
+                                  instructions: "empty",
+                                  drivingSide: .right,
+                                  distance: 0.0,
+                                  expectedTravelTime: 0.0)
+        return RouteLegProgress(leg: RouteLeg(steps: [routeStep],
+                                              name: "empty",
+                                              distance: 0.0,
+                                              expectedTravelTime: 0.0,
+                                              profileIdentifier: .automobile))
+    }
+
+    public static let credentials: DirectionsCredentials = DirectionsCredentials(accessToken: "deadbeef", host: URL(string: "https://example.com")!)
 }
 
 class TraceCollector: NSObject, CLLocationManagerDelegate {
-    
     var locations = [CLLocation]()
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {

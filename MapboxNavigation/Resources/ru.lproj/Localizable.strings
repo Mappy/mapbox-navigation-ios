@@ -5,7 +5,7 @@
 "CARPLAY_ARRIVED" = "Вы прибыли";
 
 /* Message on arrival action sheet */
-"CARPLAY_ARRIVED_MESSAGE" = "Что вы хотите дальше?";
+"CARPLAY_ARRIVED_MESSAGE" = "Куда дальше?";
 
 /* Name of the waypoint associated with the current location */
 "CARPLAY_CURRENT_LOCATION" = "Текущее положение";
@@ -56,7 +56,7 @@
 "END_OF_ROUTE_ARRIVED" = "Вы прибыли";
 
 /* Comment Placeholder Text */
-"END_OF_ROUTE_TITLE" = "Чем мы можем помочь ещё?";
+"END_OF_ROUTE_TITLE" = "Чем мы можем помочь?";
 
 /* Error message when the SDK is unable to read a spoken instruction. */
 "FAILED_INSTRUCTION" = "Не удаётся произнести инструкцию.";
@@ -64,29 +64,14 @@
 /* Indicates a faster route was found */
 "FASTER_ROUTE_FOUND" = "Найден маршрут быстрее";
 
-/* Feedback type for Bad Route */
-"FEEDBACK_BAD_ROUTE" = "Плохой\nмаршрут";
-
-/* Feedback type for Confusing Instruction */
-"FEEDBACK_CONFUSING_INSTRUCTION" = "Непонятная\nинструкция";
-
-/* Feedback type for Other Map Issue Issue */
-"FEEDBACK_GENERAL_ISSUE" = "Ошибка\nна карте";
-
-/* Feedback type for a maneuver that is Not Allowed */
-"FEEDBACK_NOT_ALLOWED" = "Манёвр\nнедопустим";
-
-/* Feedback type for Report Traffic */
-"FEEDBACK_REPORT_TRAFFIC" = "Сообщить\nо заторе";
-
-/* Feedback type for Road Closed */
-"FEEDBACK_ROAD_CLOSURE" = "Дорога\nзакрыта";
-
 /* Message confirming that the user has successfully sent feedback */
 "FEEDBACK_THANK_YOU" = "Благодарим за отзыв!";
 
 /* Title of view controller for sending feedback */
 "FEEDBACK_TITLE" = "Сообщить о проблеме";
+
+/* Label indicating the device volume is too low to hear spoken instructions and needs to be manually increased */
+"INAUDIBLE_INSTRUCTIONS_CTA" = "Увеличить громкость для голосовых инструкций";
 
 /* Format for displaying the first two major ways */
 "LEG_MAJOR_WAYS_FORMAT" = "%1$@ и %2$@";

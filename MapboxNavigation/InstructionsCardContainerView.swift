@@ -1,12 +1,9 @@
 import UIKit
 import MapboxDirections
-import MapboxCoreNavigation
 
 /**
  The `InstructionsCardContainerViewDelegate` protocol defines a method that allows an object to customize presented visual instructions within the instructions container view.
  */
-/// :nodoc:
-@objc(MBInstructionsCardContainerViewDelegate)
 public protocol InstructionsCardContainerViewDelegate: VisualInstructionDelegate {
     /**
      Called when the Primary Label will present a visual instruction.
@@ -16,8 +13,7 @@ public protocol InstructionsCardContainerViewDelegate: VisualInstructionDelegate
      - parameter presented: the formatted string that is provided by the instruction presenter
      - returns: optionally, a customized NSAttributedString that will be presented instead of the default, or if nil, the default behavior will be used.
      */
-    @objc(primaryLabel:willPresentVisualInstruction:asAttributedString:)
-    optional func primaryLabel(_ primaryLabel: InstructionLabel, willPresent instruction: VisualInstruction, as presented: NSAttributedString) -> NSAttributedString?
+    func primaryLabel(_ primaryLabel: InstructionLabel, willPresent instruction: VisualInstruction, as presented: NSAttributedString) -> NSAttributedString?
     
     /**
      Called when the Secondary Label will present a visual instruction.
@@ -27,14 +23,31 @@ public protocol InstructionsCardContainerViewDelegate: VisualInstructionDelegate
      - parameter presented: the formatted string that is provided by the instruction presenter
      - returns: optionally, a customized NSAttributedString that will be presented instead of the default, or if nil, the default behavior will be used.
      */
-    @objc(secondaryLabel:willPresentVisualInstruction:asAttributedString:)
-    optional func secondaryLabel(_ secondaryLabel: InstructionLabel, willPresent instruction: VisualInstruction, as presented: NSAttributedString) -> NSAttributedString?
+    func secondaryLabel(_ secondaryLabel: InstructionLabel, willPresent instruction: VisualInstruction, as presented: NSAttributedString) -> NSAttributedString?
 }
 
-/// :nodoc:
-@objc(MBInstructionsCardContainerView)
-public class InstructionsCardContainerView: UIView {
+public extension InstructionsCardContainerViewDelegate {
+    /**
+     `UnimplementedLogging` prints a warning to standard output the first time this method is called.
+     */
+    func primaryLabel(_ primaryLabel: InstructionLabel, willPresent instruction: VisualInstruction, as presented: NSAttributedString) -> NSAttributedString? {
+        logUnimplemented(protocolType: InstructionsCardContainerViewDelegate.self, level: .debug)
+        return nil
+    }
     
+    /**
+     `UnimplementedLogging` prints a warning to standard output the first time this method is called.
+     */
+    func secondaryLabel(_ secondaryLabel: InstructionLabel, willPresent instruction: VisualInstruction, as presented: NSAttributedString) -> NSAttributedString? {
+        logUnimplemented(protocolType: InstructionsCardContainerViewDelegate.self,level: .debug)
+        return nil
+    }
+}
+
+/**
+ A container view for the information currently displayed in `InstructionsCardViewController`.
+ */
+public class InstructionsCardContainerView: StylableView {
     lazy var informationStackView = UIStackView(orientation: .vertical, autoLayout: true)
     
     lazy var instructionsCardView: InstructionsCardView = {
@@ -53,15 +66,16 @@ public class InstructionsCardContainerView: UIView {
     private var secondaryChildren: [UIView] {
         return [lanesView, nextBannerView]
     }
+
+    @objc dynamic public var customBackgroundColor: UIColor = #colorLiteral(red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0)
+    @objc dynamic public var highlightedBackgroundColor: UIColor = UIColor(red: 0.26, green: 0.39, blue: 0.98, alpha: 1.0)
     
     public weak var delegate: InstructionsCardContainerViewDelegate?
     
     private var gradientLayer: CAGradientLayer!
-    private (set) var style: InstructionsCardStyle!
     
-    required public init(style: InstructionsCardStyle? = DayInstructionsCardStyle()) {
+    required public init() {
         super.init(frame: .zero)
-        self.style = style
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -69,9 +83,7 @@ public class InstructionsCardContainerView: UIView {
         self.commonInit()
     }
     
-    public func prepareLayout(for style: InstructionsCardStyle) {
-        self.style = style
-        self.instructionsCardView.style = style
+    public func prepareLayout() {
         commonInit()
     }
     
@@ -84,7 +96,12 @@ public class InstructionsCardContainerView: UIView {
     func commonInit() {
         addStackConstraints()
         setupInformationStackView()
-        prepareLayout()
+        setGradientLayer(for: self)
+        setGradientLayer(for: instructionsCardView)
+        setGradientLayer(for: lanesView)
+        setGradientLayer(for: nextBannerView)
+        
+        instructionsCardView.prepareLayout()
         
         instructionsCardView.primaryLabel.instructionDelegate = self
         instructionsCardView.secondaryLabel.instructionDelegate = self
@@ -107,24 +124,11 @@ public class InstructionsCardContainerView: UIView {
         informationStackView.addArrangedSubviews(secondaryChildren)
     }
     
-    private func prepareLayout() {
-        setGradientLayer(for: self)
-        setGradientLayer(for: instructionsCardView)
-        setGradientLayer(for: lanesView)
-        setGradientLayer(for: nextBannerView)
-        
-        layer.cornerRadius = style.cornerRadius
-        layer.masksToBounds = true
-        
-        instructionsCardView.prepareLayout()
-    }
-    
     @discardableResult private func setGradientLayer(for view: UIView) -> UIView {
         guard !view.isHidden else { return view }
-        
-        let backgroundColor = style.backgroundColor
+
         let alphaComponent = InstructionsCardConstants.backgroundColorAlphaComponent
-        let colors = [backgroundColor.cgColor, backgroundColor.withAlphaComponent(alphaComponent).cgColor]
+        let colors = [customBackgroundColor.cgColor, customBackgroundColor.withAlphaComponent(alphaComponent).cgColor]
 
         let requiresGradient = (gradientLayer(for: view) == nil)
         
@@ -139,19 +143,16 @@ public class InstructionsCardContainerView: UIView {
         }
         
         if let nextBannerView = view as? NextBannerView {
-            nextBannerView.maneuverView.primaryColor = style.nextBannerViewPrimaryColor
-            nextBannerView.maneuverView.secondaryColor = style.nextBannerViewSecondaryColor
-            nextBannerView.instructionLabel.normalTextColor = style.nextBannerInstructionLabelTextColor
-            nextBannerView.instructionLabel.normalFont = style.nextBannerInstructionLabelNormalFont
-            nextBannerView.instructionLabel.shieldHeight = style.nextBannerInstructionLabelNormalFont.pointSize
+            nextBannerView.maneuverView.shouldShowHighlightedColors = false
+            nextBannerView.instructionLabel.showHighlightedTextColor = false
+            nextBannerView.instructionLabel.shieldHeight = nextBannerView.instructionLabel.font.pointSize
         }
         
         if let lanesView = view as? LanesView, let stackView = lanesView.subviews.first as? UIStackView {
             let laneViews: [LaneView] = stackView.subviews.compactMap { $0 as? LaneView }
             laneViews.forEach { laneView in
                 guard laneView.isValid else { return }
-                laneView.primaryColor = self.style.lanesViewDefaultColor
-                laneView.secondaryColor = self.style.lanesViewDefaultColor
+                laneView.showHighlightedColors = false
             }
         }
         
@@ -192,7 +193,6 @@ public class InstructionsCardContainerView: UIView {
         lanesView.update(for: instruction)
         nextBannerView.instructionDelegate = self
         nextBannerView.update(for: instruction)
-
     }
     
     public func updateInstructionCard(distance: CLLocationDistance) {
@@ -205,9 +205,9 @@ public class InstructionsCardContainerView: UIView {
         let duration = InstructionsCardConstants.highlightAnimationDuration
         let alphaComponent = InstructionsCardConstants.highlightedBackgroundAlphaComponent
         
-        let colors = [style.highlightedBackgroundColor.cgColor,
-                      style.highlightedBackgroundColor.withAlphaComponent(alphaComponent).cgColor]
-        
+        let colors = [highlightedBackgroundColor.cgColor,
+                      highlightedBackgroundColor.withAlphaComponent(alphaComponent).cgColor]
+
         let containerGradientLayer = gradientLayer(for: self)
         var instructionsCardViewGradientLayer = gradientLayer(for: instructionsCardView)
         var lanesViewGradientLayer = gradientLayer(for: lanesView)
@@ -251,51 +251,47 @@ public class InstructionsCardContainerView: UIView {
     
     fileprivate func highlightLanesView(_ gradientLayer: CAGradientLayer, colors: [CGColor]) {
         gradientLayer.colors = colors
-        guard let stackView = lanesView.subviews.first as? UIStackView  else {
+        guard let stackView = lanesView.subviews.first as? UIStackView else {
             return
         }
         let laneViews: [LaneView] = stackView.subviews.compactMap { $0 as? LaneView }
         laneViews.forEach { laneView in
             guard laneView.isValid else { return }
-            laneView.primaryColor = style.lanesViewHighlightedColor
-            laneView.secondaryColor = style.lanesViewHighlightedColor
+            laneView.showHighlightedColors = true
         }
     }
     
     fileprivate func hightlightNextBannerView(_ gradientLayer: CAGradientLayer, colors: [CGColor]) {
         gradientLayer.colors = colors
-        nextBannerView.maneuverView.primaryColor = style.nextBannerInstructionHighlightedColor
-        nextBannerView.maneuverView.secondaryColor = style.nextBannerInstructionHighlightedColor
-        nextBannerView.instructionLabel.normalTextColor = style.nextBannerInstructionHighlightedColor
+        nextBannerView.maneuverView.shouldShowHighlightedColors = true
+        nextBannerView.instructionLabel.showHighlightedTextColor = true
     }
     
     fileprivate func highlightInstructionsCardView(colors: [CGColor]) {
         // primary & secondary labels
-        instructionsCardView.primaryLabel.normalTextColor = style.primaryLabelHighlightedTextColor
-        instructionsCardView.secondaryLabel.normalTextColor = style.secondaryLabelHighlightedTextColor
+        instructionsCardView.primaryLabel.showHighlightedTextColor = true
+        instructionsCardView.secondaryLabel.showHighlightedTextColor = true
+
         // distance label
-        instructionsCardView.distanceLabel.unitTextColor = style.distanceLabelHighlightedTextColor
-        instructionsCardView.distanceLabel.valueTextColor = style.distanceLabelHighlightedTextColor
+        instructionsCardView.distanceLabel.showHighlightedTextColor = true
+
         // maneuver view
-        instructionsCardView.maneuverView.primaryColor = style.maneuverViewHighlightedColor
-        instructionsCardView.maneuverView.secondaryColor = style.maneuverViewHighlightedColor
+        instructionsCardView.maneuverView.shouldShowHighlightedColors = true
     }
 }
 
-/// :nodoc:
 extension InstructionsCardContainerView: InstructionsCardContainerViewDelegate {
     public func label(_ label: InstructionLabel, willPresent instruction: VisualInstruction, as presented: NSAttributedString) -> NSAttributedString? {
-        
         if let primaryLabel = label as? PrimaryLabel,
-           let presented = delegate?.primaryLabel?(primaryLabel, willPresent: instruction, as: presented) {
+           let presented = delegate?.primaryLabel(primaryLabel, willPresent: instruction, as: presented) {
             return presented
         } else if let secondaryLabel = label as? SecondaryLabel,
-            let presented = delegate?.secondaryLabel?(secondaryLabel, willPresent: instruction, as: presented) {
+                  let presented = delegate?.secondaryLabel(secondaryLabel, willPresent: instruction, as: presented) {
             return presented
         } else {
             let highlighted = instructionsCardView.distanceFromCurrentLocation < InstructionsCardConstants.highlightDistance
-            let textColor = highlighted ? style.primaryLabelTextColor : style.primaryLabelHighlightedTextColor
-            let attributes = [NSAttributedString.Key.foregroundColor: textColor]
+            let textColor = highlighted ? instructionsCardView.primaryLabel.textColor : instructionsCardView.primaryLabel.textColorHighlighted
+            let attributes = [NSAttributedString.Key.foregroundColor: textColor as Any]
             
             let range = NSRange(location: 0, length: presented.length)
             let mutable = NSMutableAttributedString(attributedString: presented)

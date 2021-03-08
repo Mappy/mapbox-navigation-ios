@@ -53,9 +53,19 @@ struct PerformanceEventDetails: EventDetails {
 }
 
 struct NavigationEventDetails: EventDetails {
-    
     let audioType: String = AVAudioSession.sharedInstance().audioType
-    let applicationState = UIApplication.shared.applicationState
+    let applicationState: UIApplication.State = {
+        var state: UIApplication.State!
+        if Thread.isMainThread {
+            state = UIApplication.shared.applicationState
+        } else {
+            DispatchQueue.main.sync {
+                state = UIApplication.shared.applicationState
+            }
+        }
+        
+        return state
+    }()
     let batteryLevel: Int = UIDevice.current.batteryLevel >= 0 ? Int(UIDevice.current.batteryLevel * 100) : -1
     let batteryPluggedIn: Bool = [.charging, .full].contains(UIDevice.current.batteryState)
     let coordinate: CLLocationCoordinate2D?
@@ -108,12 +118,14 @@ struct NavigationEventDetails: EventDetails {
     var newDistanceRemaining: CLLocationDistance?
     var newDurationRemaining: TimeInterval?
     var newGeometry: String?
+    var totalTimeInForeground: TimeInterval
+    var totalTimeInBackground: TimeInterval
     
     init(dataSource: EventsManagerDataSource, session: SessionState, defaultInterface: Bool) {
         coordinate = dataSource.router.rawLocation?.coordinate
         startTimestamp = session.departureTimestamp ?? nil
         sdkIdentifier = defaultInterface ? "mapbox-navigation-ui-ios" : "mapbox-navigation-ios"
-        profile = dataSource.routeProgress.route.routeOptions.profileIdentifier.rawValue
+        profile = dataSource.routeProgress.routeOptions.profileIdentifier.rawValue
         simulation = dataSource.locationProvider is SimulatedLocationManager.Type
         
         sessionIdentifier = session.identifier.uuidString
@@ -121,15 +133,15 @@ struct NavigationEventDetails: EventDetails {
         requestIdentifier = dataSource.routeProgress.route.routeIdentifier
                 
         if let location = dataSource.router.rawLocation,
-           let coordinates = dataSource.routeProgress.route.coordinates,
-           let lastCoord = coordinates.last {
+            let coordinates = dataSource.routeProgress.route.shape?.coordinates,
+            let lastCoord = coordinates.last {
             userAbsoluteDistanceToDestination = location.distance(from: CLLocation(latitude: lastCoord.latitude, longitude: lastCoord.longitude))
         } else {
             userAbsoluteDistanceToDestination = nil
         }
         
-        if let geometry = session.originalRoute.coordinates {
-            originalGeometry = Polyline(coordinates: geometry)
+        if let shape = session.originalRoute.shape {
+            originalGeometry = Polyline(coordinates: shape.coordinates)
             originalDistance = round(session.originalRoute.distance)
             originalEstimatedDuration = round(session.originalRoute.expectedTravelTime)
             originalStepCount = session.originalRoute.legs.map({$0.steps.count}).reduce(0, +)
@@ -140,8 +152,8 @@ struct NavigationEventDetails: EventDetails {
             originalStepCount = nil
         }
         
-        if let geometry = session.currentRoute.coordinates {
-            self.geometry = Polyline(coordinates: geometry)
+        if let shape = session.currentRoute.shape {
+            self.geometry = Polyline(coordinates: shape.coordinates)
             distance = round(session.currentRoute.distance)
             estimatedDuration = round(session.currentRoute.expectedTravelTime)
         } else {
@@ -159,7 +171,6 @@ struct NavigationEventDetails: EventDetails {
         locationEngine = String(describing: dataSource.locationProvider)
         locationManagerDesiredAccuracy = dataSource.desiredAccuracy
         
-        
         var totalTimeInPortrait = session.timeSpentInPortrait
         var totalTimeInLandscape = session.timeSpentInLandscape
         if UIDevice.current.orientation.isPortrait {
@@ -169,15 +180,14 @@ struct NavigationEventDetails: EventDetails {
         }
         percentTimeInPortrait = totalTimeInPortrait + totalTimeInLandscape == 0 ? 100 : Int((totalTimeInPortrait / (totalTimeInPortrait + totalTimeInLandscape)) * 100)
         
-        var totalTimeInForeground = session.timeSpentInForeground
-        var totalTimeInBackground = session.timeSpentInBackground
-        if UIApplication.shared.applicationState == .active {
+        totalTimeInForeground = session.timeSpentInForeground
+        totalTimeInBackground = session.timeSpentInBackground
+        if applicationState == .active {
             totalTimeInForeground += abs(session.lastTimeInForeground.timeIntervalSinceNow)
         } else {
             totalTimeInBackground += abs(session.lastTimeInBackground.timeIntervalSinceNow)
         }
         percentTimeInForeground = totalTimeInPortrait + totalTimeInLandscape == 0 ? 100 : Int((totalTimeInPortrait / (totalTimeInPortrait + totalTimeInLandscape) * 100))
-        
         
         stepIndex = dataSource.routeProgress.currentLegProgress.stepIndex
         stepCount = dataSource.routeProgress.currentLeg.steps.count
@@ -241,6 +251,8 @@ struct NavigationEventDetails: EventDetails {
         case newDurationRemaining
         case newGeometry
         case routeLegProgress = "step"
+        case totalTimeInForeground
+        case totalTimeInBackground
     }
     
     func encode(to encoder: Encoder) throws {
@@ -295,40 +307,9 @@ struct NavigationEventDetails: EventDetails {
         try container.encodeIfPresent(secondsSinceLastReroute, forKey: .secondsSinceLastReroute)
         try container.encodeIfPresent(newDistanceRemaining, forKey: .newDistanceRemaining)
         try container.encodeIfPresent(newDurationRemaining, forKey: .newDurationRemaining)
-    }
-}
-
-extension RouteLegProgress: Encodable {
-    
-    private enum CodingKeys: String, CodingKey {
-        case upcomingInstruction
-        case upcomingType
-        case upcomingModifier
-        case upcomingName
-        case previousInstruction
-        case previousType
-        case previousModifier
-        case previousName
-        case distance
-        case duration
-        case distanceRemaining
-        case durationRemaining
-    }
-    
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encodeIfPresent(upcomingStep?.instructions, forKey: .upcomingInstruction)
-        try container.encodeIfPresent(upcomingStep?.maneuverType.description, forKey: .upcomingType)
-        try container.encodeIfPresent(upcomingStep?.maneuverDirection.description, forKey: .upcomingModifier)
-        try container.encodeIfPresent(upcomingStep?.names?.joined(separator: ";"), forKey: .upcomingName)
-        try container.encodeIfPresent(currentStep.instructions, forKey: .previousInstruction)
-        try container.encode(currentStep.maneuverType.description, forKey: .previousType)
-        try container.encode(currentStep.maneuverDirection.description, forKey: .previousModifier)
-        try container.encode(currentStep.names?.joined(separator: ";"), forKey: .previousName)
-        try container.encode(Int(currentStep.distance), forKey: .distance)
-        try container.encode(Int(currentStep.expectedTravelTime), forKey: .duration)
-        try container.encode(Int(currentStepProgress.distanceRemaining), forKey: .distanceRemaining)
-        try container.encode(Int(currentStepProgress.durationRemaining), forKey: .durationRemaining)
+        try container.encode(totalTimeInForeground, forKey: .totalTimeInForeground)
+        try container.encode(totalTimeInBackground, forKey: .totalTimeInBackground)
+        try container.encodeIfPresent(rating, forKey: .rating)
     }
 }
 

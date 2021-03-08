@@ -1,19 +1,18 @@
 import Foundation
 import CoreLocation
 #if os(iOS)
-    import UIKit
+import UIKit
 #endif
 
 extension UIDevice {
-    
     /**
      Returns a `Bool` whether the device is plugged in. Returns false if not an iOS device.
      */
-    @objc public var isPluggedIn: Bool {
+    public var isPluggedIn: Bool {
         #if os(iOS)
-            return [.charging, .full].contains(UIDevice.current.batteryState)
+        return [.charging, .full].contains(UIDevice.current.batteryState)
         #else
-            return false
+        return false
         #endif
     }
 }

@@ -5,9 +5,7 @@ import MapboxDirections
 @testable import MapboxNavigation
 @testable import MapboxCoreNavigation
 
-
 class LaneTests: FBSnapshotTestCase {
-    
     override func setUp() {
         super.setUp()
         recordMode = false
@@ -23,20 +21,17 @@ class LaneTests: FBSnapshotTestCase {
     }
     
     func verifyAllLanes(size: CGSize) {
-        
         let leftHandLanes = TestableLane.testableLanes(drivingSide: .left)
         let rightHandLanes = TestableLane.testableLanes(drivingSide: .right)
         
         func addLanes(lanes: [TestableLane], stackView: UIStackView) {
-            
             let containerView = UIStackView(orientation: .vertical, spacing: 5, autoLayout: true)
             
             for lane in lanes {
                 let groupView = UIStackView(orientation: .vertical, autoLayout: true)
                 groupView.alignment = .center
                 
-                let component = LaneIndicationComponent(indications: lane.indications, isUsable: true)
-                let laneView = LaneView(component: component)
+                let laneView = LaneView(indications: lane.indications, isUsable: true)
                 laneView.drivingSide = lane.drivingSide
                 
                 laneView.backgroundColor = .white
@@ -93,7 +88,6 @@ struct TestableLane {
 }
 
 extension UIStackView {
-    
     func setBackgroundColor(_ color: UIColor) {
         let subview = UIView(frame: bounds)
         subview.backgroundColor = color

@@ -4,10 +4,13 @@ import CarPlay
 #endif
 
 extension VisualInstruction {
-    
-    /// Returns true if `VisualInstruction.components` contains any `LaneIndicationComponent`.
-    public var containsLaneIndications: Bool {
-        return components.contains(where: { $0 is LaneIndicationComponent })
+    var laneComponents: [Component] {
+        return components.filter { component -> Bool in
+            if case VisualInstruction.Component.lane(indications: _, isUsable: _) = component {
+                return true
+            }
+            return false
+        }
     }
     
     func maneuverImage(side: DrivingSide, color: UIColor, size: CGSize) -> UIImage? {
@@ -20,8 +23,8 @@ extension VisualInstruction {
         let image = mv.imageRepresentation
         return shouldFlipImage(side: side) ? image?.withHorizontallyFlippedOrientation() : image
     }
-
-#if canImport(CarPlay)
+    
+    #if canImport(CarPlay)
     /// Returns a `CPImageSet` representing the maneuver.
     @available(iOS 12.0, *)
     public func maneuverImageSet(side: DrivingSide) -> CPImageSet? {
@@ -35,19 +38,17 @@ extension VisualInstruction {
     
     /// Returns whether the `VisualInstruction`’s maneuver image should be flipped according to the driving side.
     public func shouldFlipImage(side: DrivingSide) -> Bool {
-        let leftDirection = [.left, .slightLeft, .sharpLeft].contains(maneuverDirection)
-        
-        switch maneuverType {
+        switch maneuverType ?? .turn {
         case .takeRoundabout,
              .turnAtRoundabout,
              .takeRotary,
              _ where maneuverDirection == .uTurn:
             return side == .left
         default:
-            return leftDirection
+            return [.left, .slightLeft, .sharpLeft].contains(maneuverDirection ?? .straightAhead)
         }
     }
-
+    
     /**
      Glanceable instruction given the available space, appearance styling, and attachments.
      
@@ -74,5 +75,5 @@ extension VisualInstruction {
         
         return instructionLabel.attributedText
     }
-#endif
+    #endif
 }

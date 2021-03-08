@@ -8,16 +8,14 @@ import MapboxDirections
 import Turf
 
 class CustomViewController: UIViewController, MGLMapViewDelegate {
-
     var destination: MGLPointAnnotation!
     let directions = Directions.shared
     var navigationService: NavigationService!
     var simulateLocation = false
 
-    var userRoute: Route?
-
-    // Start voice instructions
-    var voiceController: MapboxVoiceController!
+    var userIndexedRoute: IndexedRoute?
+    
+    var userRouteOptions: RouteOptions?
     
     var stepsViewController: StepsViewController?
 
@@ -38,9 +36,8 @@ class CustomViewController: UIViewController, MGLMapViewDelegate {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        let locationManager = simulateLocation ? SimulatedLocationManager(route: userRoute!) : NavigationLocationManager()
-        navigationService = MapboxNavigationService(route: userRoute!, locationSource: locationManager, simulating: simulateLocation ? .always : .onPoorGPS)
-        voiceController = MapboxVoiceController(navigationService: navigationService)
+        let locationManager = simulateLocation ? SimulatedLocationManager(route: userIndexedRoute!.0) : NavigationLocationManager()
+        navigationService = MapboxNavigationService(route: userIndexedRoute!.0, routeIndex: userIndexedRoute!.1, routeOptions: userRouteOptions!, locationSource: locationManager, simulating: simulateLocation ? .always : .onPoorGPS)
         
         mapView.delegate = self
         mapView.compassView.isHidden = true
@@ -76,12 +73,12 @@ class CustomViewController: UIViewController, MGLMapViewDelegate {
 
     func suspendNotifications() {
         NotificationCenter.default.removeObserver(self, name: .routeControllerProgressDidChange, object: nil)
-        NotificationCenter.default.removeObserver(self, name: .routeControllerWillReroute, object: nil)
+        NotificationCenter.default.removeObserver(self, name: .routeControllerDidReroute, object: nil)
         NotificationCenter.default.removeObserver(self, name: .routeControllerDidPassVisualInstructionPoint, object: nil)
     }
 
     func mapView(_ mapView: MGLMapView, didFinishLoading style: MGLStyle) {
-        self.mapView.showRoutes([navigationService.route])
+        self.mapView.show([navigationService.route])
     }
 
     // Notifications sent on all location updates
@@ -89,8 +86,8 @@ class CustomViewController: UIViewController, MGLMapViewDelegate {
         // do not update if we are previewing instruction steps
         guard previewInstructionsView == nil else { return }
         
-        let routeProgress = notification.userInfo![RouteControllerNotificationUserInfoKey.routeProgressKey] as! RouteProgress
-        let location = notification.userInfo![RouteControllerNotificationUserInfoKey.locationKey] as! CLLocation
+        let routeProgress = notification.userInfo![RouteController.NotificationUserInfoKey.routeProgressKey] as! RouteProgress
+        let location = notification.userInfo![RouteController.NotificationUserInfoKey.locationKey] as! CLLocation
         
         // Add maneuver arrow
         if routeProgress.currentLegProgress.followOnStep != nil {
@@ -108,14 +105,15 @@ class CustomViewController: UIViewController, MGLMapViewDelegate {
     }
     
     @objc func updateInstructionsBanner(notification: NSNotification) {
-        guard let routeProgress = notification.userInfo?[RouteControllerNotificationUserInfoKey.routeProgressKey] as? RouteProgress else { return }
+        guard let routeProgress = notification.userInfo?[RouteController.NotificationUserInfoKey.routeProgressKey] as? RouteProgress else { return }
         instructionsBannerView.update(for: routeProgress.currentLegProgress.currentStepProgress.currentVisualInstruction)
     }
 
     // Fired when the user is no longer on the route.
     // Update the route on the map.
     @objc func rerouted(_ notification: NSNotification) {
-        self.mapView.showRoutes([navigationService.route])
+        self.mapView.removeWaypoints()
+        self.mapView.show([navigationService.route])
     }
 
     @IBAction func cancelButtonPressed(_ sender: Any) {
@@ -161,9 +159,9 @@ class CustomViewController: UIViewController, MGLMapViewDelegate {
         let route = navigationService.route
         
         // find the leg that contains the step, legIndex, and stepIndex
-        guard let leg       = route.legs.first(where: { $0.steps.contains(step) }),
-              let legIndex  = route.legs.firstIndex(of: leg),
-              let stepIndex = leg.steps.firstIndex(of: step) else {
+        guard let leg = route.legs.first(where: { $0.steps.contains(step) }),
+            let legIndex = route.legs.firstIndex(of: leg),
+            let stepIndex = leg.steps.firstIndex(of: step) else {
             return
         }
         
@@ -207,7 +205,7 @@ class CustomViewController: UIViewController, MGLMapViewDelegate {
         guard let view = previewInstructionsView else { return }
         view.removeFromSuperview()
         
-         // reclaim the delegate, from the preview banner
+        // reclaim the delegate, from the preview banner
         instructionsBannerView.delegate = self
         
         // nil out both the view and index

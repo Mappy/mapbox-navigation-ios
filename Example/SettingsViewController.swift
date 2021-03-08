@@ -2,9 +2,7 @@ import UIKit
 import MapboxDirections
 import MapboxCoreNavigation
 
-
 class SettingsViewController: UITableViewController {
-    
     let cellIdentifier = "cellId"
     var dataSource: [Section]!
     
@@ -26,7 +24,6 @@ class SettingsViewController: UITableViewController {
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        
         var cell: UITableViewCell! = tableView.dequeueReusableCell(withIdentifier: cellIdentifier)
         if cell == nil {
             cell = UITableViewCell(style: .subtitle, reuseIdentifier: cellIdentifier)
@@ -36,14 +33,6 @@ class SettingsViewController: UITableViewController {
         
         cell.textLabel?.text = item.title
         cell.detailTextLabel?.text = item.subtitle
-        
-        if let item = item as? OfflineVersionItem {
-            let toggle = OfflineSwitch(frame: .zero)
-            toggle.item = item
-            toggle.addTarget(self, action: #selector(switchValueChanged(_:)), for: .valueChanged)
-            toggle.isOn = item.title == Settings.selectedOfflineVersion
-            cell.accessoryView = toggle
-        }
         
         return cell
     }
@@ -79,7 +68,6 @@ class SettingsViewController: UITableViewController {
     }
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        
         tableView.deselectRow(at: indexPath, animated: true)
         
         let item = dataSource[indexPath.section].items[indexPath.row]
@@ -90,19 +78,6 @@ class SettingsViewController: UITableViewController {
         
         if let payload = item.payload {
             payload()
-        }
-    }
-    
-    @objc func switchValueChanged(_ toggle: OfflineSwitch) {
-        Settings.selectedOfflineVersion = toggle.isOn ? toggle.item?.title : nil
-        
-        if let selectedOfflineVersion = Settings.selectedOfflineVersion {
-            let tilesURL = Bundle.mapboxCoreNavigation.suggestedTileURL(version: selectedOfflineVersion)
-            
-            Settings.directions.configureRouter(tilesURL: tilesURL!) { [weak self] (numberOfTiles) in
-                let message = String.localizedStringWithFormat(NSLocalizedString("ROUTER_CONFIGURED_MSG", value: "Router configured with %ld tile(s).", comment: "Alert message when a router has been configured; 1 = number of map tiles"), numberOfTiles)
-                self?.presentAlert(message: message)
-            }
         }
     }
 }

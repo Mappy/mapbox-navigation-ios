@@ -18,7 +18,7 @@ extension CongestionLevel {
             return .orange
         case .heavy:
             return .red
-        case .severe, .extreme:
+        case .severe:
             return .red
         }
     }

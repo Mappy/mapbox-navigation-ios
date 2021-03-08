@@ -7,7 +7,7 @@ import Turf
 
 class RouteProgressTests: XCTestCase {
     func testRouteProgress() {
-        let routeProgress = RouteProgress(route: route)
+        let routeProgress = RouteProgress(route: route, routeIndex: 0, options: routeOptions)
         XCTAssertEqual(routeProgress.fractionTraveled, 0)
         XCTAssertEqual(routeProgress.distanceRemaining, 4054.2)
         XCTAssertEqual(routeProgress.distanceTraveled, 0)
@@ -15,7 +15,7 @@ class RouteProgressTests: XCTestCase {
     }
     
     func testRouteLegProgress() {
-        let routeProgress = RouteProgress(route: route)
+        let routeProgress = RouteProgress(route: route, routeIndex: 0, options: routeOptions)
         XCTAssertEqual(routeProgress.currentLeg.description, "Hyde Street, Page Street")
         XCTAssertEqual(routeProgress.currentLegProgress.distanceTraveled, 0)
         XCTAssertEqual(round(routeProgress.currentLegProgress.durationRemaining), 858)
@@ -26,24 +26,24 @@ class RouteProgressTests: XCTestCase {
     }
     
     func testRouteStepProgress() {
-        let routeProgress = RouteProgress(route: route)
+        let routeProgress = RouteProgress(route: route, routeIndex: 0, options: routeOptions)
         XCTAssertEqual(routeProgress.currentLegProgress.currentStepProgress.distanceRemaining, 384.1)
         XCTAssertEqual(routeProgress.currentLegProgress.currentStepProgress.distanceTraveled, 0)
         XCTAssertEqual(routeProgress.currentLegProgress.currentStepProgress.durationRemaining, 86.6, accuracy: 0.001)
         XCTAssertEqual(routeProgress.currentLegProgress.currentStepProgress.fractionTraveled, 0)
-        XCTAssertEqual(routeProgress.currentLegProgress.currentStepProgress.userDistanceToManeuverLocation, Double.infinity)
+        XCTAssertEqual(routeProgress.currentLegProgress.currentStepProgress.userDistanceToManeuverLocation, 384.1)
         XCTAssertEqual(routeProgress.currentLegProgress.currentStepProgress.step.description, "Head south on Taylor Street")
     }
     
     func testNextRouteStepProgress() {
-        let routeProgress = RouteProgress(route: route)
+        let routeProgress = RouteProgress(route: route, routeIndex: 0, options: routeOptions)
         routeProgress.currentLegProgress.stepIndex = 1
         XCTAssertEqual(routeProgress.currentLegProgress.currentStepProgress.spokenInstructionIndex, 0)
         XCTAssertEqual(routeProgress.currentLegProgress.currentStepProgress.distanceRemaining, 439.1)
         XCTAssertEqual(routeProgress.currentLegProgress.currentStepProgress.distanceTraveled, 0)
         XCTAssertEqual(round(routeProgress.currentLegProgress.currentStepProgress.durationRemaining), 73)
         XCTAssertEqual(routeProgress.currentLegProgress.currentStepProgress.fractionTraveled, 0)
-        XCTAssertEqual(routeProgress.currentLegProgress.currentStepProgress.userDistanceToManeuverLocation, Double.infinity)
+        XCTAssertEqual(routeProgress.currentLegProgress.currentStepProgress.userDistanceToManeuverLocation, 439.1)
         XCTAssertEqual(routeProgress.currentLegProgress.currentStepProgress.step.description, "Turn right onto California Street")
     }
     
@@ -88,35 +88,20 @@ class RouteProgressTests: XCTestCase {
         XCTAssertEqual(waypoints.1.map { $0.coordinate }, [coordinates.last!])
     }
     
-    func routeLegProgress(options: RouteOptions, routeCoordinates: [CLLocationCoordinate2D]) -> RouteLegProgress {
+    func routeLeg(options: RouteOptions, routeCoordinates: [CLLocationCoordinate2D]) -> RouteLeg {
         let source = options.waypoints.first!
         let destination = options.waypoints.last!
         options.shapeFormat = .polyline
-        let jsonLeg = [
-            "steps": [
-                [
-                    "maneuver": [
-                        "type": "depart",
-                        "location": [source.coordinate.longitude, source.coordinate.latitude],
-                    ],
-                    "name": "",
-                    "mode": "",
-                    "geometry": Polyline(coordinates: routeCoordinates, precision: 1e5).encodedPolyline,
-                ],
-                [
-                    "maneuver": [
-                        "type": "arrive",
-                        "location": [destination.coordinate.longitude, destination.coordinate.latitude],
-                    ],
-                    "name": "",
-                    "mode": "",
-                ],
-            ],
-            "distance": 0.0,
-            "duration": 0.0,
-            "summary": "",
-        ] as [String: Any]
-        let leg = RouteLeg(json: jsonLeg, source: source, destination: destination, options: options)
+        let steps = [
+            RouteStep(transportType: .automobile, maneuverLocation: source.coordinate, maneuverType: .depart, maneuverDirection: nil, instructions: "", initialHeading: nil, finalHeading: nil, drivingSide: .right, exitCodes: nil, exitNames: nil, phoneticExitNames: nil, distance: 0, expectedTravelTime: 0, names: nil, phoneticNames: nil, codes: nil, destinationCodes: nil, destinations: nil, intersections: nil, instructionsSpokenAlongStep: nil, instructionsDisplayedAlongStep: nil),
+            RouteStep(transportType: .automobile, maneuverLocation: destination.coordinate, maneuverType: .arrive, maneuverDirection: nil, instructions: "", initialHeading: nil, finalHeading: nil, drivingSide: .right, exitCodes: nil, exitNames: nil, phoneticExitNames: nil, distance: 0, expectedTravelTime: 0, names: nil, phoneticNames: nil, codes: nil, destinationCodes: nil, destinations: nil, intersections: nil, instructionsSpokenAlongStep: nil, instructionsDisplayedAlongStep: nil),
+        ]
+        steps[0].shape = LineString(routeCoordinates)
+        return RouteLeg(steps: steps, name: "", distance: 0, expectedTravelTime: 0, profileIdentifier: .automobile)
+    }
+    
+    func routeLegProgress(options: RouteOptions, routeCoordinates: [CLLocationCoordinate2D]) -> RouteLegProgress {
+        let leg = routeLeg(options: options, routeCoordinates: routeCoordinates)
         return RouteLegProgress(leg: leg)
     }
     
@@ -211,24 +196,152 @@ class RouteProgressTests: XCTestCase {
         XCTAssertEqual(remainingWaypoints.count, 4,
                        "At the first via point before backtracking, all but the source and first via point should remain")
         
-        legProgress.currentStepProgress.distanceTraveled = LineString(coordinates).distance() / 2.0
+        legProgress.currentStepProgress.distanceTraveled = LineString(coordinates).distance()! / 2.0
         remainingWaypoints = legProgress.remainingWaypoints(among: Array(options.waypoints.dropLast()))
         XCTAssertEqual(remainingWaypoints.count, 2,
                        "At the via point where the leg backtracks, only the via points after backtracking should remain")
         
-        legProgress.currentStepProgress.distanceTraveled = LineString(coordinates).distance() / 2.0 + coordinates[3].distance(to: coordinates[4]) / 2.0
+        legProgress.currentStepProgress.distanceTraveled = LineString(coordinates).distance()! / 2.0 + coordinates[3].distance(to: coordinates[4]) / 2.0
         remainingWaypoints = legProgress.remainingWaypoints(among: Array(options.waypoints.dropLast()))
         XCTAssertEqual(remainingWaypoints.count, 2,
                        "Halfway to the via point where the leg backtracks, only the via points after backtracking should remain")
         
-        legProgress.currentStepProgress.distanceTraveled = LineString(coordinates).distance() / 2.0 + coordinates[3].distance(to: coordinates[4])
+        legProgress.currentStepProgress.distanceTraveled = LineString(coordinates).distance()! / 2.0 + coordinates[3].distance(to: coordinates[4])
         remainingWaypoints = legProgress.remainingWaypoints(among: Array(options.waypoints.dropLast()))
         XCTAssertEqual(remainingWaypoints.count, 1,
                        "At the first via point after backtracking, all but one of the via points after backtracking should remain")
         
-        legProgress.currentStepProgress.distanceTraveled = LineString(coordinates).distance()
+        legProgress.currentStepProgress.distanceTraveled = LineString(coordinates).distance()!
         remainingWaypoints = legProgress.remainingWaypoints(among: Array(options.waypoints.dropLast()))
         XCTAssertEqual(remainingWaypoints.count, 0,
                        "At the last via point after backtracking, nothing should remain")
+    }
+    
+    func testSpeedLimits() {
+        let coordinates = [
+            CLLocationCoordinate2D(latitude: 0, longitude: 0),
+            CLLocationCoordinate2D(latitude: 2, longitude: 3),
+            CLLocationCoordinate2D(latitude: 4, longitude: 6),
+            CLLocationCoordinate2D(latitude: 6, longitude: 9),
+            CLLocationCoordinate2D(latitude: 8, longitude: 12),
+            CLLocationCoordinate2D(latitude: 10, longitude: 15),
+            CLLocationCoordinate2D(latitude: 12, longitude: 18),
+        ]
+        let lineString = LineString(coordinates)
+        
+        let options = RouteOptions(coordinates: [coordinates.first!, coordinates.last!])
+        let leg = routeLeg(options: options, routeCoordinates: coordinates)
+        leg.segmentMaximumSpeedLimits = [
+            .init(value: 10, unit: .kilometersPerHour),
+            .init(value: 20, unit: .milesPerHour),
+            nil,
+            .init(value: 40, unit: .milesPerHour),
+            .init(value: 50, unit: .kilometersPerHour),
+            .init(value: .infinity, unit: .kilometersPerHour),
+        ]
+        
+        let legProgress = RouteLegProgress(leg: leg)
+        
+        XCTAssertEqual(legProgress.distanceTraveled, 0)
+        XCTAssertEqual(legProgress.currentSpeedLimit, Measurement(value: 10, unit: UnitSpeed.kilometersPerHour))
+        legProgress.currentStepProgress.distanceTraveled = lineString.distance(to: coordinates[1])! / 2.0
+        XCTAssertEqual(legProgress.currentSpeedLimit, Measurement(value: 10, unit: UnitSpeed.kilometersPerHour))
+        
+        legProgress.currentStepProgress.distanceTraveled = lineString.distance(to: coordinates[1])!
+        XCTAssertEqual(legProgress.currentSpeedLimit, Measurement(value: 20, unit: UnitSpeed.milesPerHour))
+        legProgress.currentStepProgress.distanceTraveled = lineString.distance(to: coordinates[1])! + lineString.distance(from: coordinates[1], to: coordinates[2])! / 2.0
+        XCTAssertEqual(legProgress.currentSpeedLimit, Measurement(value: 20, unit: UnitSpeed.milesPerHour))
+        
+        legProgress.currentStepProgress.distanceTraveled = lineString.distance(to: coordinates[2])!
+        XCTAssertNil(legProgress.currentSpeedLimit)
+        legProgress.currentStepProgress.distanceTraveled = lineString.distance(to: coordinates[2])! + lineString.distance(from: coordinates[2], to: coordinates[3])! / 2.0
+        XCTAssertNil(legProgress.currentSpeedLimit)
+        
+        legProgress.currentStepProgress.distanceTraveled = lineString.distance(to: coordinates[3])!
+        XCTAssertEqual(legProgress.currentSpeedLimit, Measurement(value: 40, unit: UnitSpeed.milesPerHour))
+        legProgress.currentStepProgress.distanceTraveled = lineString.distance(to: coordinates[3])! + lineString.distance(from: coordinates[3], to: coordinates[4])! / 2.0
+        XCTAssertEqual(legProgress.currentSpeedLimit, Measurement(value: 40, unit: UnitSpeed.milesPerHour))
+        
+        legProgress.currentStepProgress.distanceTraveled = lineString.distance(to: coordinates[4])!
+        XCTAssertEqual(legProgress.currentSpeedLimit, Measurement(value: 50, unit: UnitSpeed.kilometersPerHour))
+        legProgress.currentStepProgress.distanceTraveled = lineString.distance(to: coordinates[4])! + lineString.distance(from: coordinates[4], to: coordinates[5])! / 2.0
+        XCTAssertEqual(legProgress.currentSpeedLimit, Measurement(value: 50, unit: UnitSpeed.kilometersPerHour))
+        
+        legProgress.currentStepProgress.distanceTraveled = lineString.distance(to: coordinates[5])!
+        XCTAssertTrue(legProgress.currentSpeedLimit?.value.isInfinite ?? false)
+        legProgress.currentStepProgress.distanceTraveled = lineString.distance(to: coordinates[5])! + (lineString.distance()! - lineString.distance(to: coordinates[5])!) / 2.0
+        XCTAssertTrue(legProgress.currentSpeedLimit?.value.isInfinite ?? false)
+    }
+    
+    func testRouteProggressCodable() {
+        let routeProgress = RouteProgress(route: route, routeIndex: 0, options: routeOptions)
+        
+        let encoder = JSONEncoder()
+        encoder.userInfo[.options] = routeOptions
+        let data = try! encoder.encode(routeProgress)
+        let decoder = JSONDecoder()
+        decoder.userInfo[.options] = routeOptions
+        let decoded = try! decoder.decode(RouteProgress.self, from: data)
+
+        XCTAssertEqual(routeProgress.indexedRoute.0.distance, decoded.indexedRoute.0.distance)
+        XCTAssertEqual(routeProgress.indexedRoute.0.speechLocale, decoded.indexedRoute.0.speechLocale)
+        XCTAssertEqual(routeProgress.indexedRoute.0.shape, decoded.indexedRoute.0.shape)
+        XCTAssertEqual(routeProgress.indexedRoute.0.expectedTravelTime, decoded.indexedRoute.0.expectedTravelTime)
+        XCTAssertEqual(routeProgress.indexedRoute.0.routeIdentifier, decoded.indexedRoute.0.routeIdentifier)
+        XCTAssertEqual(routeProgress.indexedRoute.1, decoded.indexedRoute.1)
+        XCTAssertEqual(routeProgress.routeOptions, decoded.routeOptions)
+        XCTAssertEqual(routeProgress.legIndex, decoded.legIndex)
+        XCTAssertEqual(routeProgress.currentLegProgress.leg.source, decoded.currentLegProgress.leg.source)
+        XCTAssertEqual(routeProgress.currentLegProgress.leg.destination, decoded.currentLegProgress.leg.destination)
+        XCTAssertEqual(routeProgress.currentLegProgress.leg.name, decoded.currentLegProgress.leg.name)
+        XCTAssertEqual(routeProgress.currentLegProgress.leg.distance, decoded.currentLegProgress.leg.distance)
+        XCTAssertEqual(routeProgress.currentLegProgress.leg.source, decoded.currentLegProgress.leg.source)
+        XCTAssertEqual(routeProgress.congestionTravelTimesSegmentsByStep.count, decoded.congestionTravelTimesSegmentsByStep.count)
+        XCTAssertEqual(routeProgress.congestionTimesPerStep, decoded.congestionTimesPerStep)
+    }
+    
+    func testRouteLegProgressCodable() {
+        let coordinates = [
+            CLLocationCoordinate2D(latitude: 0, longitude: 0),
+            CLLocationCoordinate2D(latitude: 2, longitude: 3),
+            CLLocationCoordinate2D(latitude: 4, longitude: 6),
+            CLLocationCoordinate2D(latitude: 6, longitude: 9),
+            CLLocationCoordinate2D(latitude: 8, longitude: 12),
+            CLLocationCoordinate2D(latitude: 10, longitude: 15),
+            CLLocationCoordinate2D(latitude: 12, longitude: 18),
+        ]
+        let options = RouteOptions(coordinates: [coordinates.first!, coordinates.last!])
+        let legProgress = routeLegProgress(options: options, routeCoordinates: coordinates)
+        
+        let data = try! JSONEncoder().encode(legProgress)
+        let decoded = try! JSONDecoder().decode(RouteLegProgress.self, from: data)
+        
+        XCTAssertEqual(legProgress.leg, decoded.leg)
+        XCTAssertEqual(legProgress.stepIndex, decoded.stepIndex)
+        XCTAssertEqual(legProgress.userHasArrivedAtWaypoint, decoded.userHasArrivedAtWaypoint)
+        XCTAssertEqual(legProgress.currentStepProgress.step, decoded.currentStepProgress.step)
+        XCTAssertEqual(legProgress.currentStepProgress.distanceTraveled, decoded.currentStepProgress.distanceTraveled)
+    }
+    
+    func testRouteStepProgressCodable() {
+        let stepProgress = RouteStepProgress(step: RouteStep(transportType: .automobile,
+                                                             maneuverLocation: CLLocationCoordinate2D(latitude: 0, longitude: 0),
+                                                             maneuverType: .arrive,
+                                                             instructions: "instructions",
+                                                             drivingSide: .right,
+                                                             distance: 13.3,
+                                                             expectedTravelTime: 0.7))
+        
+        let data = try! JSONEncoder().encode(stepProgress)
+        let decoded = try! JSONDecoder().decode(RouteStepProgress.self, from: data)
+        
+        XCTAssertEqual(stepProgress.step, decoded.step)
+        XCTAssertEqual(stepProgress.userDistanceToManeuverLocation, decoded.userDistanceToManeuverLocation)
+        XCTAssertEqual(stepProgress.intersectionsIncludingUpcomingManeuverIntersection, decoded.intersectionsIncludingUpcomingManeuverIntersection)
+        XCTAssertEqual(stepProgress.intersectionIndex, decoded.intersectionIndex)
+        XCTAssertEqual(stepProgress.intersectionDistances, decoded.intersectionDistances)
+        XCTAssertEqual(stepProgress.userDistanceToUpcomingIntersection, decoded.userDistanceToUpcomingIntersection)
+        XCTAssertEqual(stepProgress.visualInstructionIndex, decoded.visualInstructionIndex)
+        XCTAssertEqual(stepProgress.spokenInstructionIndex, decoded.spokenInstructionIndex)
     }
 }

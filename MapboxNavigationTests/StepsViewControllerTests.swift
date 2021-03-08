@@ -4,43 +4,33 @@ import MapboxDirections
 @testable import MapboxCoreNavigation
 @testable import MapboxNavigation
 
-
 class StepsViewControllerTests: XCTestCase {
-    
     struct Constants {
-        static let jsonRoute = (response["routes"] as! [AnyObject]).first as! [String: Any]
-        static let accessToken = "nonsense"
+        static let route = response.routes!.first!
+        static let options = routeOptions
+        static let credentials = Fixture.credentials
     }
     
     lazy var dependencies: (stepsViewController: StepsViewController, routeController: RouteController, firstLocation: CLLocation, lastLocation: CLLocation) = {
-        
         let bogusToken = "pk.feedCafeDeadBeefBadeBede"
-        let directions = Directions(accessToken: bogusToken)
+        let directions = Directions(credentials: Fixture.credentials)
         let dataSource = RouteControllerDataSourceFake()
         
-        let routeController = RouteController(along: initialRoute, directions: directions, dataSource: dataSource)
+        let routeController = RouteController(along: Constants.route, routeIndex: 0, options: Constants.options, directions: directions, dataSource: dataSource)
         
         let stepsViewController = StepsViewController(routeProgress: routeController.routeProgress)
         
-        let firstCoord = routeController.routeProgress.nearbyCoordinates.first!
+        let firstCoord = routeController.routeProgress.nearbyShape.coordinates.first!
         let firstLocation = CLLocation(coordinate: firstCoord, altitude: 5, horizontalAccuracy: 10, verticalAccuracy: 5, course: 20, speed: 4, timestamp: Date())
         
-        let lastCoord = routeController.routeProgress.currentLegProgress.remainingSteps.last!.coordinates!.first!
+        let lastCoord = routeController.routeProgress.currentLegProgress.remainingSteps.last!.shape!.coordinates.first!
         let lastLocation = CLLocation(coordinate: lastCoord, altitude: 5, horizontalAccuracy: 10, verticalAccuracy: 5, course: 20, speed: 4, timestamp: Date())
         
         return (stepsViewController: stepsViewController, routeController: routeController, firstLocation: firstLocation, lastLocation: lastLocation)
     }()
     
-    lazy var initialRoute: Route = {
-        let waypoint1 = Waypoint(coordinate: CLLocationCoordinate2D(latitude: 37.764793, longitude: -122.463161))
-        let waypoint2 = Waypoint(coordinate: CLLocationCoordinate2D(latitude: 34.054081, longitude: -118.243412))
-        let route = Route(json: Constants.jsonRoute, waypoints: [waypoint1, waypoint2], options: NavigationRouteOptions(waypoints: [waypoint1, waypoint2]))
-        route.accessToken = "nonsense"
-        return route
-    }()
     
     func testRebuildStepsInstructionsViewDataSource() {
-        
         let stepsViewController = dependencies.stepsViewController
 
         XCTAssertNotNil(stepsViewController.view, "StepsViewController not initiated properly")
@@ -55,7 +45,6 @@ class StepsViewControllerTests: XCTestCase {
 
     /// NOTE: This test is disabled pending https://github.com/mapbox/mapbox-navigation-ios/issues/1468
     func x_testUpdateCellPerformance() {
-        
         let stepsViewController = dependencies.stepsViewController
         
         // Test that Steps ViewController viewLoads
@@ -72,17 +61,16 @@ class StepsViewControllerTests: XCTestCase {
             }
         }
     }
-
 }
 
 extension StepsViewControllerTests {
     fileprivate func location(at coordinate: CLLocationCoordinate2D) -> CLLocation {
-                return CLLocation(coordinate: coordinate,
-                                    altitude: 5,
+        return CLLocation(coordinate: coordinate,
+                          altitude: 5,
                           horizontalAccuracy: 10,
-                            verticalAccuracy: 5,
-                                      course: 20,
-                                       speed: 15,
-                                   timestamp: Date())
+                          verticalAccuracy: 5,
+                          course: 20,
+                          speed: 15,
+                          timestamp: Date())
     }
 }
