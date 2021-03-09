@@ -77,6 +77,14 @@ public protocol NavigationServiceDelegate: class, UnimplementedLogging {
      - parameter routeProgress: The route progress updated with the refreshed route.
      */
     func navigationService(_ service: NavigationService, didRefresh routeProgress: RouteProgress)
+
+    /**
+     Called when the navigation service finds a faster alternative route.
+
+     - parameter service: The navigation service that found a faster alternative route.
+     - parameter route: The faster alternative route.
+     */
+    func navigationService(_ service: NavigationService, didReceiveFasterRoute route: Route)
     
     /**
      Called when the navigation service updates the route progress model.
@@ -246,6 +254,13 @@ public extension NavigationServiceDelegate {
      `UnimplementedLogging` prints a warning to standard output the first time this method is called.
      */
     func navigationService(_ service: NavigationService, didRefresh routeProgress: RouteProgress) {
+        logUnimplemented(protocolType: NavigationServiceDelegate.self, level: .info)
+    }
+
+    /**
+     `UnimplementedLogging` prints a warning to standard output the first time this method is called.
+     */
+    func navigationService(_ service: NavigationService, didReceiveFasterRoute route: Route) {
         logUnimplemented(protocolType: NavigationServiceDelegate.self, level: .info)
     }
     

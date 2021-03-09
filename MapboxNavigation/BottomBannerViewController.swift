@@ -85,7 +85,7 @@ open class BottomBannerViewController: UIViewController, NavigationComponent {
                 timeRemainingLabel.textColor = timeRemainingLabel.trafficModerateColor
             case .heavy:
                 timeRemainingLabel.textColor = timeRemainingLabel.trafficHeavyColor
-            case .severe:
+            case .severe, .extreme:
                 timeRemainingLabel.textColor = timeRemainingLabel.trafficSevereColor
             }
         }

@@ -32,11 +32,17 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
     
     public var refreshesRoute: Bool = true
 
+    public var refreshesMappyRoute = true // Not implemented
+
+    public var forceMappyRouteRefreshAtNextUpdate = false // Not implemented
+
     var didFindFasterRoute = false
     
     var lastProactiveRerouteDate: Date?
     
     var lastRouteRefresh: Date?
+
+    var lastMappyRouteRefresh: Date? // Not implemented
 
     public var routeProgress: RouteProgress {
         get {
@@ -72,6 +78,7 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
 
     var isRerouting = false
     var isRefreshing = false
+    var isRefreshingMappyRoute = false // Not implemented
     var lastRerouteLocation: CLLocation?
 
     var routeTask: URLSessionDataTask?
@@ -530,6 +537,10 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
             let distances: [CLLocationDistance] = intersections.compactMap { shape.distance(from: shape.coordinates.first, to: $0.location) }
             routeProgress.currentLegProgress.currentStepProgress.intersectionDistances = distances
         }
+    }
+
+    func updatePrivateRouteProgress(_ routeProgress: RouteProgress) {
+        fatalError("Not implemented")
     }
     
     // MARK: Obsolete methods

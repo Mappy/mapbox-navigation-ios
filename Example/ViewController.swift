@@ -53,6 +53,39 @@ class ViewController: UIViewController {
     
     weak var activeNavigationViewController: NavigationViewController?
 
+    enum API {
+        case mapbox, mappyProd, mappyRecette, mappySnap
+
+        var directions: Directions {
+            switch self {
+            case .mapbox:
+                return Directions.shared
+            case .mappyProd, .mappyRecette, .mappySnap:
+                return Directions(credentials: DirectionsCredentials(accessToken: "", host: self.host))
+            }
+        }
+
+        private var host: URL? {
+            switch self {
+            case .mapbox:
+                return nil
+            case .mappyProd:
+                return URL(string: "https://routemm.mappy.net")!
+            case .mappyRecette:
+                return URL(string: "https://routemm.mappyrecette.net")!
+            case .mappySnap:
+                return URL(string: "https://routemm.mappysnap.net")!
+            }
+        }
+    }
+
+    private var directions: Directions!
+    private var apiChoice: API = .mapbox {
+        didSet {
+            self.directions = apiChoice.directions
+        }
+    }
+
     // MARK: Directions Request Handlers
 
     fileprivate lazy var defaultSuccess: RouteRequestSuccess = { [weak self] (response) in
@@ -239,16 +272,22 @@ class ViewController: UIViewController {
         let userWaypoint = Waypoint(location: userLocation, heading: mapView.userLocation?.heading, name: "User location")
         waypoints.insert(userWaypoint, at: 0)
 
-        let options = NavigationRouteOptions(waypoints: waypoints)
+//        let options = NavigationRouteOptions(waypoints: waypoints)
+        let options = MappyNavigationRouteOptions(waypoints: waypoints, provider: "car", routeCalculationType: "fastest", qid: "1ad02a47-0e87-48f4-d190-a794fbbb6aac")
+        options.carVehicle = "comcar"
+        options.walkSpeed = .normal
+        options.bikeSpeed = .fast
         
         // Get periodic updates regarding changes in estimated arrival time and traffic congestion segments along the route line.
-        RouteControllerProactiveReroutingInterval = 30
+        RouteControllerProactiveReroutingInterval = 40
 
         requestRoute(with: options, success: defaultSuccess, failure: defaultFailure)
     }
 
     fileprivate func requestRoute(with options: RouteOptions, success: @escaping RouteRequestSuccess, failure: RouteRequestFailure?) {
-        Directions.shared.calculate(options) { (session, result) in
+//        Directions.shared.calculate(options) { (session, result) in
+        apiChoice = .mappyProd
+        self.directions.calculate(options) { (session, result) in
             switch result {
             case let .success(response):
                 success(response)
@@ -264,6 +303,14 @@ class ViewController: UIViewController {
         guard let response = response, let route = response.routes?.first, case let .route(routeOptions) = response.options else { return }
         
         let service = navigationService(route: route, routeIndex: 0, options: routeOptions)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+//            debugPrint("Forcing route refresh with forced alternative route at next update")
+//            (service.router as? RouteController)?.forceMappyRouteRefreshAtNextUpdate = true
+//            (service.routeProgress.routeOptions as? MappyRouteOptions)?.forceBetterRoute = true
+
+//            debugPrint("Starting offroute deviation")
+//            (service.locationManager as? SimulatedLocationManager)?.shouldDeviateRoute = true
+        }
         let navigationViewController = self.navigationViewController(navigationService: service)
         
         // Render part of the route that has been traversed with full transparency, to give the illusion of a disappearing route.
@@ -356,7 +403,7 @@ class ViewController: UIViewController {
     func navigationService(route: Route, routeIndex: Int, options: RouteOptions) -> NavigationService {
         let simulate = simulationButton.isSelected
         let mode: SimulationMode = simulate ? .always : .onPoorGPS
-        return MapboxNavigationService(route: route, routeIndex: routeIndex, routeOptions: options, simulating: mode)
+        return MapboxNavigationService(route: route, routeIndex: routeIndex, routeOptions: options, directions: self.directions, simulating: mode)
     }
 
     func presentAndRemoveMapview(_ navigationViewController: NavigationViewController, completion: CompletionHandler?) {

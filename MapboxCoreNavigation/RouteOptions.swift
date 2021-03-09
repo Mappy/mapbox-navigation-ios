@@ -1,7 +1,21 @@
 import MapboxDirections
 
+extension MappyRouteOptions {
+    internal var mappyActivityType: CLActivityType {
+        switch self.provider {
+        case "car", "motorbike":
+            return .automotiveNavigation
+        default:
+            return .fitness
+        }
+    }
+}
+
 extension RouteOptions {
     internal var activityType: CLActivityType {
+        if let mappyRouteOptions = self as? MappyRouteOptions {
+            return mappyRouteOptions.mappyActivityType
+        }
         switch self.profileIdentifier {
         case .cycling, .walking:
             return .fitness
@@ -32,6 +46,9 @@ extension RouteOptions: NSCopying {
     public func copy(with zone: NSZone? = nil) -> Any {
         do {
             let encodedOptions = try JSONEncoder().encode(self)
+            if let mappyRouteOptions = try? JSONDecoder().decode(MappyRouteOptions.self, from: encodedOptions) {
+                return mappyRouteOptions
+            }
             return try JSONDecoder().decode(RouteOptions.self, from: encodedOptions)
         } catch {
             preconditionFailure("Unable to copy RouteOptions by round-tripping it through JSON")

@@ -140,6 +140,13 @@ public extension Notification.Name {
     static let routeControllerDidRefreshRoute: Notification.Name = .init(rawValue: "RouteControllerDidRefreshRoute")
     
     /**
+     Posted when `RouteController` receives information about a faster route than the current one.
+     
+     The user info dictionary contains the key `RouteController.NotificationUserInfoKey.fasterRouteKey`.
+     */
+    static let routeControllerDidReceiveFasterRoute: Notification.Name = .init(rawValue: "RouteControllerDidReceiveFasterRoute")
+    
+    /**
      Posted after the user diverges from the expected route, just before `RouteController` attempts to calculate a new route.
      
      The user info dictionary contains the key `RouteController.NotificationUserInfoKey.locationKey`.
@@ -187,6 +194,13 @@ public extension Notification.Name {
      The user info dictionary contains the key `MapboxNavigationService.NotificationUserInfoKey.locationAuthorizationKey`.
     */
     static let locationAuthorizationDidChange: Notification.Name = .init(rawValue: "LocationAuthorizationDidChange")
+
+    /**
+     Posted when a Mappy debug message is posted.
+
+     The user info dictionary contains the key `MappyEventLogger.NotificationUserInfoKey.message`.
+     */
+    static let mappyEventLoggerDidSendMessage: Notification.Name = .init(rawValue: "MappyEventLoggerDidSendMessage")
  
 }
 
@@ -207,6 +221,11 @@ extension RouteController {
          A key in the user info dictionary of a `Notification.Name.routeControllerProgressDidChange`, `Notification.Name.routeControllerDidPassVisualInstructionPoint`, or `Notification.Name.routeControllerDidPassSpokenInstructionPoint` notification. The corresponding value is a `RouteProgress` object representing the current route progress.
          */
         public static let routeProgressKey: NotificationUserInfoKey = .init(rawValue: "progress")
+        
+        /**
+         A key in the user info dictionary of a `Notification.Name.routeControllerDidReceiveFasterRoute` notification. The corresponding value is a `Route` object representing a faster route than the current one.
+         */
+        public static let fasterRouteKey: NotificationUserInfoKey = .init(rawValue: "fasterRoute")
         
         /**
          A key in the user info dictionary of a `Notification.Name.routeControllerProgressDidChange`, `Notification.Name.routeControllerWillReroute`, or `Notification.Name.routeControllerDidReroute` notification. The corresponding value is a `CLLocation` object representing the current idealized user location.
@@ -291,5 +310,22 @@ extension MapboxNavigationService {
         /**
          A key in the user info dictionary of a `Notification.Name.locationAuthorizationDidChange` notification. The corresponding value is a CLAccuracyAuthorization` indicating the current location authorization setting. */
         public static let locationAuthorizationKey: NotificationUserInfoKey = .init(rawValue: "locationAuthorization")
+    }
+}
+
+extension MappyEventLogger {
+    /**
+     Keys in the user info dictionaries of various notifications posted by the internal shared instance of `MappyEventLogger`.
+     */
+    public struct NotificationUserInfoKey: Hashable, Equatable, RawRepresentable {
+        public typealias RawValue = String
+        public var rawValue: String
+        public init(rawValue: String) {
+            self.rawValue = rawValue
+        }
+
+        /**
+         A key in the user info dictionary of a `Notification.Name.mappyEventLoggerDidSendMessage` notification. The corresponding value is a String` containing the debug message. */
+        public static let message: NotificationUserInfoKey = .init(rawValue: "debugMessage")
     }
 }

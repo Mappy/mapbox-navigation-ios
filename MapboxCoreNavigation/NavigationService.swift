@@ -161,6 +161,11 @@ public class MapboxNavigationService: NSObject, NavigationService {
      The `NavigationService` delegate. Wraps `RouterDelegate` messages.
      */
     public weak var delegate: NavigationServiceDelegate?
+
+    /**
+     Mappy addition: A navigation service’s debug delegate that can receive internal events for debugging/logging purposes.
+     */
+    public weak var debugDelegate: NavigationServiceDebugDelegate?
     
     /**
      The native location source. This is a `NavigationLocationManager` by default, but can be overridden with a custom location manager at initalization.
@@ -414,6 +419,11 @@ extension MapboxNavigationService: CLLocationManagerDelegate {
             //pass this good update onto the poor GPS timer mechanism.
             resetGPSCountdown()
         }
+
+        // Mappy addition: pass the update to the debug delegate
+        if manager == nativeLocationSource {
+            debugDelegate?.navigationServiceDebug(self, didUpdateLocations: locations)
+        }
         
         //Finally, pass the update onto the router.
         router.locationManager?(manager, didUpdateLocations: locations)
@@ -444,6 +454,10 @@ extension MapboxNavigationService: RouterDelegate {
         
         //notify our consumer
         delegate?.navigationService(self, willRerouteFrom: location)
+    }
+
+    public func router(_ router: Router, didReceiveFasterRoute route: Route) {
+        delegate?.navigationService(self, didReceiveFasterRoute: route)
     }
     
     public func router(_ router: Router, didRerouteAlong route: Route, at location: CLLocation?, proactive: Bool) {

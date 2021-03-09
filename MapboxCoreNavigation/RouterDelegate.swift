@@ -70,6 +70,14 @@ public protocol RouterDelegate: class, UnimplementedLogging {
      - parameter routeProgress: The route progress updated with the refreshed route.
      */
     func router(_ router: Router, didRefresh routeProgress: RouteProgress)
+
+    /**
+     Called when the router finds a faster alternative route.
+
+     - parameter service: The navigation service that found a faster alternative route.
+     - parameter route: The faster alternative route.
+     */
+    func router(_ router: Router, didReceiveFasterRoute route: Route)
     
     /**
      Called when the router updates the route progress model.
@@ -164,6 +172,10 @@ public extension RouterDelegate {
     
     func router(_ router: Router, didFailToRerouteWith error: Error) {
         logUnimplemented(protocolType: RouterDelegate.self, level: .debug)
+    }
+
+    func router(_ router: Router, didReceiveFasterRoute route: Route) {
+        logUnimplemented(protocolType: RouterDelegate.self, level: .info)
     }
     
     func router(_ router: Router, didUpdate progress: RouteProgress, with location: CLLocation, rawLocation: CLLocation) {

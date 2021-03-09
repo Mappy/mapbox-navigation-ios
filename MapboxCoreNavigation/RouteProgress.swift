@@ -237,7 +237,7 @@ open class RouteProgress: Codable {
         }
     }
 
-    func reroutingOptions(with current: CLLocation) -> RouteOptions {
+    func reroutingOptions(with current: CLLocation, mappyRouteSignature: String? = nil) -> RouteOptions {
         let oldOptions = routeOptions
         let user = Waypoint(coordinate: current.coordinate)
 
@@ -248,6 +248,10 @@ open class RouteProgress: Codable {
         let newWaypoints = [user] + remainingWaypointsForCalculatingRoute()
         let newOptions = oldOptions.copy() as! RouteOptions
         newOptions.waypoints = newWaypoints
+
+        if let mappyRouteOptions = newOptions as? MappyRouteOptions {
+            mappyRouteOptions.routeSignature = mappyRouteSignature
+        }
 
         return newOptions
     }

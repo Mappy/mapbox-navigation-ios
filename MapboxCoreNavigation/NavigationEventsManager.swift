@@ -55,7 +55,7 @@ open class NavigationEventsManager {
             accessToken = tokenOverride
         }
         self.mobileEventsManager = mobileEventsManager
-        start()
+//        start()
         resumeNotifications()
     }
     

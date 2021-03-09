@@ -2,7 +2,7 @@ import Foundation
 import MapboxDirections
 import Turf
 
-fileprivate let maximumSpeed: CLLocationSpeed = 30 // ~108 kmh
+fileprivate let maximumSpeed: CLLocationSpeed = 36 // ~130 kmh
 fileprivate let minimumSpeed: CLLocationSpeed = 6 // ~21 kmh
 fileprivate var distanceFilter: CLLocationDistance = 10
 fileprivate var verticalAccuracy: CLLocationAccuracy = 10
@@ -69,6 +69,10 @@ open class SimulatedLocationManager: NavigationLocationManager {
     }
     
     private var routeProgress: RouteProgress?
+
+    public var shouldDeviateRoute: Bool = false
+    fileprivate var routeDeviationDeltaCoordinates: CLLocationCoordinate2D?
+    fileprivate var routeDeviationCourse: CLLocationDegrees?
     
     /**
      Initalizes a new `SimulatedLocationManager` with the given route.
@@ -110,6 +114,10 @@ open class SimulatedLocationManager: NavigationLocationManager {
         if let shape = route?.shape {
             routeShape = shape
             locations = shape.coordinates.simulatedLocationsWithTurnPenalties()
+
+            shouldDeviateRoute = false
+            routeDeviationDeltaCoordinates = nil
+            routeDeviationCourse = nil
         }
     }
     
@@ -167,15 +175,65 @@ open class SimulatedLocationManager: NavigationLocationManager {
             let time = expectedSegmentTravelTimes.optional[closestCoordinateOnRoute.index] {
             let distance = shape.coordinates[closestCoordinateOnRoute.index].distance(to: nextCoordinateOnRoute)
             currentSpeed =  max(distance / time, 2)
+        } else if let stepTime = routeProgress?.currentLegProgress.currentStep.expectedTravelTime,
+                  let stepDistance = routeProgress?.currentLegProgress.currentStep.distance {
+            let meanSpeed = stepTime > 0 ? stepDistance / stepTime : 0
+            currentSpeed = min(max(meanSpeed, minimumSpeed), maximumSpeed)
         } else {
             currentSpeed = calculateCurrentSpeed(distance: distance, coordinatesNearby: coordinatesNearby, closestLocation: closestLocation)
         }
+
+        var course = newCoordinate.direction(to: lookAheadCoordinate).wrap(min: 0, max: 360)
+        var coordinate = newCoordinate
+
+        if shouldDeviateRoute == true {
+            let delta: CLLocationDegrees = 0.0002
+            if routeDeviationDeltaCoordinates == nil || routeDeviationCourse == nil {
+                switch course
+                {
+                case 45...135:
+                    routeDeviationDeltaCoordinates = CLLocationCoordinate2DMake(-delta, 0)
+                case 225...315:
+                    routeDeviationDeltaCoordinates = CLLocationCoordinate2DMake(delta, 0)
+                case 135...225:
+                    routeDeviationDeltaCoordinates = CLLocationCoordinate2DMake(0, -delta)
+                default:
+                    routeDeviationDeltaCoordinates = CLLocationCoordinate2DMake(0, delta)
+                }
+                routeDeviationCourse = course + 45
+            }
+            else {
+                let latitude, longitude: CLLocationDegrees
+                switch (routeDeviationDeltaCoordinates!.latitude, routeDeviationDeltaCoordinates!.longitude)
+                {
+                case let (lat, _) where lat < 0:
+                    latitude = lat - delta
+                    longitude = 0
+                case let (lat, _) where lat > 0:
+                    latitude = lat + delta
+                    longitude = 0
+                case let (_, lng) where lng < 0:
+                    latitude = 0
+                    longitude = lng - delta
+                case let (_, lng) where lng > 0:
+                    latitude = 0
+                    longitude = lng + delta
+                default:
+                    fatalError("Should never enter default case")
+                }
+                routeDeviationDeltaCoordinates = CLLocationCoordinate2DMake(latitude, longitude)
+            }
+
+            coordinate = CLLocationCoordinate2DMake(newCoordinate.latitude + routeDeviationDeltaCoordinates!.latitude,
+                                                    newCoordinate.longitude + routeDeviationDeltaCoordinates!.longitude)
+            course = routeDeviationCourse!
+        }
         
-        let location = CLLocation(coordinate: newCoordinate,
+        let location = CLLocation(coordinate: coordinate,
                                   altitude: 0,
                                   horizontalAccuracy: horizontalAccuracy,
                                   verticalAccuracy: verticalAccuracy,
-                                  course: newCoordinate.direction(to: lookAheadCoordinate).wrap(min: 0, max: 360),
+                                  course: course,
                                   speed: currentSpeed,
                                   timestamp: Date())
         

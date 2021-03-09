@@ -109,7 +109,7 @@ class InstructionPresenter {
             switch component {
             case .delimiter(let text):
                 return NSAttributedString(string: text.text, attributes: defaultAttributes)
-            case .text(let text):
+            case .text(let text), .coloredText(let text, _, _):
                 let attributedString = NSMutableAttributedString(string: text.text, attributes: defaultAttributes)
                 // Annotate the attributed text representation with an abbreviation.
                 if let abbreviation = text.abbreviation, let abbreviationPriority = text.abbreviationPriority {

@@ -63,6 +63,8 @@ open class RouteController: NSObject {
     var isRerouting = false
     
     var isRefreshing = false
+
+    var isRefreshingMappyRoute = false
     
     var userSnapToStepDistanceFromManeuver: CLLocationDistance?
     
@@ -127,6 +129,12 @@ open class RouteController: NSObject {
     var lastRouteRefresh: Date?
     
     public var refreshesRoute: Bool = true
+
+    public var refreshesMappyRoute: Bool = true
+
+    var lastMappyRouteRefresh: Date?
+
+    public var forceMappyRouteRefreshAtNextUpdate = false
     
     /**
      The route controller’s delegate.
@@ -393,6 +401,10 @@ open class RouteController: NSObject {
     public func locationHistory() -> String? {
         return navigator.getHistory()
     }
+
+    func updatePrivateRouteProgress(_ routeProgress: RouteProgress) {
+        _routeProgress = routeProgress
+    }
 }
 
 extension RouteController: Router {
@@ -435,7 +447,7 @@ extension RouteController: Router {
         // Avoid interrupting an ongoing reroute
         if isRerouting { return }
         isRerouting = true
-        
+
         getDirections(from: location, along: progress) { [weak self] (session, result) in
             self?.isRerouting = false
             

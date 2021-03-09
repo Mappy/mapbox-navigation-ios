@@ -4,14 +4,14 @@ import MapboxMobileEvents
 @testable import MapboxCoreNavigation
 
 class NavigationEventsManagerTests: XCTestCase {
-    func testMobileEventsManagerIsInitializedImmediately() {
-        let mobileEventsManagerSpy = MMEEventsManagerSpy()
-        let _ = NavigationEventsManager(dataSource: nil, accessToken: "example token", mobileEventsManager: mobileEventsManagerSpy)
-
-        let config = UserDefaults.mme_configuration()
-        let token = config.mme_accessToken
-        XCTAssertEqual(token, "example token")
-    }
+//    func testMobileEventsManagerIsInitializedImmediately() {
+//        let mobileEventsManagerSpy = MMEEventsManagerSpy()
+//        let _ = NavigationEventsManager(dataSource: nil, accessToken: "example token", mobileEventsManager: mobileEventsManagerSpy)
+//
+//        let config = UserDefaults.mme_configuration()
+//        let token = config.mme_accessToken
+//        XCTAssertEqual(token, "example token")
+//    }
     
     func skipped_testDepartRerouteArrive() {
         

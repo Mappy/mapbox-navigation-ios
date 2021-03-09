@@ -324,13 +324,13 @@ class NavigationServiceTests: XCTestCase {
 
     // MARK: - Events & Delegation
 
-    func testTurnstileEventSentUponInitialization() {
-        // MARK: it sends a turnstile event upon initialization
-
-        let service = MapboxNavigationService(route: initialRoute, routeIndex: 0, routeOptions: routeOptions, directions: directionsClientSpy, locationSource: NavigationLocationManager(), eventsManagerType: NavigationEventsManagerSpy.self)
-        let eventsManagerSpy = service.eventsManager as! NavigationEventsManagerSpy
-        XCTAssertTrue(eventsManagerSpy.hasFlushedEvent(with: MMEEventTypeAppUserTurnstile))
-    }
+//    func testTurnstileEventSentUponInitialization() {
+//        // MARK: it sends a turnstile event upon initialization
+//
+//        let service = MapboxNavigationService(route: initialRoute, routeIndex: 0, routeOptions: routeOptions, directions: directionsClientSpy, locationSource: NavigationLocationManager(), eventsManagerType: NavigationEventsManagerSpy.self)
+//        let eventsManagerSpy = service.eventsManager as! NavigationEventsManagerSpy
+//        XCTAssertTrue(eventsManagerSpy.hasFlushedEvent(with: MMEEventTypeAppUserTurnstile))
+//    }
 
     func testReroutingFromLocationUpdatesSimulatedLocationSource() {
         let navigationService = MapboxNavigationService(route: initialRoute, routeIndex: 0, routeOptions: routeOptions,  directions: directionsClientSpy, eventsManagerType: NavigationEventsManagerSpy.self, simulating: .always)
@@ -530,7 +530,7 @@ class NavigationServiceTests: XCTestCase {
         for (index, location) in trace.enumerated() {
             navigationService.locationManager!(navigationService.locationManager, didUpdateLocations: [location])
 
-            if index < 32 {
+            if index < 28 {
                 XCTAssert(routeController.routeProgress.legIndex == 0)
             } else {
                 XCTAssert(routeController.routeProgress.legIndex == 1)

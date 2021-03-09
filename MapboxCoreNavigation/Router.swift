@@ -82,6 +82,23 @@ public protocol Router: class, CLLocationManagerDelegate {
      Refreshing will be used only if route's mode of transportation profile is set to `.automobileAvoidingTraffic`. If `reroutesProactively` is enabled too, rerouting will be checked after route is refreshed.
      */
     var refreshesRoute: Bool { get set }
+
+    /**
+     Mappy feature: if true, the `RouteController` attempts to update ETA and route congestion on an interval defined by `RouteControllerProactiveReroutingInterval`.
+
+     Refreshing will be used only if current route is a MappyRoute and options are an instance or subclass of MappyRouteOptions.
+     */
+    var refreshesMappyRoute: Bool { get set }
+
+    /**
+     Force the `RouteController` to update ETA and route congestion from the server at reception of the next location update.
+
+     This is a Mappy debug feature. This works by bypassing all usual checks that determine if a refresh should occur.
+     `refreshesRoute` must be set to true otherwise this parameter is ignored.
+     This property reverts to false once forced request has been sent.
+     - note: Unimplemented for `LegacyRouteController`.
+     */
+    var forceMappyRouteRefreshAtNextUpdate: Bool { get set }
     
     /**
      Advances the leg index.
@@ -99,6 +116,8 @@ protocol InternalRouter: class {
     var lastProactiveRerouteDate: Date? { get set }
     
     var lastRouteRefresh: Date? { get set }
+
+    var lastMappyRouteRefresh: Date? { get set }
     
     var routeTask: URLSessionDataTask? { get set }
     
@@ -111,16 +130,22 @@ protocol InternalRouter: class {
     var isRerouting: Bool { get set }
     
     var isRefreshing: Bool { get set }
+
+    var isRefreshingMappyRoute: Bool { get set }
     
     var directions: Directions { get }
     
     var routeProgress: RouteProgress { get set }
+
+    func updatePrivateRouteProgress(_ routeProgress: RouteProgress)
 }
 
 extension InternalRouter where Self: Router {
     
     func refreshAndCheckForFasterRoute(from location: CLLocation, routeProgress: RouteProgress) {
-        if refreshesRoute {
+        if refreshesMappyRoute && routeProgress.routeOptions is MappyRouteOptions  {
+            self.refreshMappyRouteAndCheckForFasterRoute(from: location, routeProgress: routeProgress)
+        } else if refreshesRoute {
             refreshRoute(from: location, legIndex: routeProgress.legIndex) {
                 self.checkForFasterRoute(from: location, routeProgress: routeProgress)
             }
@@ -223,14 +248,114 @@ extension InternalRouter where Self: Router {
             }
         }
     }
+
+    func refreshMappyRouteAndCheckForFasterRoute(from location: CLLocation, routeProgress: RouteProgress) {
+        guard refreshesMappyRoute,
+              routeProgress.routeOptions is MappyRouteOptions,
+              let mappyRoute = routeProgress.route as? MappyRoute else {
+            return
+        }
+
+        guard let currentUpcomingManeuver = routeProgress.currentLegProgress.upcomingStep else {
+            return
+        }
+
+        guard let lastMappyRouteRefresh = lastMappyRouteRefresh else {
+            self.lastMappyRouteRefresh = location.timestamp
+            return
+        }
+
+        // Only refresh route so often
+        guard location.timestamp.timeIntervalSince(lastMappyRouteRefresh) >= RouteControllerProactiveReroutingInterval
+                || forceMappyRouteRefreshAtNextUpdate == true else {
+            return
+        }
+
+        // Avoid interrupting an ongoing reroute
+        if isRerouting { return }
+
+        // Avoid interrupting an ongoing Mappy route refresh
+        if isRefreshingMappyRoute { return }
+        isRefreshingMappyRoute = true
+
+        var forceApplyRefreshedRoute = false
+        if forceMappyRouteRefreshAtNextUpdate {
+            forceMappyRouteRefreshAtNextUpdate = false
+            forceApplyRefreshedRoute = true
+        }
+
+        getDirections(from: location, along: routeProgress, mappyRouteSignature: mappyRoute.signature) { [weak self] (session, result) in
+            defer {
+                self?.isRefreshingMappyRoute = false
+                self?.lastMappyRouteRefresh = nil
+            }
+
+            guard let self = self else {
+                return
+            }
+
+            guard case let .success(response) = result,
+                  case let .route(routeOptions) = response.options,
+                  let mappyRouteOptions = routeOptions as? MappyRouteOptions else {
+                return
+            }
+
+            if let refreshedRoute = response.routes?.first(where: { ($0 as? MappyRoute)?.routeType == .current }) {
+                guard let firstLeg = refreshedRoute.legs.first else {
+                    return
+                }
+
+                let refreshedRouteIsValid = (currentUpcomingManeuver == firstLeg.steps[1])
+
+                if refreshedRouteIsValid || forceApplyRefreshedRoute {
+                    // Make sure to reset spokenInstructionIndex to 0 (in addition to reseting leg & step indexes)
+                    let routeProgress = RouteProgress(route: refreshedRoute, routeIndex: 0, options: mappyRouteOptions, legIndex: 0, spokenInstructionIndex: 0)
+                    routeProgress.currentLegProgress.stepIndex = 0
+                    self.updatePrivateRouteProgress(routeProgress)
+
+                    var userInfo = [RouteController.NotificationUserInfoKey: Any]()
+                    userInfo[.routeProgressKey] = self.routeProgress
+                    NotificationCenter.default.post(name: .routeControllerDidRefreshRoute, object: self, userInfo: userInfo)
+                    self.delegate?.router(self, didRefresh: self.routeProgress)
+                }
+            }
+
+            if let fasterRoute = response.routes?.first(where: { ($0 as? MappyRoute)?.routeType == .best }) {
+                guard let firstLeg = fasterRoute.legs.first, let firstStep = firstLeg.steps.first else {
+                    return
+                }
+
+                // Consider the faster route suitable to be presented to user only if:
+                // - the user has plenty of time left on the route
+                // - the user is not approaching a maneuver
+                // - the faster route's next maneuver matches the current route's next maneuver
+                let fasterRouteIsSuitable =
+                    routeProgress.durationRemaining > RouteControllerMinimumDurationRemainingForProactiveRerouting &&
+                    firstStep.expectedTravelTime >= RouteControllerMediumAlertInterval &&
+                    currentUpcomingManeuver == firstLeg.steps[1]
+
+                if fasterRouteIsSuitable {
+                    var userInfo = [RouteController.NotificationUserInfoKey: Any]()
+                    userInfo[.fasterRouteKey] = fasterRoute
+                    NotificationCenter.default.post(name: .routeControllerDidReceiveFasterRoute, object: self, userInfo: userInfo)
+                    self.delegate?.router(self, didReceiveFasterRoute: fasterRoute)
+                }
+            }
+        }
+    }
     
-    func getDirections(from location: CLLocation, along progress: RouteProgress, completion: @escaping Directions.RouteCompletionHandler) {
+    func getDirections(from location: CLLocation, along progress: RouteProgress, mappyRouteSignature: String? = nil, completion: @escaping Directions.RouteCompletionHandler) {
         routeTask?.cancel()
-        let options = progress.reroutingOptions(with: location)
+        let options = progress.reroutingOptions(with: location, mappyRouteSignature: mappyRouteSignature)
         
         lastRerouteLocation = location
         
         routeTask = directions.calculate(options) {(session, result) in
+
+            // Automatically disable debug flag "forceBetterRoute" once request as been performed
+            if let mappyRouteOptions = progress.routeOptions as? MappyRouteOptions {
+                mappyRouteOptions.forceBetterRoute = false
+            }
             
             guard case let .success(response) = result else {
                 return completion(session, result)
