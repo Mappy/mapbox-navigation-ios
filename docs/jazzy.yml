@@ -4,7 +4,7 @@ title: "Navigation SDK for iOS"
 author_url: https://docs.mapbox.com/ios/navigation/
 github_url: https://github.com/mapbox/mapbox-navigation-ios
 dash_url: https://docs.mapbox.com/ios/docsets/MapboxNavigation.xml
-copyright: '© 2014–2019 [Mapbox](https://www.mapbox.com/). See [license](https://github.com/mapbox/mapbox-navigation-ios/blob/master/LICENSE.md) for more details.'
+copyright: '© 2014–2021 [Mapbox](https://www.mapbox.com/). See [license](https://github.com/mapbox/mapbox-navigation-ios/blob/main/LICENSE.md) for more details.'
 
 head: |
   <link rel='shortcut icon' href='https://www.mapbox.com/img/favicon.ico' type='image/x-icon' />
@@ -22,47 +22,90 @@ custom_categories:
       - NavigationViewController
       - NavigationViewControllerDelegate
       - RouteVoiceController
+      - SpeechSynthesizing
+      - SpeechSynthesizingDelegate
+      - MapboxSpeechSynthesizer
+      - SystemSpeechSynthesizer
+      - MultiplexedSpeechSynthesizer
+      - SpeechError
+      - SpeechFailureAction
+      - NavigationOptions
+      - NavigationView
   - name: Core Navigation Logic
     children:
       - NavigationService
+      - NavigationServiceDelegate
       - MapboxNavigationService
+      - Router
+      - RouterDataSource
       - RouteController
-      - RouteControllerDelegate
+      - RouterDelegate
       - RouteProgress
       - RouteLegProgress
+      - RouteStep
       - RouteStepProgress
-      - RouteControllerNotificationUserInfoKey
+      - CongestionLevel
+      - VisualInstruction
+      - VisualInstructionDelegate
+      - NavigationEventsManager
+      - EventsManagerDataSource
+      - NavigationLocationManager
+      - ReplayLocationManager
+      - SimulatedLocationManager
+      - NavigationRouteOptions
+      - RouteOptions
+      - NavigationMatchOptions
+      - SimulationMode
+      - PassiveLocationDataSource
   - name: Maps
     children:
       - NavigationMapView
       - NavigationMapViewDelegate
+      - NavigationMapViewCourseTrackingDelegate
       - MGLMapView
+      - MGLAccountManager
+      - MGLMultiPolygonFeature
+      - MGLMultiPolyline
+      - MGLMultiPolylineFeature
+      - MGLPointAnnotation
+      - MGLPointFeature
+      - MGLPolygon
+      - MGLPolygonFeature
+      - MGLPolyline
+      - MGLPolylineFeature
+      - MGLStyle
+      - PassiveLocationManager
+      - WaypointStyle
   - name: Styling
     children:
       - Style
-      - StyleKitArrows
-      - StylableButton
-      - StylableLabel
+      - StyleManager
+      - StyleManagerNotificationUserInfoKey
+      - StyleManagerDelegate
+      - DayStyle
+      - NightStyle
   - name: Formatters
     children:
       - DistanceFormatter
-      - RouteStepFormatter
   - name: UI Components
     children:
-      - RouteTableViewController
-      - NavigationPulleyViewController
-      - Button
-      - CellSubtitleLabel
-      - CellTitleLabel
-      - DashedLineView
-      - HighlightedButton
-      - LineView
-      - ProgressBar
-      - SeparatorView
-      - SubtitleLabel
-      - TitleLabel
-      - TurnArrowView
-      - WayNameLabel
+      - BottomBannerViewController
+      - BottomBannerViewControllerDelegate
+      - SpeedLimitView
+      - UserPuckCourseView
+      - UserHaloCourseView
+      - CourseUpdatable
+      - NavigationComponent
+  - name: Guidance Instruction UI
+    children:
+      - TopBannerViewController
+      - InstructionsCardViewController
+      - InstructionsCardContainerView
+      - InstructionsCardContainerViewDelegate
+      - InstructionsBannerViewDelegate
+      - ManeuverView
+      - JunctionView
+      - GenericRouteShield
   - name: CarPlay
     children:
       - CarPlayManager
@@ -70,20 +113,49 @@ custom_categories:
       - CarPlayNavigationViewController
       - CarPlayNavigationDelegate
       - CarPlayActivity
+      - CarPlayCompassView
+      - CarPlayMapViewController
+      - CarPlaySearchController
+      - CarPlayConnectionObserver
   - name: Configuration
     children:
-      - MaxSecondsSpentTravelingAwayFromStartOfRoute
       - RouteControllerDeadReckoningTimeInterval
+      - RouteControllerMediumAlertInterval
       - RouteControllerHighAlertInterval
       - RouteControllerManeuverZoneRadius
-      - RouteControllerMaxManipulatedCourseAngle
+      - RouteSnappingMaxManipulatedCourseAngle
       - RouteControllerMaximumAllowedDegreeOffsetForTurnCompletion
       - RouteControllerMaximumDistanceBeforeRecalculating
-      - RouteControllerMediumAlertInterval
-      - RouteControllerMinimumDistanceForHighAlertCycling
-      - RouteControllerMinimumDistanceForHighAlertDriving
-      - RouteControllerMinimumDistanceForHighAlertWalking
-      - RouteControllerMinimumDistanceForMediumAlertCycling
-      - RouteControllerMinimumDistanceForMediumAlertDriving
-      - RouteControllerMinimumDistanceForMediumAlertWalking
       - RouteControllerUserLocationSnappingDistance
+      - MapOrnamentPosition
+      - MBCongestionAttribute
+      - MBCurrentLegAttribute
+      - MBRouteLineWidthByZoomLevel
+      - NavigationMapViewMinimumDistanceForOverheadZooming
+      - NavigationViewMinimumVolumeForWarning
+      - RouteControllerIncorrectCourseMultiplier
+      - RouteControllerLinkedInstructionBufferMultiplier
+      - RouteControllerMaximumSpeedForUsingCurrentStep
+      - RouteControllerMinNumberOfInCorrectCourses
+      - RouteControllerMinimumBacktrackingDistanceForRerouting
+      - RouteControllerMinimumDistanceForContinueInstruction
+      - RouteControllerMinimumDurationRemainingForProactiveRerouting
+      - RouteControllerMinimumNumberLocationUpdatesBackwards
+      - RouteControllerNumberOfSecondsForRerouteFeedback
+      - RouteControllerProactiveReroutingInterval
+      - RouteSnappingMinimumHorizontalAccuracy
+      - RouteSnappingMinimumSpeed
+      - NavigationSettings
+  - name: User Feedback
+    children:
+      - FeedbackViewController
+      - FeedbackViewControllerDelegate
+      - FeedbackItem
+      - FeedbackType
+      - IncorrectVisualSubtype
+      - ConfusingAudioSubtype
+      - RouteQualitySubtype
+      - IllegalRouteSubtype
+      - RoadClosureSubtype
+      - FeedbackSource
+      - EndOfRouteFeedback

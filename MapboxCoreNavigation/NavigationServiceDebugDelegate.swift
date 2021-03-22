@@ -2,8 +2,6 @@ import Foundation
 import CoreLocation
 import MapboxDirections
 
-@objc public protocol NavigationServiceDebugDelegate {
-
-    @objc(navigationServiceDebug:didUpdateLocations:)
+public protocol NavigationServiceDebugDelegate: class {
     func navigationServiceDebug(_ service: NavigationService, didUpdateLocations locations: [CLLocation])
 }

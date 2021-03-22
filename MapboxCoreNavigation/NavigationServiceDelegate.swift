@@ -1,6 +1,7 @@
 import Foundation
 import CoreLocation
 import MapboxDirections
+import os.log
 
 /**
  A navigation service delegate interacts with one or more `NavigationService` instances (such as `MapboxNavigationService` objects) during turn-by-turn navigation. This protocol is the main way that your application can synchronize its state with the SDK’s location-related functionality. Each of the protocol’s methods is optional.
@@ -14,7 +15,7 @@ import MapboxDirections
  - seealso: NavigationViewControllerDelegate
  - seealso: RouterDelegate
  */
-@objc public protocol NavigationServiceDelegate {
+public protocol NavigationServiceDelegate: class, UnimplementedLogging {
     /**
      Returns whether the navigation service should be allowed to calculate a new route.
      
@@ -24,19 +25,17 @@ import MapboxDirections
      - parameter location: The user’s current location.
      - returns: True to allow the navigation service to calculate a new route; false to keep tracking the current route.
      */
-    @objc(navigationService:shouldRerouteFromLocation:)
-    optional func navigationService(_ service: NavigationService, shouldRerouteFrom location: CLLocation) -> Bool
+    func navigationService(_ service: NavigationService, shouldRerouteFrom location: CLLocation) -> Bool
     
     /**
      Called immediately before the navigation service calculates a new route.
      
-     This method is called after `navigationService(_:shouldRerouteFrom:)` is called, simultaneously with the `NavigationServiceWillReroute` notification being posted, and before `navigationService(_:didRerouteAlong:)` is called.
+     This method is called after `navigationService(_:shouldRerouteFrom:)` is called, simultaneously with the `Notification.Name.routeControllerWillReroute` notification being posted, and before `navigationService(_:didRerouteAlong:)` is called.
      
      - parameter service: The navigation service that will calculate a new route.
      - parameter location: The user’s current location.
      */
-    @objc(navigationService:willRerouteFromLocation:)
-    optional func navigationService(_ service: NavigationService, willRerouteFrom location: CLLocation)
+    func navigationService(_ service: NavigationService, willRerouteFrom location: CLLocation)
     
     /**
      Called when a location has been identified as unqualified to navigate on.
@@ -45,41 +44,47 @@ import MapboxDirections
      
      - parameter service: The navigation service that discarded the location.
      - parameter location: The location that will be discarded.
-     - return: If `true`, the location is discarded and the `NavigationService` will not consider it. If `false`, the location will not be thrown out.
+     - returns: If `true`, the location is discarded and the `NavigationService` will not consider it. If `false`, the location will not be thrown out.
      */
-    @objc(navigationService:shouldDiscardLocation:)
-    optional func navigationService(_ service: NavigationService, shouldDiscard location: CLLocation) -> Bool
-    
-    /**
-     Called when a faster alternative route is found.
-     
-     - parameter service: The navigation service that has received a faster alternative route.
-     - parameter route: The alternative route.
-     */
-    @objc(navigationService:didReceiveFasterRoute:)
-    optional func navigationService(_ service: NavigationService, didReceiveFasterRoute route: Route)
+    func navigationService(_ service: NavigationService, shouldDiscard location: CLLocation) -> Bool
     
     /**
      Called immediately after the navigation service receives a new route.
      
-     This method is called after `navigationService(_:willRerouteFrom:)` and simultaneously with the `NavigationServiceDidReroute` notification being posted.
+     This method is called after `navigationService(_:willRerouteFrom:)` and simultaneously with the `Notification.Name.routeControllerDidReroute` notification being posted.
      
      - parameter service: The navigation service that has calculated a new route.
      - parameter route: The new route.
      */
-    @objc(navigationService:didRerouteAlongRoute:at:proactive:)
-    optional func navigationService(_ service: NavigationService, didRerouteAlong route: Route, at location: CLLocation?, proactive: Bool)
+    func navigationService(_ service: NavigationService, didRerouteAlong route: Route, at location: CLLocation?, proactive: Bool)
     
     /**
      Called when the navigation service fails to receive a new route.
      
-     This method is called after `navigationService(_:willRerouteFrom:)` and simultaneously with the `NavigationServiceDidFailToReroute` notification being posted.
+     This method is called after `navigationService(_:willRerouteFrom:)` and simultaneously with the `Notification.Name.routeControllerDidFailToReroute` notification being posted.
      
      - parameter service: The navigation service that has calculated a new route.
      - parameter error: An error raised during the process of obtaining a new route.
      */
-    @objc(navigationService:didFailToRerouteWithError:)
-    optional func navigationService(_ service: NavigationService, didFailToRerouteWith error: Error)
+    func navigationService(_ service: NavigationService, didFailToRerouteWith error: Error)
+    
+    /**
+     Called immediately after the navigation service refreshes the route.
+     
+     This method is called simultaneously with the `Notification.Name.routeControllerDidRefreshRoute` notification being posted.
+     
+     - parameter service: The navigation service that has refreshed the route.
+     - parameter routeProgress: The route progress updated with the refreshed route.
+     */
+    func navigationService(_ service: NavigationService, didRefresh routeProgress: RouteProgress)
+
+    /**
+     Called when the navigation service finds a faster alternative route.
+
+     - parameter service: The navigation service that found a faster alternative route.
+     - parameter route: The faster alternative route.
+     */
+    func navigationService(_ service: NavigationService, didReceiveFasterRoute route: Route)
     
     /**
      Called when the navigation service updates the route progress model.
@@ -89,18 +94,15 @@ import MapboxDirections
      - parameter location: the guaranteed location, possibly snapped, associated with the progress update.
      - parameter rawLocation: the raw location, from the location manager, associated with the progress update.
      */
-    @objc(navigationService:didUpdateProgress:withLocation:rawLocation:)
-    optional func navigationService(_ service: NavigationService, didUpdate progress: RouteProgress, with location: CLLocation, rawLocation: CLLocation)
+    func navigationService(_ service: NavigationService, didUpdate progress: RouteProgress, with location: CLLocation, rawLocation: CLLocation)
     
     /**
      Called when the navigation service detects that the user has passed a point at which an instruction should be displayed.
      - parameter service: The navigation service that passed the instruction point.
      - parameter instruction: The instruction to be presented.
      - parameter routeProgress: The route progress object that the navigation service is updating.
-    */
-    @objc(navigationService:didPassVisualInstructionPoint:routeProgress:)
-    optional func navigationService(_ service: NavigationService, didPassVisualInstructionPoint instruction: VisualInstructionBanner, routeProgress: RouteProgress)
-    
+     */
+    func navigationService(_ service: NavigationService, didPassVisualInstructionPoint instruction: VisualInstructionBanner, routeProgress: RouteProgress)
     
     /**
      Called when the navigation service detects that the user has passed a point at which an instruction should be spoken.
@@ -108,8 +110,7 @@ import MapboxDirections
      - parameter instruction: The instruction to be spoken.
      - parameter routeProgress: The route progress object that the navigation service is updating.
      */
-    @objc(navigationService:didPassSpokenInstructionPoint:routeProgress:)
-    optional func navigationService(_ service: NavigationService, didPassSpokenInstructionPoint instruction: SpokenInstruction, routeProgress: RouteProgress)
+    func navigationService(_ service: NavigationService, didPassSpokenInstructionPoint instruction: SpokenInstruction, routeProgress: RouteProgress)
     
     /**
      Called as the navigation service approaches a waypoint.
@@ -121,9 +122,7 @@ import MapboxDirections
      - parameter distance: The current distance from the waypoint, in meters.
      - important: This method will likely be called several times as you approach a destination. If only one consumption of this method is desired, then usage of an internal flag is recommended.
      */
-    
-    @objc(navigationService:willArriveAtWaypoint:after:distance:)
-    optional func navigationService(_ service: NavigationService, willArriveAt waypoint: Waypoint, after remainingTimeInterval:TimeInterval, distance: CLLocationDistance)
+    func navigationService(_ service: NavigationService, willArriveAt waypoint: Waypoint, after remainingTimeInterval:TimeInterval, distance: CLLocationDistance)
     
     /**
      Called when the navigation service arrives at a waypoint.
@@ -135,8 +134,7 @@ import MapboxDirections
      - parameter waypoint: The waypoint that the controller has arrived at.
      - returns: True to advance to the next leg, if any, or false to remain on the completed leg.
      */
-    @objc(navigationService:didArriveAtWaypoint:)
-    optional func navigationService(_ service: NavigationService, didArriveAt waypoint: Waypoint) -> Bool
+    func navigationService(_ service: NavigationService, didArriveAt waypoint: Waypoint) -> Bool
     
     /**
      Called when the navigation service arrives at a waypoint.
@@ -147,9 +145,17 @@ import MapboxDirections
      - parameter waypoint: The waypoint that the controller has arrived at.
      - returns: True to prevent the navigation service from checking if the user should be rerouted.
      */
-    @objc(navigationService:shouldPreventReroutesWhenArrivingAtWaypoint:)
-    optional func navigationService(_ service: NavigationService, shouldPreventReroutesWhenArrivingAt waypoint: Waypoint) -> Bool
+    func navigationService(_ service: NavigationService, shouldPreventReroutesWhenArrivingAt waypoint: Waypoint) -> Bool
     
+    /**
+     Called when the location manager's accuracy authorization changed.
+     
+     You can implement this method to allow the navigation service to check if the user changed accuracy authorization, especially if reducedAccuracy is enabled. This method is only relevant for iOS 14 and above.
+     
+     - parameter service: The navigation service that will alert that user that reducedAccuracy is enabled.
+     - parameter manager: The location manager.
+     */
+    func navigationServiceDidChangeAuthorization(_ service: NavigationService, didChangeAuthorizationFor locationManager: CLLocationManager)
     
     /**
      Called when the navigation service will disable battery monitoring.
@@ -159,9 +165,7 @@ import MapboxDirections
      - parameter service: The navigation service that will change the state of battery monitoring.
      - returns: A bool indicating whether to disable battery monitoring when the RouteController is deinited.
      */
-    @objc(navigationServiceShouldDisableBatteryMonitoring:)
-    optional func navigationServiceShouldDisableBatteryMonitoring(_ service: NavigationService) -> Bool
-    
+    func navigationServiceShouldDisableBatteryMonitoring(_ service: NavigationService) -> Bool
     
     /**
      Called when the navigation service is about to begin location simulation.
@@ -172,7 +176,7 @@ import MapboxDirections
      - parameter progress: the current RouteProgress model.
      - parameter reason: The reason the simulation will be initiated. Either manual or poorGPS.
      */
-    @objc optional func navigationService(_ service: NavigationService, willBeginSimulating progress: RouteProgress, becauseOf reason: SimulationIntent)
+    func navigationService(_ service: NavigationService, willBeginSimulating progress: RouteProgress, becauseOf reason: SimulationIntent)
     
     /**
      Called after the navigation service begins location simulation.
@@ -183,7 +187,7 @@ import MapboxDirections
      - parameter progress: the current RouteProgress model.
      - parameter reason: The reason the simulation has been initiated. Either manual or poorGPS.
      */
-    @objc optional func navigationService(_ service: NavigationService, didBeginSimulating progress: RouteProgress, becauseOf reason: SimulationIntent)
+    func navigationService(_ service: NavigationService, didBeginSimulating progress: RouteProgress, becauseOf reason: SimulationIntent)
     
     /**
      Called when the navigation service is about to end location simulation.
@@ -194,7 +198,7 @@ import MapboxDirections
      - parameter progress: the current RouteProgress model.
      - parameter reason: The reason the simulation was initiated. Either manual or poorGPS.
      */
-    @objc optional func navigationService(_ service: NavigationService, willEndSimulating progress: RouteProgress, becauseOf reason: SimulationIntent)
+    func navigationService(_ service: NavigationService, willEndSimulating progress: RouteProgress, becauseOf reason: SimulationIntent)
     
     /**
      Called after the navigation service ends location simulation.
@@ -205,5 +209,142 @@ import MapboxDirections
      - parameter progress: the current RouteProgress model.
      - parameter reason: The reason the simulation was initiated. Either manual or poorGPS.
      */
-    @objc optional func navigationService(_ service: NavigationService, didEndSimulating progress: RouteProgress, becauseOf reason: SimulationIntent)
+    func navigationService(_ service: NavigationService, didEndSimulating progress: RouteProgress, becauseOf reason: SimulationIntent)
+}
+
+public extension NavigationServiceDelegate {
+    /**
+     `UnimplementedLogging` prints a warning to standard output the first time this method is called.
+     */
+    func navigationService(_ service: NavigationService, shouldRerouteFrom location: CLLocation) -> Bool {
+        logUnimplemented( protocolType: NavigationServiceDelegate.self, level: .debug)
+        return MapboxNavigationService.Default.shouldRerouteFromLocation
+    }
+    
+    /**
+     `UnimplementedLogging` prints a warning to standard output the first time this method is called.
+     */
+    func navigationService(_ service: NavigationService, willRerouteFrom location: CLLocation) {
+        logUnimplemented(protocolType: NavigationServiceDelegate.self, level: .debug)
+    }
+    
+    /**
+     `UnimplementedLogging` prints a warning to standard output the first time this method is called.
+     */
+    func navigationService(_ service: NavigationService, shouldDiscard location: CLLocation) -> Bool {
+        logUnimplemented(protocolType: NavigationServiceDelegate.self, level: .debug)
+        return MapboxNavigationService.Default.shouldDiscardLocation
+    }
+    
+    /**
+     `UnimplementedLogging` prints a warning to standard output the first time this method is called.
+     */
+    func navigationService(_ service: NavigationService, didRerouteAlong route: Route, at location: CLLocation?, proactive: Bool) {
+        logUnimplemented(protocolType: NavigationServiceDelegate.self, level: .info)
+    }
+    
+    /**
+     `UnimplementedLogging` prints a warning to standard output the first time this method is called.
+     */
+    func navigationService(_ service: NavigationService, didFailToRerouteWith error: Error) {
+        logUnimplemented(protocolType: NavigationServiceDelegate.self, level: .debug)
+    }
+    
+    /**
+     `UnimplementedLogging` prints a warning to standard output the first time this method is called.
+     */
+    func navigationService(_ service: NavigationService, didRefresh routeProgress: RouteProgress) {
+        logUnimplemented(protocolType: NavigationServiceDelegate.self, level: .info)
+    }
+
+    /**
+     `UnimplementedLogging` prints a warning to standard output the first time this method is called.
+     */
+    func navigationService(_ service: NavigationService, didReceiveFasterRoute route: Route) {
+        logUnimplemented(protocolType: NavigationServiceDelegate.self, level: .info)
+    }
+    
+    /**
+     `UnimplementedLogging` prints a warning to standard output the first time this method is called.
+     */
+    func navigationService(_ service: NavigationService, didUpdate progress: RouteProgress, with location: CLLocation, rawLocation: CLLocation) {
+        logUnimplemented(protocolType: NavigationServiceDelegate.self, level: .info)
+    }
+    
+    /**
+     `UnimplementedLogging` prints a warning to standard output the first time this method is called.
+     */
+    func navigationService(_ service: NavigationService, didPassVisualInstructionPoint instruction: VisualInstructionBanner, routeProgress: RouteProgress) {
+        logUnimplemented(protocolType: NavigationServiceDelegate.self, level: .debug)
+    }
+    
+    /**
+     `UnimplementedLogging` prints a warning to standard output the first time this method is called.
+     */
+    func navigationService(_ service: NavigationService, didPassSpokenInstructionPoint instruction: SpokenInstruction, routeProgress: RouteProgress) {
+        logUnimplemented(protocolType: NavigationServiceDelegate.self, level: .debug)
+    }
+    
+    /**
+     `UnimplementedLogging` prints a warning to standard output the first time this method is called.
+     */
+    func navigationService(_ service: NavigationService, willArriveAt waypoint: Waypoint, after remainingTimeInterval: TimeInterval, distance: CLLocationDistance) {
+        logUnimplemented(protocolType: NavigationServiceDelegate.self, level: .debug)
+    }
+    
+    /**
+     `UnimplementedLogging` prints a warning to standard output the first time this method is called.
+     */
+    func navigationService(_ service: NavigationService, didArriveAt waypoint: Waypoint) -> Bool {
+        logUnimplemented(protocolType: NavigationServiceDelegate.self, level: .debug)
+        return MapboxNavigationService.Default.didArriveAtWaypoint
+    }
+    
+    /**
+     `UnimplementedLogging` prints a warning to standard output the first time this method is called.
+     */
+    func navigationService(_ service: NavigationService, shouldPreventReroutesWhenArrivingAt waypoint: Waypoint) -> Bool {
+        logUnimplemented(protocolType: NavigationServiceDelegate.self, level: .debug)
+        return MapboxNavigationService.Default.shouldPreventReroutesWhenArrivingAtWaypoint
+    }
+    
+    func navigationServiceDidChangeAuthorization(_ service: NavigationService, didChangeAuthorizationFor locationManager: CLLocationManager) {
+        logUnimplemented(protocolType: NavigationServiceDelegate.self, level: .debug)
+    }
+    
+    /**
+     `UnimplementedLogging` prints a warning to standard output the first time this method is called.
+     */
+    func navigationServiceShouldDisableBatteryMonitoring(_ service: NavigationService) -> Bool {
+        logUnimplemented(protocolType: NavigationServiceDelegate.self, level: .debug)
+        return MapboxNavigationService.Default.shouldDisableBatteryMonitoring
+    }
+    
+    /**
+     `UnimplementedLogging` prints a warning to standard output the first time this method is called.
+     */
+    func navigationService(_ service: NavigationService, willBeginSimulating progress: RouteProgress, becauseOf reason: SimulationIntent) {
+        logUnimplemented(protocolType: NavigationServiceDelegate.self, level: .debug)
+    }
+    
+    /**
+     `UnimplementedLogging` prints a warning to standard output the first time this method is called.
+     */
+    func navigationService(_ service: NavigationService, didBeginSimulating progress: RouteProgress, becauseOf reason: SimulationIntent) {
+        logUnimplemented(protocolType: NavigationServiceDelegate.self, level: .debug)
+    }
+    
+    /**
+     `UnimplementedLogging` prints a warning to standard output the first time this method is called.
+     */
+    func navigationService(_ service: NavigationService, willEndSimulating progress: RouteProgress, becauseOf reason: SimulationIntent) {
+        logUnimplemented(protocolType: NavigationServiceDelegate.self, level: .debug)
+    }
+    
+    /**
+     `UnimplementedLogging` prints a warning to standard output the first time this method is called.
+     */
+    func navigationService(_ service: NavigationService, didEndSimulating progress: RouteProgress, becauseOf reason: SimulationIntent) {
+        logUnimplemented(protocolType: NavigationServiceDelegate.self, level: .debug)
+    }
 }

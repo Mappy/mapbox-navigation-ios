@@ -12,7 +12,7 @@ cache:
     - Carthage/Checkouts/
 
 .bundler_before: &carthage_init
-  - carthage bootstrap --platform ios --cache-builds
+  - ./scripts/wcarthage.sh bootstrap --platform ios --cache-builds --use-netrc
 
 .mappy_branch_only: &mappy_branch_rules
   - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
@@ -23,13 +23,8 @@ build_mapbox_navigation:
   stage: build
   before_script: *carthage_init
   script:
-    # - ./scripts/launch_corenav_build.sh
     - ./scripts/build_ui.sh
   rules: *mappy_branch_rules
-  # artifacts:
-  #   paths:
-  #     - pkg/*.tar.gz
-  #   expire_in: 2 months
 
 test_mapbox_navigation:
   stage: test
@@ -39,5 +34,5 @@ test_mapbox_navigation:
   rules: *mappy_branch_rules
   artifacts:
     reports:
-      junit: test-reports/TEST-MBCoreNavigation.xml
+      junit: test-reports/TEST-MapboxCoreNavigation.xml
   dependencies: []

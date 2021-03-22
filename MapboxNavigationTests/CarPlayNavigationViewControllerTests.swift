@@ -5,7 +5,6 @@ import XCTest
 import Foundation
 import TestHelper
 
-
 @available(iOS 12.0, *)
 fileprivate class CarPlayNavigationDelegateSpy: NSObject, CarPlayNavigationDelegate {
     var didArriveExpectation: XCTestExpectation!
@@ -28,9 +27,8 @@ fileprivate class CPManeuverFake: CPManeuver {
 
 @available(iOS 12.0, *)
 fileprivate class CPNavigationSessionFake: CPNavigationSession {
-     init(maneuvers: [CPManeuver]) {
+    init(maneuvers: [CPManeuver]) {
         fakeManeuvers = maneuvers
-        
     }
     
     override var upcomingManeuvers: [CPManeuver] {
@@ -48,12 +46,16 @@ fileprivate class CPNavigationSessionFake: CPNavigationSession {
 @available(iOS 12.0, *)
 fileprivate class CarPlayNavigationViewControllerTests: XCTestCase {
     func testCarplayDisplaysCorrectEstimates() {
-        
         //set up the litany of dependancies
-        let directions = Directions(accessToken: "fafedeadbeef")
+        let directions = Directions(credentials: Fixture.credentials)
         let manager = CarPlayManager(directions: directions)
-        let route = Fixture.route(from: "multileg-route")
-        let navService = MapboxNavigationService(route: route)
+        let options = NavigationRouteOptions(coordinates: [
+            CLLocationCoordinate2D(latitude: 9.519172, longitude: 47.210823),
+            CLLocationCoordinate2D(latitude: 9.52222, longitude: 47.214268),
+            CLLocationCoordinate2D(latitude: 47.212326, longitude: 9.512569),
+        ])
+        let route = Fixture.route(from: "multileg-route", options: options)
+        let navService = MapboxNavigationService(route: route, routeIndex: 0, routeOptions: options)
         let interface = FakeCPInterfaceController("test estimates display")
         let mapSpy = MapTemplateSpy()
         let trip = CPTrip(origin: MKMapItem(), destination: MKMapItem(), routeChoices: [])
@@ -61,14 +63,16 @@ fileprivate class CarPlayNavigationViewControllerTests: XCTestCase {
         let fakeSession = CPNavigationSessionFake(maneuvers: [fakeManeuver])
         mapSpy.fakeSession = fakeSession
         let progress = navService.routeProgress
-        let firstCoordinate = progress.currentLeg.coordinates.first!
+        let firstCoordinate = progress.currentLeg.shape.coordinates.first!
         let location = CLLocation(latitude: firstCoordinate.latitude, longitude: firstCoordinate.longitude)
         
         //create the subject and notification
         let subject = CarPlayNavigationViewController(navigationService: navService, mapTemplate: mapSpy, interfaceController: interface, manager: manager)
         subject.startNavigationSession(for: trip)
-        let payload: [RouteControllerNotificationUserInfoKey:Any] = [.routeProgressKey : navService.routeProgress,
-             .locationKey: location]
+        let payload: [RouteController.NotificationUserInfoKey: Any] = [
+            .routeProgressKey: navService.routeProgress,
+            .locationKey: location,
+        ]
         let fakeNotication = NSNotification(name: .routeControllerProgressDidChange, object: navService.router, userInfo: payload)
         
         //fire the fake notification

@@ -19,12 +19,24 @@ When reporting a bug in the navigation SDK itself, please indicate:
 
 ## Building the SDK
 
-To build this SDK, you need Xcode 9 and [Carthage](https://github.com/Carthage/Carthage/):
+To build this SDK, you need Xcode 11.4.1 and [Carthage](https://github.com/Carthage/Carthage/) v0.35:
 
-1. Run `carthage bootstrap --platform iOS --cache-builds`.
-1. Once the Carthage build finishes, open `MapboxNavigation.xcodeproj` in Xcode and build the MapboxNavigation scheme.
+1. Go to your [Mapbox account dashboard](https://account.mapbox.com/) and create an access token that has the `DOWNLOADS:READ` scope. **PLEASE NOTE: This is not the same as your production Mapbox API token. Make sure to keep it private and do not insert it into any Info.plist file.** Create a file named `.netrc` in your home directory if it doesn’t already exist, then add the following lines to the end of the file:
+   ```
+   machine api.mapbox.com
+     login mapbox
+     password PRIVATE_MAPBOX_API_TOKEN
+   ```
+   where _PRIVATE_MAPBOX_API_TOKEN_ is your Mapbox API token with the `DOWNLOADS:READ` scope.
 
-See [the README](./README.md#running-the-example-project) for instructions on building and running the included Swift and Objective-C example projects.
+1. _(Optional)_ Clear your Carthage caches:
+   ```bash
+   rm -rf ~/Library/Caches/carthage/ ~/Library/Caches/org.carthage.CarthageKit/binaries/{MapboxAccounts,MapboxCommon-ios,MapboxNavigationNative,mapbox-ios-sdk-dynamic}
+   ```
+
+1. Run `./scripts/wcarthage.sh bootstrap --platform iOS --cache-builds --use-netrc`. (wcarthage.sh is a temporary workaround for [a linker error in Xcode 12](https://github.com/Carthage/Carthage/issues/3019).)
+
+1. Once the Carthage build finishes, open `MapboxNavigation.xcodeproj` in Xcode and build the MapboxNavigation scheme. Switch to the Example or Example-CarPlay scheme to see the SDK in action.
 
 ## Testing the SDK
 
@@ -32,21 +44,20 @@ It is important to test the SDK using the `iPhone 8 Plus` simulator for the `FBS
 
 ## Opening a pull request
 
-Pull requests are appreciated. If your PR includes any changes that would impact developers or end users, please mention those changes in the “master” section of [CHANGELOG.md](CHANGELOG.md), noting the PR number. Examples of noteworthy changes include new features, fixes for user-visible bugs, renamed or deleted public symbols, and changes that affect bridging to Objective-C.
+Pull requests are appreciated. If your PR includes any changes that would impact developers or end users, please mention those changes in the “main” section of [CHANGELOG.md](CHANGELOG.md), noting the PR number. Examples of noteworthy changes include new features, fixes for user-visible bugs, and renamed or deleted public symbols.
 
 ## Making any symbol public
 
 To add any type, constant, or member to the SDK’s public interface:
 
-1. Ensure that the symbol bridges to Objective-C and does not rely on any language features specific to Swift – so no namespaced types or classes named with emoji! 🙃
 1. Name the symbol according to [Swift design guidelines](https://swift.org/documentation/api-design-guidelines/) and [Cocoa naming conventions](https://developer.apple.com/library/prerelease/content/documentation/Cocoa/Conceptual/CodingGuidelines/CodingGuidelines.html#//apple_ref/doc/uid/10000146i).
-1. Use `@objc(…)` to specify an Objective-C-specific name that conforms to Objective-C naming conventions. Use the `MB` class prefix to avoid conflicts with client code.
+1. In rare cases where a symbol needs to bridge to Objective-C to interoperate with the Objective-C runtime, use `@objc(…)` to specify an Objective-C-specific name that conforms to Objective-C naming conventions. Use the `MB` class prefix to avoid conflicts with client code.
 1. Provide full documentation comments. We use [jazzy](https://github.com/realm/jazzy/) to produce the documentation found [on the website for this SDK](https://docs.mapbox.com/ios/api/navigation/). Many developers also rely on Xcode’s Quick Help feature, which supports a subset of Markdown.
 1. _(Optional.)_ Add the type or constant’s name to the relevant category in the `custom_categories` section of [the jazzy configuration file](./docs/jazzy.yml). This is required for classes and protocols and also recommended for any other type that is strongly associated with a particular class or protocol. If you leave out this step, the symbol will appear in an “Other” section in the generated HTML documentation’s table of contents.
 
 ## Adding image assets
 
-Image assets are designed in a [PaintCode](http://paintcodeapp.com/) document managed in the [navigation-ui-resources](https://github.com/mapbox/navigation-ui-resources/) repository. After changes to that repository are merged, export the PaintCode drawings as Swift source code and add or replace files in the [MapboxNavigation](https://github.com/mapbox/mapbox-navigation-ios/tree/master/MapboxNavigation/) folder.
+Image assets are designed in a [PaintCode](http://paintcodeapp.com/) document managed in the [navigation-ui-resources](https://github.com/mapbox/navigation-ui-resources/) repository. After changes to that repository are merged, export the PaintCode drawings as Swift source code and add or replace files in the [MapboxNavigation](https://github.com/mapbox/mapbox-navigation-ios/tree/main/MapboxNavigation/) folder.
 
 ## Adding user-facing text
 
@@ -70,7 +81,7 @@ The Mapbox Navigation SDK for iOS features several translations contributed thro
 
 While you’re there, please consider also translating the following related projects:
 
-* [Mapbox Maps SDK for iOS](https://www.transifex.com/mapbox/mapbox-gl-native/), which is responsible for the map view and minor UI elements such as the compass ([instructions](https://github.com/mapbox/mapbox-gl-native/blob/master/platform/ios/DEVELOPING.md#adding-a-localization))
+* [Mapbox Maps SDK for iOS](https://www.transifex.com/mapbox/mapbox-gl-native/), which is responsible for the map view and minor UI elements such as the compass ([instructions](https://github.com/mapbox/mapbox-gl-native-ios/blob/master/platform/ios/DEVELOPING.md#adding-a-localization))
 * [OSRM Text Instructions](https://www.transifex.com/project-osrm/osrm-text-instructions/), which the Mapbox Directions API uses to generate textual and verbal turn instructions ([instructions](https://github.com/Project-OSRM/osrm-text-instructions/blob/master/CONTRIBUTING.md#adding-or-updating-a-localization))
 * [Mapbox Navigation SDK for Android](https://www.transifex.com/mapbox/mapbox-navigation-sdk-for-android/), the analogous library for Android applications ([instructions](https://github.com/mapbox/mapbox-navigation-android/blob/master/CONTRIBUTING.md#adding-or-updating-a-localization))
 

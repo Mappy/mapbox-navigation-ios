@@ -3,20 +3,17 @@ import MapboxDirections
 import TestHelper
 @testable import MapboxCoreNavigation
 
-
 class OfflineRoutingTests: XCTestCase {
-    
     func testOfflineDirections() {
-        
         let bundle = Bundle(for: Fixture.self)
         let tilesURL = URL(fileURLWithPath: bundle.bundlePath.appending("/tiles/liechtenstein"))
 
         let setupExpectation = expectation(description: "Set up offline routing")
 
-        let directions = NavigationDirections(accessToken: "foo")
+        let directions = NavigationDirections(credentials: Fixture.credentials)
         
-        directions.configureRouter(tilesURL: tilesURL) { (numberOfTiles) in
-            XCTAssertEqual(numberOfTiles, 5)
+        directions.configureRouter(tilesURL: tilesURL) { (outTilesURL) in
+            XCTAssertEqual(tilesURL, outTilesURL)
             setupExpectation.fulfill()
         }
 
@@ -28,32 +25,40 @@ class OfflineRoutingTests: XCTestCase {
 
         let options = NavigationRouteOptions(coordinates: coordinates, profileIdentifier: .automobile)
         let calculateRouteExpectation = expectation(description: "Calculate route offline")
-        var route: Route?
+        var possibleRoute: Route?
 
-        directions.calculate(options, offline: true) { (waypoints, routes, error) in
-            XCTAssertNil(error)
-            XCTAssertNotNil(waypoints)
-            XCTAssertNotNil(routes)
-            route = routes!.first!
-            calculateRouteExpectation.fulfill()
+        directions.calculate(options, offline: true) { (session, result) in
+            switch result {
+            case let .failure(error):
+                XCTFail("Unexpected Failure: \(error)")
+                
+            case let .success(response):
+                XCTAssertNotNil(response.routes)
+                XCTAssertNotNil(response.waypoints)
+                possibleRoute = response.routes!.first!
+                calculateRouteExpectation.fulfill()
+            }
         }
 
         wait(for: [calculateRouteExpectation], timeout: 2)
 
-        XCTAssertNotNil(route)
-        XCTAssertEqual(route!.coordinates!.count, 47)
+        guard let route = possibleRoute else {
+            XCTFail("No route returned")
+            return
+        }
+        
+        XCTAssertEqual(route.shape!.coordinates.count, 47)
     }
     
     func testOfflineDirectionsError() {
-        
         let bundle = Bundle(for: Fixture.self)
         let tilesURL = URL(fileURLWithPath: bundle.bundlePath).appendingPathComponent("/tiles/liechtenstein")
         
         let setupExpectation = expectation(description: "Set up offline routing")
         
-        let directions = NavigationDirections(accessToken: "foo")
-        directions.configureRouter(tilesURL: tilesURL) { (numberOfTiles) in
-            XCTAssertEqual(numberOfTiles, 5)
+        let directions = NavigationDirections(credentials: Fixture.credentials)
+        directions.configureRouter(tilesURL: tilesURL) { (outTilesURL) in
+            XCTAssertEqual(tilesURL, outTilesURL)
             setupExpectation.fulfill()
         }
         
@@ -66,13 +71,18 @@ class OfflineRoutingTests: XCTestCase {
         let options = NavigationRouteOptions(coordinates: coordinates, profileIdentifier: .automobile)
         let calculateRouteExpectation = expectation(description: "Calculate route offline")
         
-        directions.calculate(options, offline: true) { (waypoints, routes, error) in
-            XCTAssertNotNil(error)
-            let validErrors = ["No suitable edges near location", "Unknown Routing Error"]
-            let validError = validErrors.contains(error!.localizedDescription)
-            XCTAssertTrue(validError)
-            XCTAssertNil(routes)
-            XCTAssertNil(waypoints)
+        directions.calculate(options, offline: true) { (session, response) in
+            guard case let .failure(error) = response else {
+                XCTFail("Unexpected Success")
+                return
+            }
+            
+            guard case let .standard(directionsError) = error else {
+                XCTFail("Wrong error type.")
+                return
+            }
+            
+            XCTAssertEqual(directionsError, .unableToRoute)
             calculateRouteExpectation.fulfill()
         }
         
@@ -80,7 +90,6 @@ class OfflineRoutingTests: XCTestCase {
     }
     
     func testUnpackTilePack() {
-        
         let bundle = Bundle(for: Fixture.self)
         let readonlyPackURL = URL(fileURLWithPath: bundle.path(forResource: "li", ofType: "tar")!)
         
@@ -99,9 +108,7 @@ class OfflineRoutingTests: XCTestCase {
         progressExpectation.expectedFulfillmentCount = 2
         
         NavigationDirections.unpackTilePack(at: packURL, outputDirectoryURL: outputDirectoryURL, progressHandler: { (totalBytes, unpackedBytes) in
-            
             progressExpectation.fulfill()
-            
         }) { (result, error) in
             XCTAssertEqual(result, 5)
             XCTAssertNil(error)
@@ -112,9 +119,9 @@ class OfflineRoutingTests: XCTestCase {
         
         let configureExpectation = self.expectation(description: "Configure router with unpacked tar")
         
-        let directions = NavigationDirections(accessToken: "foo")
-        directions.configureRouter(tilesURL: outputDirectoryURL) { (numberOfTiles) in
-            XCTAssertEqual(numberOfTiles, 5)
+        let directions = NavigationDirections(credentials: Fixture.credentials)
+        directions.configureRouter(tilesURL: outputDirectoryURL) { (outOutputDirectoryURL) in
+            XCTAssertEqual(outputDirectoryURL, outOutputDirectoryURL)
             configureExpectation.fulfill()
         }
         

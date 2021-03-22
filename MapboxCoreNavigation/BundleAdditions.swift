@@ -32,8 +32,19 @@ extension Bundle {
     /**
      The Mapbox Core Navigation framework bundle.
      */
-    @objc public class var mapboxCoreNavigation: Bundle {
+    public class var mapboxCoreNavigation: Bundle {
         return Bundle(for: RouteController.self)
+    }
+    
+    /**
+     The Mapbox Navigation framework bundle, if installed.
+     */
+    class var mapboxNavigationIfInstalled: Bundle? {
+        // Assumption: MapboxNavigation.framework includes NavigationViewController and exposes it to the Objective-C runtime as MapboxNavigation.NavigationViewController.
+        guard let NavigationViewController = NSClassFromString("MapboxNavigation.NavigationViewController") else {
+            return nil
+        }
+        return Bundle(for: NavigationViewController)
     }
     
     public func ensureSuggestedTileURLExists() -> Bool {
@@ -45,8 +56,7 @@ extension Bundle {
     /**
      A file URL representing a directory in which the application can place downloaded tile files.
      */
-    @objc public var suggestedTileURL: URL? {
-        
+    public var suggestedTileURL: URL? {
         guard let cachesDirectory = NSSearchPathForDirectoriesInDomains(.cachesDirectory, .userDomainMask, true).first else {
             return nil
         }
@@ -60,7 +70,6 @@ extension Bundle {
     /**
      A file URL at which the application can place a downloaded tile file with the given version identifier.
      */
-    @objc(suggestedTileURLWithVersion:)
     public func suggestedTileURL(version: String) -> URL? {
         return suggestedTileURL?.appendingPathComponent(version)
     }

@@ -3,14 +3,11 @@ import MapboxDirections
 import MapboxCoreNavigation
 
 /// :nodoc:
-@objc(MBNextInstructionLabel)
-open class NextInstructionLabel: InstructionLabel { }
+open class NextInstructionLabel: InstructionLabel {}
 
 /// :nodoc:
 @IBDesignable
-@objc(MBNextBannerView)
 open class NextBannerView: UIView, NavigationComponent {
-    
     weak var maneuverView: ManeuverView!
     weak var instructionLabel: NextInstructionLabel!
     weak var bottomSeparatorView: SeparatorView!
@@ -20,6 +17,9 @@ open class NextBannerView: UIView, NavigationComponent {
         }
     }
     public var isCurrentlyVisible: Bool = false
+    private var shouldHide: Bool = false
+    private var shouldShow: Bool = false
+    private var isAnimating: Bool = false
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -61,13 +61,15 @@ open class NextBannerView: UIView, NavigationComponent {
         bottomSeparatorView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(bottomSeparatorView)
         self.bottomSeparatorView = bottomSeparatorView
+        
+        clipsToBounds = true
     }
     
     override open func prepareForInterfaceBuilder() {
         super.prepareForInterfaceBuilder()
         maneuverView.isEnd = true
-        let component = VisualInstructionComponent(type: .text, text: "Next step", imageURL: nil, abbreviation: nil, abbreviationPriority: NSNotFound)
-        let instruction = VisualInstruction(text: nil, maneuverType: .none, maneuverDirection: .none, components: [component])
+        let component = VisualInstruction.Component.text(text: .init(text: "Next step", abbreviation: nil, abbreviationPriority: nil))
+        let instruction = VisualInstruction(text: nil, maneuverType: .turn, maneuverDirection: .right, components: [component])
         instructionLabel.instruction = instruction
     }
     
@@ -92,16 +94,37 @@ open class NextBannerView: UIView, NavigationComponent {
         bottomSeparatorView.heightAnchor.constraint(equalToConstant: 1 / UIScreen.main.scale).isActive = true
     }
     
-    @objc public func navigationService(_ service: NavigationService, didPassVisualInstructionPoint instruction: VisualInstructionBanner, routeProgress: RouteProgress) {
+    public func navigationService(_ service: NavigationService, didPassVisualInstructionPoint instruction: VisualInstructionBanner, routeProgress: RouteProgress) {
+        guard shouldShowNextBanner(for: routeProgress) else {
+            hide()
+            return
+        }
+
         update(for: instruction)
     }
     
+    func shouldShowNextBanner(for routeProgress: RouteProgress) -> Bool {
+        guard let upcomingStep = routeProgress.currentLegProgress.upcomingStep else {
+            return false
+        }
+        
+        let durationForNext = RouteControllerHighAlertInterval * RouteControllerLinkedInstructionBufferMultiplier
+        
+        guard routeProgress.currentLegProgress.currentStepProgress.durationRemaining <= durationForNext, upcomingStep.expectedTravelTime <= durationForNext else {
+            return false
+        }
+        guard let _ = upcomingStep.instructionsDisplayedAlongStep?.last else {
+            return false
+        }
+        
+        return true
+    }
+            
     /**
      Updates the instructions banner info with a given `VisualInstructionBanner`.
      */
-    @objc(updateForVisualInstructionBanner:)
     public func update(for visualInstruction: VisualInstructionBanner?) {
-        guard let tertiaryInstruction = visualInstruction?.tertiaryInstruction, !tertiaryInstruction.containsLaneIndications else {
+        guard let tertiaryInstruction = visualInstruction?.tertiaryInstruction, tertiaryInstruction.laneComponents.isEmpty else {
             hide()
             return
         }
@@ -114,18 +137,45 @@ open class NextBannerView: UIView, NavigationComponent {
     
     public func show() {
         guard isHidden, !isCurrentlyVisible else { return }
-        UIView.defaultAnimation(0.3, animations: {
-            self.isCurrentlyVisible = true
-            self.isHidden = false
-        }, completion: nil)
+        
+        shouldShow = true
+        
+        if !isAnimating {
+            isAnimating = true
+            
+            UIView.defaultAnimation(1.0, animations: {
+                self.isCurrentlyVisible = true
+                self.isHidden = false
+            }) { _ in
+                self.shouldShow = false
+                self.isAnimating = false
+                
+                if self.shouldHide {
+                    self.hide()
+                }
+            }
+        }
     }
     
     public func hide() {
         guard !isHidden, isCurrentlyVisible else { return }
-        UIView.defaultAnimation(0.3, animations: {
-            self.isCurrentlyVisible = false
-            self.isHidden = true
-        }, completion: nil)
+        
+        shouldHide = true
+        
+        if !isAnimating {
+            isAnimating = true
+            
+            UIView.defaultAnimation(1.0, animations: {
+                self.isCurrentlyVisible = false
+                self.isHidden = true
+            }) { _ in
+                self.shouldHide = false
+                self.isAnimating = false
+                
+                if self.shouldShow {
+                    self.show()
+                }
+            }
+        }
     }
-    
 }

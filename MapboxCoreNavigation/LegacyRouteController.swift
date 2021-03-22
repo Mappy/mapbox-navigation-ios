@@ -5,48 +5,52 @@ import Polyline
 import MapboxMobileEvents
 import Turf
 
-
 protocol RouteControllerDataSource: class {
     var location: CLLocation? { get }
     var locationProvider: NavigationLocationManager.Type { get }
 }
 
-
-@objc(MBLegacyRouteController)
-//@available(*, deprecated, renamed: "RouteController")
+@available(*, deprecated, renamed: "RouteController")
 open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationManagerDelegate {
     
-    @objc public weak var delegate: RouterDelegate?
+    public weak var delegate: RouterDelegate?
 
-    @objc public unowned var dataSource: RouterDataSource
+    public unowned var dataSource: RouterDataSource
     
     /**
      The Directions object used to create the route.
      */
-    @objc public var directions: Directions
-
+    public var directions: Directions
 
     /**
      The threshold used when we determine when the user has arrived at the waypoint.
      By default, we claim arrival 5 seconds before the user is physically estimated to arrive.
-    */
-    @objc public var waypointArrivalThreshold: TimeInterval = 5.0
+     */
+    public var waypointArrivalThreshold: TimeInterval = 5.0
     
-    @objc public var reroutesProactively = true
+    public var reroutesProactively = true
+    
+    public var refreshesRoute: Bool = true
 
-    @objc public var forceProactiveReroutingAtNextUpdate = false
+    public var refreshesMappyRoute = true // Not implemented
+
+    public var forceMappyRouteRefreshAtNextUpdate = false // Not implemented
 
     var didFindFasterRoute = false
     
     var lastProactiveRerouteDate: Date?
+    
+    var lastRouteRefresh: Date?
 
-    @objc public var routeProgress: RouteProgress {
+    var lastMappyRouteRefresh: Date? // Not implemented
+
+    public var routeProgress: RouteProgress {
         get {
             return _routeProgress
         }
         set {
             if let location = self.location {
-                delegate?.router?(self, willRerouteFrom: location)
+                delegate?.router(self, willRerouteFrom: location)
             }
             _routeProgress = newValue
             announce(reroute: routeProgress.route, at: location, proactive: didFindFasterRoute)
@@ -59,16 +63,22 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
         }
     }
     
-    public var route: Route {
+    public var indexedRoute: IndexedRoute {
         get {
-            return routeProgress.route
+            return routeProgress.indexedRoute
         }
         set {
-            routeProgress = RouteProgress(route: newValue)
+            routeProgress.indexedRoute = newValue
         }
+    }
+    
+    public var route: Route {
+        return indexedRoute.0
     }
 
     var isRerouting = false
+    var isRefreshing = false
+    var isRefreshingMappyRoute = false // Not implemented
     var lastRerouteLocation: CLLocation?
 
     var routeTask: URLSessionDataTask?
@@ -82,12 +92,13 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
     
     var isFirstLocation: Bool = true
 
-    public var userSnapToStepDistanceFromManeuver: CLLocationDistance?
+    var userSnapToStepDistanceFromManeuver: CLLocationDistance?
     
-    required public init(along route: Route, directions: Directions = Directions.shared, dataSource source: RouterDataSource) {
+    required public init(along route: Route, routeIndex: Int, options: RouteOptions, directions: Directions = Directions.shared, dataSource source: RouterDataSource) {
         self.directions = directions
-        self._routeProgress = RouteProgress(route: route)
+        self._routeProgress = RouteProgress(route: route, routeIndex: routeIndex, options: options)
         self.dataSource = source
+        self.refreshesRoute = options.profileIdentifier == .automobileAvoidingTraffic && options.refreshingEnabled
         UIDevice.current.isBatteryMonitoringEnabled = true
 
         super.init()
@@ -97,14 +108,12 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
     }
 
     deinit {
-        if delegate?.routerShouldDisableBatteryMonitoring?(self) ?? RouteController.DefaultBehavior.shouldDisableBatteryMonitoring {
+        if let del = delegate, del.routerShouldDisableBatteryMonitoring(self) {
             UIDevice.current.isBatteryMonitoringEnabled = false
         }
-  
     }
     
-    @objc public var location: CLLocation? {
-
+    public var location: CLLocation? {
         // If there is no snapped location, and the rawLocation course is unqualified, use the user's heading as long as it is accurate.
         if snappedLocation == nil,
             let heading = heading,
@@ -141,14 +150,14 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
     }
 
     func updateDistanceToManeuver() {
-        guard let coordinates = routeProgress.currentLegProgress.currentStep.coordinates, let coordinate = rawLocation?.coordinate else {
+        guard let shape = routeProgress.currentLegProgress.currentStep.shape, let coordinate = rawLocation?.coordinate else {
             userSnapToStepDistanceFromManeuver = nil
             return
         }
-        userSnapToStepDistanceFromManeuver = Polyline(coordinates).distance(from: coordinate)
+        userSnapToStepDistanceFromManeuver = shape.distance(from: coordinate)
     }
 
-    @objc public var reroutingTolerance: CLLocationDistance {
+    public var reroutingTolerance: CLLocationDistance {
         guard let intersections = routeProgress.currentLegProgress.currentStepProgress.intersectionsIncludingUpcomingManeuverIntersection else { return RouteControllerMaximumDistanceBeforeRecalculating }
         guard let userLocation = rawLocation else { return RouteControllerMaximumDistanceBeforeRecalculating }
 
@@ -166,8 +175,8 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
      Monitors the user's course to see if it is consistantly moving away from what we expect the course to be at a given point.
      */
     func userCourseIsOnRoute(_ location: CLLocation) -> Bool {
-        let nearbyCoordinates = routeProgress.nearbyCoordinates
-        guard let calculatedCourseForLocationOnStep = location.interpolatedCourse(along: nearbyCoordinates) else { return true }
+        let nearbyPolyline = routeProgress.nearbyShape
+        guard let calculatedCourseForLocationOnStep = location.interpolatedCourse(along: nearbyPolyline) else { return true }
         
         let maxUpdatesAwayFromRouteGivenAccuracy = Int(location.horizontalAccuracy / Double(RouteControllerIncorrectCourseMultiplier))
         
@@ -182,12 +191,15 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
         return true
     }
     
-    @objc public func userIsOnRoute(_ location: CLLocation) -> Bool {
+    public func userIsOnRoute(_ location: CLLocation) -> Bool {
         
+        guard let destination = routeProgress.currentLeg.destination else {
+            preconditionFailure("Route legs used for navigation must have destinations")
+        }
         // If the user has arrived, do not continue monitor reroutes, step progress, etc
         if routeProgress.currentLegProgress.userHasArrivedAtWaypoint &&
-            (delegate?.router?(self, shouldPreventReroutesWhenArrivingAt: routeProgress.currentLeg.destination) ??
-             RouteController.DefaultBehavior.shouldPreventReroutesWhenArrivingAtWaypoint) {
+            (delegate?.router(self, shouldPreventReroutesWhenArrivingAt: destination) ??
+                RouteController.DefaultBehavior.shouldPreventReroutesWhenArrivingAtWaypoint) {
             return true
         }
         
@@ -217,18 +229,18 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
         return isCloseToCurrentStep
     }
     
-    public func advanceLegIndex(location: CLLocation) {
+    public func advanceLegIndex() {
         precondition(!routeProgress.isFinalLeg, "Can not increment leg index beyond final leg.")
         routeProgress.legIndex += 1
     }
     
     // MARK: CLLocationManagerDelegate methods
     
-    @objc public func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
+    public func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
         heading = newHeading
     }
 
-    @objc public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+    public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         let filteredLocations = locations.filter {
             return $0.isQualified
         }
@@ -246,8 +258,7 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
             potentialLocation = lastFiltered
         // `filteredLocations` does not contain good locations and we have found at least one good location previously.
         } else if hasFoundOneQualifiedLocation {
-            if let lastLocation = locations.last, delegate?.router?(self, shouldDiscard: lastLocation) ?? RouteController.DefaultBehavior.shouldDiscardLocation {
-                
+            if let lastLocation = locations.last, delegate?.router(self, shouldDiscard: lastLocation) ?? RouteController.DefaultBehavior.shouldDiscardLocation {
                 // Allow the user puck to advance. A stationary puck is not great.
                 self.rawLocation = lastLocation
                 
@@ -265,7 +276,6 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
 
         self.rawLocation = location
 
-
         updateIntersectionIndex(for: currentStepProgress)
         // Notify observers if the step’s remaining distance has changed.
 
@@ -275,7 +285,7 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
         updateRouteLegProgress(for: location)
         updateVisualInstructionProgress()
 
-        if !userIsOnRoute(location) && delegate?.router?(self, shouldRerouteFrom: location) ?? RouteController.DefaultBehavior.shouldRerouteFromLocation {
+        if !userIsOnRoute(location) && delegate?.router(self, shouldRerouteFrom: location) ?? RouteController.DefaultBehavior.shouldRerouteFromLocation {
             reroute(from: location, along: routeProgress)
             return
         }
@@ -283,31 +293,21 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
         updateSpokenInstructionProgress()
         
         // Check for faster route proactively (if reroutesProactively is enabled)
-        checkForFasterRoute(from: location, routeProgress: routeProgress)
+        refreshAndCheckForFasterRoute(from: location, routeProgress: routeProgress)
     }
     
     private func update(progress: RouteProgress, with location: CLLocation, rawLocation: CLLocation) {
+        progress.updateDistanceTraveled(with: rawLocation)
         
-        let stepProgress = progress.currentLegProgress.currentStepProgress
-        let step = stepProgress.step
+        //Fire the delegate method
+        delegate?.router(self, didUpdate: progress, with: location, rawLocation: rawLocation)
         
-        //Increment the progress model
-        let polyline = Polyline(step.coordinates!)
-        if let closestCoordinate = polyline.closestCoordinate(to: rawLocation.coordinate) {
-            let remainingDistance = polyline.distance(from: closestCoordinate.coordinate)
-            let distanceTraveled = step.distance - remainingDistance
-            stepProgress.distanceTraveled = distanceTraveled
-            
-            //Fire the delegate method
-            delegate?.router?(self, didUpdate: progress, with: location, rawLocation: rawLocation)
-            
-            //Fire the notification (for now)
-            NotificationCenter.default.post(name: .routeControllerProgressDidChange, object: self, userInfo: [
-                RouteControllerNotificationUserInfoKey.routeProgressKey: progress,
-                RouteControllerNotificationUserInfoKey.locationKey: location, //guaranteed value
-                RouteControllerNotificationUserInfoKey.rawLocationKey: rawLocation //raw
-                ])
-        }
+        //Fire the notification (for now)
+        NotificationCenter.default.post(name: .routeControllerProgressDidChange, object: self, userInfo: [
+            RouteController.NotificationUserInfoKey.routeProgressKey: progress,
+            RouteController.NotificationUserInfoKey.locationKey: location, //guaranteed value
+            RouteController.NotificationUserInfoKey.rawLocationKey: rawLocation, //raw
+        ])
     }
         
     func updateIntersectionIndex(for currentStepProgress: RouteStepProgress) {
@@ -317,26 +317,29 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
     }
 
     func updateRouteLegProgress(for location: CLLocation) {
-        let currentDestination = routeProgress.currentLeg.destination
+        
         let legProgress = routeProgress.currentLegProgress
-        guard let remainingVoiceInstructions = legProgress.currentStepProgress.remainingSpokenInstructions else { return }
+        guard let currentDestination = legProgress.leg.destination else {
+            preconditionFailure("Route legs used for navigation must have destinations")
+        }
+        guard let remainingVoiceInstructions = legProgress.currentStepProgress.remainingSpokenInstructions else {
+            return
+        }
 
         // We are at least at the "You will arrive" instruction
         if legProgress.remainingSteps.count <= 1 && remainingVoiceInstructions.count <= 1 && currentDestination != previousArrivalWaypoint {
-
             //Have we actually arrived? Last instruction is "You have arrived"
             if remainingVoiceInstructions.count == 0, legProgress.durationRemaining <= waypointArrivalThreshold {
                 previousArrivalWaypoint = currentDestination
                 legProgress.userHasArrivedAtWaypoint = true
                 
-                let advancesToNextLeg = delegate?.router?(self, didArriveAt: currentDestination) ?? RouteController.DefaultBehavior.didArriveAtWaypoint
+                let advancesToNextLeg = delegate?.router(self, didArriveAt: currentDestination) ?? RouteController.DefaultBehavior.didArriveAtWaypoint
                 
                 guard !routeProgress.isFinalLeg && advancesToNextLeg else { return }
-                advanceLegIndex(location: location)
+                advanceLegIndex()
                 updateDistanceToManeuver()
-                
             } else { //we are approaching the destination
-                delegate?.router?(self, willArriveAt: currentDestination, after: legProgress.durationRemaining, distance: legProgress.distanceRemaining)
+                delegate?.router(self, willArriveAt: currentDestination, after: legProgress.durationRemaining, distance: legProgress.distanceRemaining)
             }
         }
     }
@@ -354,38 +357,35 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
 
         isRerouting = true
 
-        delegate?.router?(self, willRerouteFrom: location)
+        delegate?.router(self, willRerouteFrom: location)
         NotificationCenter.default.post(name: .routeControllerWillReroute, object: self, userInfo: [
-            RouteControllerNotificationUserInfoKey.locationKey: location
+            RouteController.NotificationUserInfoKey.locationKey: location,
         ])
 
         self.lastRerouteLocation = location
 
-        let options = progress.route.routeOptions
-        if let mappyOptions = options as? MappyNavigationRouteOptions {
-            mappyOptions.routeSignature = nil
-        }
-        getDirections(from: location, along: progress) { [weak self] (route, mappyRoutes, error) in
-            self?.isRerouting = false
-
+        getDirections(from: location, along: progress) { [weak self] (session, result) in
             guard let strongSelf = self else {
                 return
             }
-
-			strongSelf.isRerouting = false
-            if let error = error {
-                strongSelf.delegate?.router?(strongSelf, didFailToRerouteWith: error)
-                NotificationCenter.default.post(name: .routeControllerDidFailToReroute, object: self, userInfo: [
-                    RouteControllerNotificationUserInfoKey.routingErrorKey: error
-                ])
-                return
+            
+            strongSelf.isRerouting = false
+            switch result {
+            case let .failure(error):
+                strongSelf.delegate?.router(strongSelf, didFailToRerouteWith: error)
+                 NotificationCenter.default.post(name: .routeControllerDidFailToReroute, object: self, userInfo: [
+                     RouteController.NotificationUserInfoKey.routingErrorKey: error,
+                 ])
+                 return
+            case let .success(response):
+                guard case let .route(options) = response.options, let route = response.routes?.first else {
+                    return
+                }
+                strongSelf.indexedRoute = (route, 0) // unconditionally getting the first route above
+                strongSelf._routeProgress = RouteProgress(route: route, routeIndex: 0, options: options, legIndex: 0)
+                strongSelf._routeProgress.currentLegProgress.stepIndex = 0
+                strongSelf.announce(reroute: route, at: location, proactive: false)
             }
-
-            guard let route = route ?? mappyRoutes?.first else { return }
-
-            strongSelf._routeProgress = RouteProgress(route: route, legIndex: 0)
-            strongSelf._routeProgress.currentLegProgress.stepIndex = 0
-            strongSelf.announce(reroute: route, at: location, proactive: false)
         }
     }
 
@@ -428,8 +428,12 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
 
         routeProgress.currentLegProgress.currentStepProgress.intersectionsIncludingUpcomingManeuverIntersection = intersections
 
+        guard let shape = currentStepProgress.step.shape else {
+            return
+        }
+        
         if let upcomingIntersection = routeProgress.currentLegProgress.currentStepProgress.upcomingIntersection {
-            routeProgress.currentLegProgress.currentStepProgress.userDistanceToUpcomingIntersection = Polyline(currentStepProgress.step.coordinates!).distance(from: location.coordinate, to: upcomingIntersection.location)
+            routeProgress.currentLegProgress.currentStepProgress.userDistanceToUpcomingIntersection = shape.distance(from: location.coordinate, to: upcomingIntersection.location)
         }
         
         if routeProgress.currentLegProgress.currentStepProgress.intersectionDistances == nil {
@@ -481,13 +485,15 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
         guard let userSnapToStepDistanceFromManeuver = userSnapToStepDistanceFromManeuver else { return }
         guard let spokenInstructions = routeProgress.currentLegProgress.currentStepProgress.remainingSpokenInstructions else { return }
 
-        for spokenInstruction in spokenInstructions {
-            if userSnapToStepDistanceFromManeuver <= spokenInstruction.distanceAlongStep {
+        // Always give the first voice announcement when beginning a leg.
+        let firstInstructionOnFirstStep = routeProgress.currentLegProgress.stepIndex == 0 && routeProgress.currentLegProgress.currentStepProgress.spokenInstructionIndex == 0
 
-                delegate?.router?(self, didPassSpokenInstructionPoint: spokenInstruction, routeProgress: routeProgress)
+        for spokenInstruction in spokenInstructions {
+            if userSnapToStepDistanceFromManeuver <= spokenInstruction.distanceAlongStep || firstInstructionOnFirstStep {
+                delegate?.router(self, didPassSpokenInstructionPoint: spokenInstruction, routeProgress: routeProgress)
                 NotificationCenter.default.post(name: .routeControllerDidPassSpokenInstructionPoint, object: self, userInfo: [
-                    RouteControllerNotificationUserInfoKey.routeProgressKey: routeProgress,
-                    RouteControllerNotificationUserInfoKey.spokenInstructionKey: spokenInstruction
+                    RouteController.NotificationUserInfoKey.routeProgressKey: routeProgress,
+                    RouteController.NotificationUserInfoKey.spokenInstructionKey: spokenInstruction,
                 ])
 
                 routeProgress.currentLegProgress.currentStepProgress.spokenInstructionIndex += 1
@@ -501,14 +507,12 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
         let currentStepProgress = routeProgress.currentLegProgress.currentStepProgress
         guard let visualInstructions = currentStepProgress.remainingVisualInstructions else { return }
         
-        let firstInstructionOnFirstStep = routeProgress.currentLegProgress.stepIndex == 0 && currentStepProgress.visualInstructionIndex == 0
-
         for visualInstruction in visualInstructions {
-            if userSnapToStepDistanceFromManeuver <= visualInstruction.distanceAlongStep || isFirstLocation || firstInstructionOnFirstStep {
-                delegate?.router?(self, didPassVisualInstructionPoint: visualInstruction, routeProgress: routeProgress)
+            if userSnapToStepDistanceFromManeuver <= visualInstruction.distanceAlongStep || isFirstLocation {
+                delegate?.router(self, didPassVisualInstructionPoint: visualInstruction, routeProgress: routeProgress)
                 NotificationCenter.default.post(name: .routeControllerDidPassVisualInstructionPoint, object: self, userInfo: [
-                    RouteControllerNotificationUserInfoKey.routeProgressKey: routeProgress,
-                    RouteControllerNotificationUserInfoKey.visualInstructionKey: visualInstruction,
+                    RouteController.NotificationUserInfoKey.routeProgressKey: routeProgress,
+                    RouteController.NotificationUserInfoKey.visualInstructionKey: visualInstruction,
                 ])
                 currentStepProgress.visualInstructionIndex += 1
                 return
@@ -516,12 +520,11 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
         }
     }
 
-    public func advanceStepIndex(to: Array<RouteStep>.Index? = nil) {
+    func advanceStepIndex(to: Array<RouteStep>.Index? = nil) {
         if let forcedStepIndex = to {
             guard forcedStepIndex < routeProgress.currentLeg.steps.count else { return }
             routeProgress.currentLegProgress.stepIndex = forcedStepIndex
         } else {
-            forceTriggerLastVisualInstructionOfCurrentStep()
             routeProgress.currentLegProgress.stepIndex += 1
         }
 
@@ -530,43 +533,27 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
     }
 
     func updateIntersectionDistances() {
-        if let coordinates = routeProgress.currentLegProgress.currentStep.coordinates, let intersections = routeProgress.currentLegProgress.currentStep.intersections {
-            let polyline = Polyline(coordinates)
-            let distances: [CLLocationDistance] = intersections.map { polyline.distance(from: coordinates.first, to: $0.location) }
+        if let shape = routeProgress.currentLegProgress.currentStep.shape, let intersections = routeProgress.currentLegProgress.currentStep.intersections {
+            let distances: [CLLocationDistance] = intersections.compactMap { shape.distance(from: shape.coordinates.first, to: $0.location) }
             routeProgress.currentLegProgress.currentStepProgress.intersectionDistances = distances
         }
     }
 
-    private func forceTriggerLastVisualInstructionOfCurrentStep()
-    {
-        let currentStepProgress = routeProgress.currentLegProgress.currentStepProgress
-        if let remainingVisualInstructions = currentStepProgress.remainingVisualInstructions,
-            let instructionsDisplayedAlongStep = currentStepProgress.step.instructionsDisplayedAlongStep,
-            remainingVisualInstructions.count > 0
-        {
-            currentStepProgress.visualInstructionIndex = instructionsDisplayedAlongStep.count - 1
-            let currentVisualInstruction = currentStepProgress.currentVisualInstruction!
-            delegate?.router?(self, didPassVisualInstructionPoint: currentVisualInstruction, routeProgress: routeProgress)
-            NotificationCenter.default.post(name: .routeControllerDidPassVisualInstructionPoint, object: self, userInfo: [
-                RouteControllerNotificationUserInfoKey.routeProgressKey: routeProgress,
-                RouteControllerNotificationUserInfoKey.visualInstructionKey: currentVisualInstruction,
-                ])
-            currentStepProgress.visualInstructionIndex += 1
-        }
+    func updatePrivateRouteProgress(_ routeProgress: RouteProgress) {
+        fatalError("Not implemented")
     }
     
     // MARK: Obsolete methods
     
-    @available(*, deprecated, message: "MapboxNavigationService is now the point-of-entry to MapboxCoreNavigation. Direct use of RouteController is no longer reccomended. See MapboxNavigationService for more information.")
+    @available(swift, obsoleted: 0.1, message: "MapboxNavigationService is now the point-of-entry to MapboxCoreNavigation. Direct use of RouteController is no longer reccomended. See MapboxNavigationService for more information.")
     /// :nodoc: Obsoleted method.
-    @objc(initWithRoute:directions:dataSource:eventsManager:)
     public convenience init(along route: Route, directions: Directions = Directions.shared, dataSource: NavigationLocationManager = NavigationLocationManager(), eventsManager: NavigationEventsManager) {
         fatalError()
     }
     
-    @available(*, deprecated, message: "RouteController no longer manages a location manager directly. Instead, the Router protocol conforms to CLLocationManagerDelegate, and RouteControllerDataSource provides access to synchronous location requests.")
+    @available(swift, obsoleted: 0.1, message: "RouteController no longer manages a location manager directly. Instead, the Router protocol conforms to CLLocationManagerDelegate, and RouteControllerDataSource provides access to synchronous location requests.")
     /// :nodoc: obsoleted
-    @objc public final var locationManager: NavigationLocationManager! {
+    public final var locationManager: NavigationLocationManager! {
         get {
             fatalError()
         }
@@ -574,9 +561,9 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
             fatalError()
         }
     }
-    @available(*, deprecated, renamed: "NavigationService.locationManager", message: "NavigationViewController no longer directly manages an NavigationLocationManager. See MapboxNavigationService, which contains a reference to the locationManager, for more information.")
+    @available(swift, obsoleted: 0.1, message: "NavigationViewController no longer directly manages a TunnelIntersectionManager. See MapboxNavigationService, which contains a reference to the locationManager, for more information.")
     /// :nodoc: obsoleted
-    @objc public final var tunnelIntersectionManager: Any! {
+    public final var tunnelIntersectionManager: Any! {
         get {
             fatalError()
         }
@@ -584,14 +571,29 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
             fatalError()
         }
     }
-    @available(*, deprecated, renamed: "navigationService.eventsManager", message: "NavigationViewController no longer directly manages a NavigationEventsManager. See MapboxNavigationService, which contains a reference to the eventsManager, for more information.")
+    @available(swift, obsoleted: 0.1, renamed: "navigationService.eventsManager", message: "NavigationViewController no longer directly manages a NavigationEventsManager. See MapboxNavigationService, which contains a reference to the eventsManager, for more information.")
     /// :nodoc: obsoleted
-    @objc public final var eventsManager: NavigationEventsManager! {
+    public final var eventsManager: NavigationEventsManager! {
         get {
             fatalError()
         }
         set {
             fatalError()
         }
+    }
+    
+    /// Required through `Router` protocol. No-op
+    public func enableLocationRecording() {
+        // no-op
+    }
+    /// Required through `Router` protocol. No-op
+
+    public func disableLocationRecording() {
+        // no-op
+    }
+    
+    /// Required through `Router` protocol. No-op
+    public func locationHistory() -> String? {
+        return nil
     }
 }

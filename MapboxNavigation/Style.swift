@@ -7,8 +7,7 @@ import UIKit
  */
 @objc(MBStyle)
 open class Style: NSObject {
-    
-    ///  General styling
+    // MARK: General styling
     
     /**
      Sets the tint color for guidance arrow, highlighted text, progress bar and more.
@@ -34,12 +33,14 @@ open class Style: NSObject {
     /**
      URL of the style to display on the map during turn-by-turn navigation.
      */
-    @objc open var mapStyleURL: URL = MGLStyle.navigationGuidanceDayStyleURL
+    @objc open var mapStyleURL: URL = MGLStyle.navigationDayStyleURL
     
     /**
      URL of the style to display on the map when previewing a route, for example on CarPlay or your own route preview map.
+     
+     Defaults to same style as `mapStyleURL`.
      */
-    @objc open var previewMapStyleURL = MGLStyle.navigationPreviewDayStyleURL
+    @objc open var previewMapStyleURL: URL = MGLStyle.navigationDayStyleURL
     
     /**
      Applies the style for all changed properties.
@@ -51,7 +52,7 @@ open class Style: NSObject {
 
 /**
  :nodoc:
- `MBButton` sets the tintColor according to the style.
+ `Button` sets the tintColor according to the style.
  */
 @objc(MBButton)
 open class Button: StylableButton { }
@@ -64,11 +65,16 @@ open class CancelButton: Button { }
 @objc(MBDismissButton)
 open class DismissButton: Button { }
 
-/// :nodoc:
+/**
+ A rounded button with an icon that is designed to float above `NavigationMapView`.
+ */
 @objc(MBFloatingButton)
 open class FloatingButton: Button {
+    /**
+     The default size of a floating button.
+     */
+    public static let buttonSize = CGSize(width: 50, height: 50)
     
-    static let buttonSize = CGSize(width: 50, height: 50)
     static let sizeConstraintPriority = UILayoutPriority(999.0) //Don't fight with the stack view (superview) when it tries to hide buttons.
     
     lazy var widthConstraint: NSLayoutConstraint = {
@@ -94,7 +100,14 @@ open class FloatingButton: Button {
         }
     }
     
-    class func rounded<T: FloatingButton>(image: UIImage? = nil, selectedImage: UIImage? = nil, size: CGSize = FloatingButton.buttonSize) -> T {
+    /**
+     Return a `FloatingButton` with given images and size.
+     
+     - parameter image: The `UIImage` of this button.
+     - parameter selectedImage: The `UIImage` of this button when selected.
+     - parameter size: The size of this button,  or `FloatingButton.buttonSize` if this argument is not specified.
+     */
+    public class func rounded<T: FloatingButton>(image: UIImage? = nil, selectedImage: UIImage? = nil, size: CGSize = FloatingButton.buttonSize) -> T {
         let button = T.init(type: .custom)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.constrainedSize = size
@@ -108,7 +121,6 @@ open class FloatingButton: Button {
 /// :nodoc:
 @objc(MBReportButton)
 public class ReportButton: Button {
-    
     static let defaultInsets: UIEdgeInsets = 10.0
     static let defaultCornerRadius: CGFloat = 4.0
     
@@ -187,7 +199,6 @@ public class ResumeButton: UIControl {
 /// :nodoc:
 @objc(MBDraggableView)
 open class StepListIndicatorView: UIView {
-    
     // Workaround the fact that UIView properties are not marked with UI_APPEARANCE_SELECTOR
     @objc dynamic open var gradientColors: [UIColor] = [.gray, .lightGray, .gray] {
         didSet {
@@ -213,7 +224,6 @@ open class StepListIndicatorView: UIView {
         view.frame = parentView.bounds
         parentView.addSubview(view)
     }
-    
 }
 
 /// :nodoc:
@@ -221,28 +231,37 @@ open class StepListIndicatorView: UIView {
 open class StylableLabel: UILabel {
     // Workaround the fact that UILabel properties are not marked with UI_APPEARANCE_SELECTOR
     @objc dynamic open var normalTextColor: UIColor = .black {
-        didSet {
-            textColor = normalTextColor
-        }
+        didSet { update() }
     }
     
     @objc dynamic open var normalFont: UIFont = .systemFont(ofSize: 16) {
-        didSet {
-            font = normalFont
-        }
+        didSet { update() }
+    }
+
+    @objc dynamic public var textColorHighlighted: UIColor = #colorLiteral(red: 1, green: 1, blue: 1, alpha: 1) {
+        didSet { update() }
+    }
+
+    @objc public var showHighlightedTextColor: Bool = false {
+        didSet { update() }
+    }
+
+    open func update() {
+        textColor = showHighlightedTextColor ? textColorHighlighted : normalTextColor
+        font = normalFont
     }
 }
 
-/// :nodoc
+/// :nodoc:
 @objc(MBStylableView)
 open class StylableView: UIView {
-    @objc dynamic var borderWidth: CGFloat = 0.0 {
+    @objc dynamic public var borderWidth: CGFloat = 0.0 {
         didSet {
             layer.borderWidth = borderWidth
         }
     }
     
-    @objc dynamic var cornerRadius: CGFloat = 0.0 {
+    @objc dynamic public var cornerRadius: CGFloat = 0.0 {
         didSet {
             layer.cornerRadius = cornerRadius
         }
@@ -279,6 +298,12 @@ open class DistanceLabel: StylableLabel {
     @objc dynamic public var unitTextColor: UIColor = #colorLiteral(red: 0.6274509804, green: 0.6274509804, blue: 0.6274509804, alpha: 1) {
         didSet { update() }
     }
+    @objc dynamic public var valueTextColorHighlighted: UIColor = #colorLiteral(red: 1, green: 1, blue: 1, alpha: 1) {
+        didSet { update() }
+    }
+    @objc dynamic public var unitTextColorHighlighted: UIColor = #colorLiteral(red: 1, green: 1, blue: 1, alpha: 1) {
+        didSet { update() }
+    }
     @objc dynamic public var valueFont: UIFont = UIFont.systemFont(ofSize: 16, weight: .medium) {
         didSet { update() }
     }
@@ -298,7 +323,7 @@ open class DistanceLabel: StylableLabel {
         }
     }
     
-    fileprivate func update() {
+    open override func update() {
         guard let attributedDistanceString = attributedDistanceString else {
             return
         }
@@ -311,11 +336,11 @@ open class DistanceLabel: StylableLabel {
             let foregroundColor: UIColor
             let font: UIFont
             if let _ = emphasizedDistanceString.attribute(.quantity, at: range.location, effectiveRange: nil) {
-                foregroundColor = valueTextColor
+                foregroundColor = showHighlightedTextColor ? valueTextColorHighlighted : valueTextColor
                 font = valueFont
                 hasQuantity = true
             } else {
-                foregroundColor = unitTextColor
+                foregroundColor = showHighlightedTextColor ? unitTextColorHighlighted : unitTextColor
                 font = unitFont
             }
             emphasizedDistanceString.addAttributes([.foregroundColor: foregroundColor, .font: font], range: range)
@@ -347,7 +372,6 @@ open class SecondaryLabel: InstructionLabel { }
 /// :nodoc:
 @objc(MBTimeRemainingLabel)
 open class TimeRemainingLabel: StylableLabel {
-    
     // Sets the text color for no or unknown traffic
     @objc dynamic public var trafficUnknownColor: UIColor = #colorLiteral(red: 0, green: 0, blue: 0, alpha: 1) {
         didSet {
@@ -383,7 +407,6 @@ open class SubtitleLabel: StylableLabel { }
 /// :nodoc:
 @objc(MBWayNameView)
 open class WayNameView: UIView {
-    
     private static let textInsets = UIEdgeInsets(top: 6, left: 14, bottom: 6, right: 14)
     
     lazy var label: WayNameLabel = .forAutoLayout()
@@ -426,7 +449,6 @@ open class WayNameView: UIView {
         commonInit()
     }
     
-    
     func commonInit() {
         addSubview(label)
         layoutMargins = WayNameView.textInsets
@@ -446,7 +468,6 @@ open class WayNameLabel: StylableLabel {}
 /// :nodoc:
 @objc(MBProgressBar)
 public class ProgressBar: UIView {
-    
     let bar = UIView()
     
     // Sets the color of the progress bar.
@@ -494,7 +515,6 @@ public class ProgressBar: UIView {
 /// :nodoc:
 @objc(MBLineView)
 public class LineView: UIView {
-    
     // Set the line color on all line views.
     @objc dynamic public var lineColor: UIColor = .black {
         didSet {
@@ -506,13 +526,11 @@ public class LineView: UIView {
 
 /// :nodoc:
 @objc(MBSeparatorView)
-public class SeparatorView: UIView { }
+public class SeparatorView: UIView {}
 
 /// :nodoc:
 @objc(MBStylableButton)
 open class StylableButton: UIButton {
-    
-
     // Sets the font on the button’s titleLabel
     @objc dynamic open var textFont: UIFont = UIFont.systemFont(ofSize: 20, weight: .medium) {
         didSet {
@@ -554,14 +572,13 @@ open class StylableButton: UIButton {
 open class ManeuverContainerView: UIView {
     @IBOutlet weak var heightConstraint: NSLayoutConstraint!
     
-    @objc dynamic var height: CGFloat = 100 {
+    @objc dynamic public var height: CGFloat = 100 {
         didSet {
             heightConstraint.constant = height
             setNeedsUpdateConstraints()
         }
     }
 }
-
 
 /// :nodoc:
 @objc(MBBannerContainerView)
@@ -575,16 +592,16 @@ open class TopBannerView: UIView { }
 @objc(MBBottomBannerView)
 open class BottomBannerView: UIView { }
 
-@objc(MBBottomPaddingView)
 open class BottomPaddingView: BottomBannerView { }
 
-/// :nodoc:
-class NavigationAnnotation: MGLPointAnnotation { }
+/**
+ `NavigationAnnotation` is an annotation, which is used to mark final destination on `NavigationMapView`.
+ */
+public class NavigationAnnotation: MGLPointAnnotation { }
 
 /// :nodoc:
 @objc(MBMarkerView)
 public class MarkerView: UIView {
-    
     // Sets the inner color on the pin.
     @objc public dynamic var innerColor: UIColor = .white {
         didSet {

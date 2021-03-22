@@ -158,7 +158,7 @@ open class DistanceFormatter: Formatter, NSSecureCoding {
     
     /**
      Creates and returns a localized, formatted string representation of the given distance in meters.
-	
+     
      The distance is converted from meters to the most appropriate unit based on the locale and quantity.
      
      - parameter distance: The distance, measured in meters, to localize and format.
@@ -239,7 +239,6 @@ open class DistanceFormatter: Formatter, NSSecureCoding {
 }
 
 extension Double {
-    
     func rounded(precision: Double) -> Double {
         if precision == 0 {
             return Double(Int(rounded()))

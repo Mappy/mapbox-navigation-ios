@@ -1,9 +1,7 @@
 import XCTest
 @testable import MapboxNavigation
 
-
 class ImageDownloaderTests: XCTestCase {
-
     lazy var sessionConfig: URLSessionConfiguration = {
         let config = URLSessionConfiguration.default
         config.protocolClasses = [ImageLoadingURLProtocolSpy.self]
@@ -12,7 +10,7 @@ class ImageDownloaderTests: XCTestCase {
 
     var downloader: ReentrantImageDownloader?
 
-    let imageURL = URL(string: "https://zombo.com/lulz/selfie.png")!
+    let imageURL = URL(string: "https://github.com/mapbox/mapbox-navigation-ios/blob/main/docs/img/navigation.png")!
 
     override func setUp() {
         super.setUp()

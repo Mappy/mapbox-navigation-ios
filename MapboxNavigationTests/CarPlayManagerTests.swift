@@ -13,7 +13,6 @@ import CarPlay
 
 @available(iOS 12.0, *)
 class CarPlayManagerTests: XCTestCase {
-
     var manager: CarPlayManager?
     var searchController: CarPlaySearchController?
     var eventsManagerSpy: NavigationEventsManagerSpy?
@@ -196,7 +195,11 @@ class CarPlayManagerTests: XCTestCase {
         // given the user is previewing route choices
         // when a trip is started using one of the route choices
         let choice = CPRouteChoice(summaryVariants: ["summary1"], additionalInformationVariants: ["addl1"], selectionSummaryVariants: ["selection1"])
-        choice.userInfo = Fixture.route(from: "route-with-banner-instructions")
+        let options = NavigationRouteOptions(coordinates: [
+            CLLocationCoordinate2D(latitude: 37.764793, longitude: -122.463161),
+            CLLocationCoordinate2D(latitude: 34.054081, longitude: -118.243412),
+        ])
+        choice.userInfo = (Fixture.route(from: "route-with-banner-instructions", options: options), 0, options)
 
         manager.mapTemplate(mapTemplate, startedTrip: CPTrip(origin: MKMapItem(), destination: MKMapItem(), routeChoices: [choice]), using: choice)
 
@@ -214,22 +217,18 @@ class CarPlayManagerTests: XCTestCase {
     }
     
     func testRouteFailure() {
-        
         let manager = CarPlayManager()
         
         let spy = CarPlayManagerFailureDelegateSpy()
-        let testError = NSError(domain: "com.mapbox.test", code: 42, userInfo: nil)
+        let testError = DirectionsError.requestTooLarge
         let locOne = CLLocationCoordinate2D(latitude: 0, longitude: 0)
         let fakeOptions = RouteOptions(coordinates: [locOne])
         manager.delegate = spy
-        manager.didCalculate(nil, for: fakeOptions, between: nil, error: testError, completionHandler: { })
+        manager.didCalculate(.failure(testError), in: (options: fakeOptions, credentials: Fixture.credentials), for: fakeOptions, completionHandler: { })
         XCTAssert(spy.recievedError == testError, "Delegate should have receieved error")
-        
     }
     
-    
     func testDirectionsOverride() {
-        
         class DirectionsInvocationSpy: Directions {
             typealias VoidClosure = () -> Void
             var payload: VoidClosure?
@@ -242,7 +241,7 @@ class CarPlayManagerTests: XCTestCase {
         }
         
         let expectation = XCTestExpectation(description: "Ensuring Spy is called")
-        let spy = DirectionsInvocationSpy(accessToken: "DeadBeefCafe", host: nil)
+        let spy = DirectionsInvocationSpy()
         spy.payload = expectation.fulfill
         
         let subject = CarPlayManager(directions: spy)
@@ -250,7 +249,7 @@ class CarPlayManagerTests: XCTestCase {
         let waypoint1 = Waypoint(coordinate: CLLocationCoordinate2D(latitude: 37.795042, longitude: -122.413165))
         let waypoint2 = Waypoint(coordinate: CLLocationCoordinate2D(latitude: 37.7727, longitude: -122.433378))
         let options = RouteOptions(waypoints: [waypoint1, waypoint2])
-        subject.calculate(options, completionHandler: { _, _, _ in })
+        subject.calculate(options, completionHandler: { _, _ in })
         wait(for: [expectation], timeout: 1.0)
         
         XCTAssert(subject.directions == spy, "Directions client is not overridden properly.")
@@ -282,7 +281,7 @@ class CarPlayManagerSpec: QuickSpec {
         var delegate: TestCarPlayManagerDelegate?
 
         beforeEach {
-            let directionsSpy = DirectionsSpy(accessToken: "asdf")
+            let directionsSpy = DirectionsSpy()
             manager = CarPlayManager(styles: nil, directions: directionsSpy, eventsManager: nil)
             delegate = TestCarPlayManagerDelegate()
             manager!.delegate = delegate
@@ -297,12 +296,16 @@ class CarPlayManagerSpec: QuickSpec {
             }
 
             let previewRoutesAction = {
-                let route = Fixture.route(from: "route-with-banner-instructions")
-                let waypoints = route.routeOptions.waypoints
+                let options = NavigationRouteOptions(coordinates: [
+                    CLLocationCoordinate2D(latitude: 37.764793, longitude: -122.463161),
+                    CLLocationCoordinate2D(latitude: 34.054081, longitude: -118.243412),
+                ])
+                let route = Fixture.route(from: "route-with-banner-instructions", options: options)
+                let waypoints = options.waypoints
 
                 let directionsSpy = manager!.directions as! DirectionsSpy
 
-                manager!.previewRoutes(for: route.routeOptions, completionHandler: {})
+                manager!.previewRoutes(for: options, completionHandler: {})
                 directionsSpy.fireLastCalculateCompletion(with: waypoints, routes: [route], error: nil)
             }
 
@@ -362,7 +365,6 @@ class CarPlayManagerSpec: QuickSpec {
                     expect(mapTemplateSpy.currentTripPreviews).toNot(beEmpty())
                     expect(mapTemplateSpy.currentPreviewTextConfiguration?.startButtonTitle).to(equal(customStartButtonTitleText))
                 }
-
             })
         })
         
@@ -371,12 +373,17 @@ class CarPlayManagerSpec: QuickSpec {
             let action = {
                 let fakeTemplate = CPMapTemplate()
                 let fakeRouteChoice = CPRouteChoice(summaryVariants: ["summary1"], additionalInformationVariants: ["addl1"], selectionSummaryVariants: ["selection1"])
-                fakeRouteChoice.userInfo = Fixture.route(from: "route-with-banner-instructions")
+                let options = NavigationRouteOptions(coordinates: [
+                    CLLocationCoordinate2D(latitude: 37.764793, longitude: -122.463161),
+                    CLLocationCoordinate2D(latitude: 34.054081, longitude: -118.243412),
+                ])
+                fakeRouteChoice.userInfo = (Fixture.route(from: "route-with-banner-instructions", options: options), 0, options)
                 let fakeTrip = CPTrip(origin: MKMapItem(), destination: MKMapItem(), routeChoices: [fakeRouteChoice])
 
                 //simulate starting a fake trip
                 manager!.mapTemplate(fakeTemplate, startedTrip: fakeTrip, using: fakeRouteChoice)
-                manager?.currentNavigator?.navigationService.start()
+                let service = delegate!.currentService! as! MapboxNavigationService
+                service.start()
             }
 
             context("When configured to simulate", {
@@ -414,7 +421,6 @@ class CarPlayManagerSpec: QuickSpec {
     }
 
     private class CustomTripPreviewDelegate: CarPlayManagerDelegate {
-        
         var customTripPreviewTextConfiguration: CPTripPreviewTextConfiguration?
         var customTrip: CPTrip?
 
@@ -434,9 +440,10 @@ class CarPlayManagerSpec: QuickSpec {
             //no-op
         }
         
-        func carPlayManager(_ carPlayManager: CarPlayManager, navigationServiceAlong route: Route, desiredSimulationMode: SimulationMode) -> NavigationService {
-            let directionsFake = Directions(accessToken: "foo")
-            return MapboxNavigationService(route: route, directions: directionsFake, simulating: desiredSimulationMode)
+        //TODO: ADD OPTIONS TO THIS DELEGATE METHOD
+        func carPlayManager(_ carPlayManager: CarPlayManager, navigationServiceAlong route: Route, routeIndex: Int, routeOptions: RouteOptions, desiredSimulationMode: SimulationMode) -> NavigationService {
+            let directionsFake = Directions(credentials: Fixture.credentials)
+            return MapboxNavigationService(route: route, routeIndex: routeIndex, routeOptions: routeOptions, directions: directionsFake, simulating: desiredSimulationMode)
         }
     }
 }
@@ -450,19 +457,22 @@ func simulateCarPlayConnection(_ manager: CarPlayManager) {
     let fakeWindow = CPWindow()
     
     manager.application(UIApplication.shared, didConnectCarInterfaceController: fakeInterfaceController, to: fakeWindow)
+    if let mapViewController = manager.carWindow?.rootViewController?.view {
+        manager.carWindow?.addSubview(mapViewController)
+    }
 }
 
 @available(iOS 12.0, *)
 class CarPlayManagerFailureDelegateSpy: CarPlayManagerDelegate {
-    private(set) var recievedError: NSError?
+    private(set) var recievedError: DirectionsError?
     
     @available(iOS 12.0, *)
-    func carPlayManager(_ carPlayManager: CarPlayManager, didFailToFetchRouteBetween waypoints: [Waypoint]?, options: RouteOptions, error: NSError) -> CPNavigationAlert? {
+    func carPlayManager(_ carPlayManager: CarPlayManager, didFailToFetchRouteBetween waypoints: [Waypoint]?, options: RouteOptions, error: DirectionsError) -> CPNavigationAlert? {
         recievedError = error
         return nil
     }
     
-    func carPlayManager(_ carPlayManager: CarPlayManager, navigationServiceAlong route: Route, desiredSimulationMode: SimulationMode) -> NavigationService {
+    func carPlayManager(_ carPlayManager: CarPlayManager, navigationServiceAlong route: Route, routeIndex: Int, routeOptions: RouteOptions, desiredSimulationMode: SimulationMode) -> NavigationService {
         fatalError("This is an empty stub.")
     }
     
@@ -479,7 +489,6 @@ class CarPlayManagerFailureDelegateSpy: CarPlayManagerDelegate {
 
 @available(iOS 12.0, *)
 class TestCarPlayManagerDelegate: CarPlayManagerDelegate {
-
     public fileprivate(set) var navigationInitiated = false
     public fileprivate(set) var currentService: NavigationService?
     public fileprivate(set) var navigationEnded = false
@@ -490,20 +499,11 @@ class TestCarPlayManagerDelegate: CarPlayManagerDelegate {
     public var trailingBarButtons: [CPBarButton]?
     public var mapButtons: [CPMapButton]?
 
-    func carPlayManager(_ carPlayManager: CarPlayManager, navigationServiceAlong route: Route, desiredSimulationMode: SimulationMode) -> NavigationService {
-        let response = Fixture.JSONFromFileNamed(name: jsonFileName)
-        let jsonRoute = (response["routes"] as! [AnyObject]).first as! [String: Any]
-        let initialRoute: Route = {
-            let waypoint1 = Waypoint(coordinate: CLLocationCoordinate2D(latitude: 37.795042, longitude: -122.413165))
-            let waypoint2 = Waypoint(coordinate: CLLocationCoordinate2D(latitude: 37.7727, longitude: -122.433378))
-            let options = NavigationRouteOptions(waypoints: [waypoint1, waypoint2])
-            options.shapeFormat = .polyline
-            let route = Route(json: jsonRoute, waypoints: [waypoint1, waypoint2], options: options)
-            route.accessToken = "deadbeef"
-            return route
-        }()
-        let directionsClientSpy = DirectionsSpy(accessToken: "garbage", host: nil)
-        let service = MapboxNavigationService(route: initialRoute, directions: directionsClientSpy, locationSource: NavigationLocationManager(), eventsManagerType: NavigationEventsManagerSpy.self, simulating: desiredSimulationMode)
+    func carPlayManager(_ carPlayManager: CarPlayManager, navigationServiceAlong route: Route, routeIndex: Int, routeOptions: RouteOptions, desiredSimulationMode: SimulationMode) -> NavigationService {
+        let response = Fixture.routeResponse(from: jsonFileName, options: routeOptions)
+        let initialRoute = response.routes!.first!
+        let directionsClientSpy = DirectionsSpy()
+        let service = MapboxNavigationService(route: initialRoute, routeIndex: 0, routeOptions: routeOptions, directions: directionsClientSpy, locationSource: NavigationLocationManager(), eventsManagerType: NavigationEventsManagerSpy.self, simulating: desiredSimulationMode)
         return service
     }
 
@@ -541,7 +541,6 @@ class CarPlayNavigationViewControllerTestable: CarPlayNavigationViewController {
 
 @available(iOS 12.0, *)
 class TestCarPlaySearchControllerDelegate: CarPlaySearchControllerDelegate {
-    
     public fileprivate(set) var interfaceController: CPInterfaceController?
     public fileprivate(set) var carPlayManager: CarPlayManager?
     
@@ -603,7 +602,6 @@ public class MapTemplateSpyProvider: MapTemplateProvider {
 
 @available(iOS 12.0, *)
 class FakeCPInterfaceController: CPInterfaceController {
-
     /**
      A simple stub which allows for instantiation of a CPInterfaceController for testing.
 

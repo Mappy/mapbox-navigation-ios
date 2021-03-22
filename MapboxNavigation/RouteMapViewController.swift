@@ -8,75 +8,30 @@ import Turf
 class ArrowFillPolyline: MGLPolylineFeature {}
 class ArrowStrokePolyline: ArrowFillPolyline {}
 
-extension RouteMapViewController: NavigationComponent {
-        
-    func navigationService(_ service: NavigationService, didUpdate progress: RouteProgress, with location: CLLocation, rawLocation: CLLocation) {
-        
-        let route = progress.route
-        let legIndex = progress.legIndex
-        let stepIndex = progress.currentLegProgress.stepIndex
-        
-        mapView.updatePreferredFrameRate(for: progress)
-        if currentLegIndexMapped != legIndex {
-            mapView.showWaypoints(route, legIndex: legIndex)
-            mapView.showRoutes([route], legIndex: legIndex)
-            
-            currentLegIndexMapped = legIndex
-        }
-        
-        if currentStepIndexMapped != stepIndex {
-            updateMapOverlays(for: progress)
-            currentStepIndexMapped = stepIndex
-        }
-        
-        if annotatesSpokenInstructions {
-            mapView.showVoiceInstructionsOnMap(route: route)
-        }
-    }
-    
-    @objc public func navigationService(_ service: NavigationService, didPassSpokenInstructionPoint instruction: SpokenInstruction, routeProgress: RouteProgress) {
-        updateCameraAltitude(for: routeProgress)
-    }
-    
-    
-    func navigationService(_ service: NavigationService, didRerouteAlong route: Route, at location: CLLocation?, proactive: Bool) {
-        currentStepIndexMapped = 0
-        let route = router.route
-        let stepIndex = router.routeProgress.currentLegProgress.stepIndex
-        let legIndex = router.routeProgress.legIndex
-        
-        
-        mapView.addArrow(route: route, legIndex: legIndex, stepIndex: stepIndex + 1)
-        mapView.showRoutes([route], legIndex: legIndex)
-        mapView.showWaypoints(route)
-        
-        if annotatesSpokenInstructions {
-            mapView.showVoiceInstructionsOnMap(route: route)
-        }
-        
-        if isInOverviewMode {
-            if let coordinates = route.coordinates, let userLocation = router.location?.coordinate {
-                mapView.contentInset = contentInset(forOverviewing: true)
-                mapView.setOverheadCameraView(from: userLocation, along: coordinates, for: contentInset(forOverviewing: true))
-            }
-        } else {
-            mapView.tracksUserCourse = true
-            navigationView.wayNameView.isHidden = true
-        }
-        
-    }
-    
-}
-
-
 class RouteMapViewController: UIViewController {
-
     var navigationView: NavigationView { return view as! NavigationView }
     var mapView: NavigationMapView { return navigationView.mapView }
     var reportButton: FloatingButton { return navigationView.reportButton }
     var topBannerContainerView: BannerContainerView { return navigationView.topBannerContainerView }
     var bottomBannerContainerView: BannerContainerView { return navigationView.bottomBannerContainerView }
-
+    
+    var floatingButtonsPosition: MapOrnamentPosition {
+        get {
+            return navigationView.floatingButtonsPosition
+        }
+        set {
+            navigationView.floatingButtonsPosition = newValue
+        }
+    }
+    
+    var floatingButtons: [UIButton]? {
+        get {
+            return navigationView.floatingButtons
+        }
+        set {
+            navigationView.floatingButtons = newValue
+        }
+    }
     
     lazy var endOfRouteViewController: EndOfRouteViewController = {
         let storyboard = UIStoryboard(name: "Navigation", bundle: .mapboxNavigation)
@@ -98,6 +53,13 @@ class RouteMapViewController: UIViewController {
     var destination: Waypoint?
 
     var showsEndOfRoute: Bool = true
+    var showsSpeedLimits: Bool = true {
+        didSet {
+            navigationView.speedLimitView.isAlwaysHidden = !showsSpeedLimits
+        }
+    }
+
+    var detailedFeedbackEnabled: Bool = false
 
     var pendingCamera: MGLMapCamera? {
         guard let parent = parent as? NavigationViewController else {
@@ -152,13 +114,23 @@ class RouteMapViewController: UIViewController {
     var overheadInsets: UIEdgeInsets {
         return UIEdgeInsets(top: topBannerContainerView.bounds.height, left: 20, bottom: bottomBannerContainerView.bounds.height, right: 20)
     }
+    
+    var routeLineTracksTraversal = false {
+        didSet {
+            mapView.routeLineTracksTraversal = routeLineTracksTraversal
+        }
+    }
 
     typealias LabelRoadNameCompletionHandler = (_ defaultRaodNameAssigned: Bool) -> Void
 
     var labelRoadNameCompletionHandler: (LabelRoadNameCompletionHandler)?
+    
+    /**
+     A Boolean value that determines whether the map altitude should change based on internal conditions.
+     */
+    var suppressAutomaticAltitudeChanges: Bool = false
 
     convenience init(navigationService: NavigationService, delegate: RouteMapViewControllerDelegate? = nil, topBanner: ContainerViewController, bottomBanner: ContainerViewController) {
-        
         self.init()
         self.navService = navigationService
         self.delegate = delegate
@@ -172,7 +144,6 @@ class RouteMapViewController: UIViewController {
         
         topContainer.backgroundColor = .clear
         
-        
         let bottomContainer = navigationView.bottomBannerContainerView
         embed(bottomBanner, in: bottomContainer) { (parent, banner) -> [NSLayoutConstraint] in
             banner.view.translatesAutoresizingMaskIntoConstraints = false
@@ -183,7 +154,6 @@ class RouteMapViewController: UIViewController {
         
         view.bringSubviewToFront(topBannerContainerView)
     }
-
 
     override func loadView() {
         view = NavigationView(delegate: self)
@@ -205,6 +175,10 @@ class RouteMapViewController: UIViewController {
             }
             self?.showRouteIfNeeded()
             mapView.localizeLabels()
+            mapView.showsTraffic = false
+                        
+            // FIXME: In case when building highlighting feature is enabled due to style changes and no info currently being stored
+            // regarding building identification such highlighted building will disappear.
         }
         
         makeGestureRecognizersResetFrameRate()
@@ -231,7 +205,7 @@ class RouteMapViewController: UIViewController {
             mapView.camera = camera
         } else if let location = router.location, location.course > 0 {
             mapView.updateCourseTracking(location: location, animated: false)
-        } else if let coordinates = router.routeProgress.currentLegProgress.currentStep.coordinates, let firstCoordinate = coordinates.first, coordinates.count > 1 {
+        } else if let coordinates = router.routeProgress.currentLegProgress.currentStep.shape?.coordinates, let firstCoordinate = coordinates.first, coordinates.count > 1 {
             let secondCoordinate = coordinates[1]
             let course = firstCoordinate.direction(to: secondCoordinate)
             let newLocation = CLLocation(coordinate: router.location?.coordinate ?? firstCoordinate, altitude: 0, horizontalAccuracy: 0, verticalAccuracy: 0, course: course, speed: 0, timestamp: Date())
@@ -256,11 +230,13 @@ class RouteMapViewController: UIViewController {
 
     func resumeNotifications() {
         NotificationCenter.default.addObserver(self, selector: #selector(applicationWillEnterForeground(notification:)), name: UIApplication.willEnterForegroundNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(orientationDidChange(_:)), name: UIDevice.orientationDidChangeNotification, object: nil)
         subscribeToKeyboardNotifications()
     }
 
     func suspendNotifications() {
         NotificationCenter.default.removeObserver(self, name: UIApplication.willEnterForegroundNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: UIDevice.orientationDidChangeNotification, object: nil)
         unsubscribeFromKeyboardNotifications()
     }
 
@@ -278,7 +254,8 @@ class RouteMapViewController: UIViewController {
         mapView.tracksUserCourse = true
         mapView.enableFrameByFrameCourseViewTracking(for: 3)
         isInOverviewMode = false
-
+        
+        mapView.updateCourseTracking(location: mapView.userLocationForCourseTracking)
         updateCameraAltitude(for: router.routeProgress)
         
         mapView.addArrow(route: router.route,
@@ -299,12 +276,12 @@ class RouteMapViewController: UIViewController {
 
     @objc func toggleOverview(_ sender: Any) {
         mapView.enableFrameByFrameCourseViewTracking(for: 3)
-        if let coordinates = router.route.coordinates,
-            let userLocation = router.location?.coordinate {
-            mapView.contentInset = contentInset(forOverviewing: true)
-            mapView.setOverheadCameraView(from: userLocation, along: coordinates, for: contentInset(forOverviewing: true))
+        if let shape = router.route.shape,
+           let userLocation = router.location {
+            mapView.setOverheadCameraView(from: userLocation, along: shape, for: contentInset(forOverviewing: true))
         }
         isInOverviewMode = true
+        updateMapViewComponents()
     }
 
     @objc func toggleMute(_ sender: UIButton) {
@@ -321,6 +298,7 @@ class RouteMapViewController: UIViewController {
     func showFeedback(source: FeedbackSource = .user) {
         guard let parent = parent else { return }
         let feedbackViewController = FeedbackViewController(eventsManager: navService.eventsManager)
+        feedbackViewController.detailedFeedbackEnabled = detailedFeedbackEnabled
         parent.present(feedbackViewController, animated: true, completion: nil)
     }
 
@@ -335,12 +313,23 @@ class RouteMapViewController: UIViewController {
             // Don't move mapView content on rotation or when e.g. top banner expands.
             return
         }
-        mapView.setContentInset(contentInset(forOverviewing: isInOverviewMode), animated: true, completionHandler: nil)
+        
+        updateMapViewContentInsets()
+    }
+    
+    func updateMapViewContentInsets(animated: Bool = false, completion: CompletionHandler? = nil) {
+        mapView.setContentInset(contentInset(forOverviewing: isInOverviewMode), animated: animated, completionHandler: completion)
         mapView.setNeedsUpdateConstraints()
+        
+        updateMapViewComponents()
     }
 
     @objc func applicationWillEnterForeground(notification: NSNotification) {
         mapView.updateCourseTracking(location: router.location, animated: false)
+    }
+    
+    @objc func orientationDidChange(_ notification: Notification) {
+        updateMapViewComponents()
     }
 
     func updateMapOverlays(for routeProgress: RouteProgress) {
@@ -374,14 +363,10 @@ class RouteMapViewController: UIViewController {
         }
     }
 
-
-
     private func setCamera(altitude: Double) {
         guard mapView.altitude != altitude else { return }
         mapView.altitude = altitude
     }
-
-
     
     /** Modifies the gesture recognizers to also update the map’s frame rate. */
     func makeGestureRecognizersResetFrameRate() {
@@ -392,6 +377,41 @@ class RouteMapViewController: UIViewController {
     
     @objc func resetFrameRate(_ sender: UIGestureRecognizer) {
         mapView.preferredFramesPerSecond = NavigationMapView.FrameIntervalOptions.defaultFramesPerSecond
+    }
+    
+    /**
+     Method updates `logoView` and `attributionButton` margins to prevent incorrect alignment
+     reported in https://github.com/mapbox/mapbox-navigation-ios/issues/2561. To be able to successfully update margins
+     `RouteMapViewController.automaticallyAdjustsScrollViewInsets` should be set to `true` and then switched back to `false`
+     to prevent spontaneous changes to `MGLMapView.contentInset`.
+     */
+    func updateMapViewComponents() {
+        // FIXME: Current implementation is considered as a workaround of Mapbox Maps SDK issue reported in:
+        // https://github.com/mapbox/mapbox-gl-native-ios/issues/533 and should be revised after root cause is fixed.
+        
+        automaticallyAdjustsScrollViewInsets = true
+        
+        let bottomBannerHeight = bottomBannerContainerView.bounds.height
+        let bottomBannerVerticalOffset = UIScreen.main.bounds.height - bottomBannerHeight - bottomBannerContainerView.frame.origin.y
+        let defaultOffset: CGFloat = 10.0
+        let x: CGFloat = defaultOffset
+        let y: CGFloat = bottomBannerHeight + defaultOffset + bottomBannerVerticalOffset
+        
+        mapView.logoViewPosition = .bottomLeft
+        if #available(iOS 11.0, *) {
+            mapView.logoViewMargins = CGPoint(x: x, y: y - view.safeAreaInsets.bottom)
+        } else {
+            mapView.logoViewMargins = CGPoint(x: x, y: y)
+        }
+        
+        mapView.attributionButtonPosition = .bottomRight
+        if #available(iOS 11.0, *) {
+            mapView.attributionButtonMargins = CGPoint(x: x, y: y - view.safeAreaInsets.bottom)
+        } else {
+            mapView.attributionButtonMargins = CGPoint(x: x, y: y)
+        }
+        
+        automaticallyAdjustsScrollViewInsets = false
     }
     
     func contentInset(forOverviewing overviewing: Bool) -> UIEdgeInsets {
@@ -413,7 +433,7 @@ class RouteMapViewController: UIViewController {
             var contentFrame = mapView.bounds.inset(by: insets)
 
             // Avoid letting the puck go partially off-screen, and add a comfortable padding beyond that.
-            let courseViewBounds = mapView.userCourseView?.bounds ?? .zero
+            let courseViewBounds = mapView.userCourseView.bounds
             // If it is not possible to position it right above the content area, center it at the remaining space.
             contentFrame = contentFrame.insetBy(dx: min(NavigationMapView.courseViewMinimumInsets.left + courseViewBounds.width / 2.0, contentFrame.width / 2.0),
                                                 dy: min(NavigationMapView.courseViewMinimumInsets.top + courseViewBounds.height / 2.0, contentFrame.height / 2.0))
@@ -477,9 +497,9 @@ class RouteMapViewController: UIViewController {
         guard let height = navigationView.endOfRouteHeightConstraint?.constant else { return }
         let insets = UIEdgeInsets(top: topBannerContainerView.bounds.height, left: 20, bottom: height + 20, right: 20)
         
-        if let coordinates = route.coordinates, let userLocation = navService.router.location?.coordinate {
-            let slicedLine = Polyline(coordinates).sliced(from: userLocation).coordinates
-            let line = MGLPolyline(coordinates: slicedLine, count: UInt(slicedLine.count))
+        if let shape = route.shape, let userLocation = navService.router.location?.coordinate, !shape.coordinates.isEmpty {
+            let slicedLineString = shape.sliced(from: userLocation)!
+            let line = MGLPolyline(slicedLineString)
 
             let camera = navigationView.mapView.cameraThatFitsShape(line, direction: navigationView.mapView.camera.heading, edgePadding: insets)
             camera.pitch = 0
@@ -498,7 +518,7 @@ class RouteMapViewController: UIViewController {
         guard waypoint.name == nil else { return populated(waypoint) }
         let location = CLLocation(latitude: waypoint.coordinate.latitude, longitude: waypoint.coordinate.longitude)
         CLGeocoder().reverseGeocodeLocation(location) { (places, error) in
-        guard let place = places?.first, let placeName = place.name, error == nil else { return }
+            guard let place = places?.first, let placeName = place.name, error == nil else { return }
             let named = Waypoint(coordinate: waypoint.coordinate, name: placeName)
             return populated(named)
         }
@@ -506,6 +526,82 @@ class RouteMapViewController: UIViewController {
     
     fileprivate func leg(containing step: RouteStep) -> RouteLeg? {
         return route.legs.first { $0.steps.contains(step) }
+    }
+}
+
+// MARK: - NavigationComponent
+extension RouteMapViewController: NavigationComponent {
+    func navigationService(_ service: NavigationService, didUpdate progress: RouteProgress, with location: CLLocation, rawLocation: CLLocation) {
+        let route = progress.route
+        let legIndex = progress.legIndex
+        let stepIndex = progress.currentLegProgress.stepIndex
+
+        mapView.updatePreferredFrameRate(for: progress)
+        if currentLegIndexMapped != legIndex {
+            mapView.showWaypoints(on: route, legIndex: legIndex)
+            mapView.show([route], legIndex: legIndex)
+            
+            currentLegIndexMapped = legIndex
+        }
+        
+        if currentStepIndexMapped != stepIndex {
+            updateMapOverlays(for: progress)
+            currentStepIndexMapped = stepIndex
+        }
+        
+        if annotatesSpokenInstructions {
+            mapView.showVoiceInstructionsOnMap(route: route)
+        }
+        
+        if routeLineTracksTraversal {
+            mapView.updateUpcomingRoutePointIndex(routeProgress: progress)
+            mapView.updateTraveledRouteLine(location.coordinate)
+            mapView.updateRoute(progress)
+        }
+        
+        navigationView.speedLimitView.signStandard = progress.currentLegProgress.currentStep.speedLimitSignStandard
+        navigationView.speedLimitView.speedLimit = progress.currentLegProgress.currentSpeedLimit
+    }
+    
+    public func navigationService(_ service: NavigationService, didPassSpokenInstructionPoint instruction: SpokenInstruction, routeProgress: RouteProgress) {
+        if !suppressAutomaticAltitudeChanges {
+            updateCameraAltitude(for: routeProgress)
+        }
+    }
+    
+    func navigationService(_ service: NavigationService, didRerouteAlong route: Route, at location: CLLocation?, proactive: Bool) {
+        currentStepIndexMapped = 0
+        let route = router.route
+        let stepIndex = router.routeProgress.currentLegProgress.stepIndex
+        let legIndex = router.routeProgress.legIndex
+        
+        mapView.removeWaypoints()
+        
+        mapView.addArrow(route: route, legIndex: legIndex, stepIndex: stepIndex + 1)
+        mapView.show([route], legIndex: legIndex)
+        mapView.showWaypoints(on: route)
+        
+        if annotatesSpokenInstructions {
+            mapView.showVoiceInstructionsOnMap(route: route)
+        }
+        
+        if isInOverviewMode {
+            if let shape = route.shape, let userLocation = router.location {
+                mapView.setOverheadCameraView(from: userLocation, along: shape, for: contentInset(forOverviewing: true))
+            }
+        } else {
+            mapView.tracksUserCourse = true
+            navigationView.wayNameView.isHidden = true
+        }
+    }
+    
+    func navigationService(_ service: NavigationService, didRefresh routeProgress: RouteProgress) {
+        mapView.show([routeProgress.route], legIndex: routeProgress.legIndex)
+        if routeLineTracksTraversal {
+            mapView.updateUpcomingRoutePointIndex(routeProgress: routeProgress)
+            mapView.updateTraveledRouteLine(router.location?.coordinate)
+            mapView.updateRoute(routeProgress)
+        }
     }
 }
 
@@ -530,7 +626,7 @@ extension RouteMapViewController: NavigationViewDelegate {
     // MARK: VisualInstructionDelegate
     
     func label(_ label: InstructionLabel, willPresent instruction: VisualInstruction, as presented: NSAttributedString) -> NSAttributedString? {
-        return delegate?.label?(label, willPresent: instruction, as: presented)
+        return delegate?.label(label, willPresent: instruction, as: presented)
     }
 
     // MARK: NavigationMapViewCourseTrackingDelegate
@@ -545,38 +641,46 @@ extension RouteMapViewController: NavigationViewDelegate {
         mapView.logoView.isHidden = true
     }
 
-
     //MARK: NavigationMapViewDelegate
-    func navigationMapView(_ mapView: NavigationMapView, routeStyleLayerWithIdentifier identifier: String, source: MGLSource) -> MGLStyleLayer? {
-        return delegate?.navigationMapView?(mapView, routeStyleLayerWithIdentifier: identifier, source: source)
+
+    func navigationMapView(_ mapView: NavigationMapView, mainRouteStyleLayerWithIdentifier identifier: String, source: MGLSource) -> MGLStyleLayer? {
+        return delegate?.navigationMapView(mapView, mainRouteStyleLayerWithIdentifier: identifier, source: source)
     }
 
-    func navigationMapView(_ mapView: NavigationMapView, routeCasingStyleLayerWithIdentifier identifier: String, source: MGLSource) -> MGLStyleLayer? {
-        return delegate?.navigationMapView?(mapView, routeCasingStyleLayerWithIdentifier: identifier, source: source)
+    func navigationMapView(_ mapView: NavigationMapView, mainRouteCasingStyleLayerWithIdentifier identifier: String, source: MGLSource) -> MGLStyleLayer? {
+        return delegate?.navigationMapView(mapView, mainRouteCasingStyleLayerWithIdentifier: identifier, source: source)
+    }
+
+    func navigationMapView(_ mapView: NavigationMapView, alternativeRouteStyleLayerWithIdentifier identifier: String, source: MGLSource) -> MGLStyleLayer? {
+        return delegate?.navigationMapView(mapView, alternativeRouteStyleLayerWithIdentifier: identifier, source: source)
+    }
+
+    func navigationMapView(_ mapView: NavigationMapView, alternativeRouteCasingStyleLayerWithIdentifier identifier: String, source: MGLSource) -> MGLStyleLayer? {
+        return delegate?.navigationMapView(mapView, alternativeRouteCasingStyleLayerWithIdentifier: identifier, source: source)
     }
 
     func navigationMapView(_ mapView: NavigationMapView, waypointStyleLayerWithIdentifier identifier: String, source: MGLSource) -> MGLStyleLayer? {
-        return delegate?.navigationMapView?(mapView, waypointStyleLayerWithIdentifier: identifier, source: source)
+        return delegate?.navigationMapView(mapView, waypointStyleLayerWithIdentifier: identifier, source: source)
     }
 
     func navigationMapView(_ mapView: NavigationMapView, waypointSymbolStyleLayerWithIdentifier identifier: String, source: MGLSource) -> MGLStyleLayer? {
-        return delegate?.navigationMapView?(mapView, waypointSymbolStyleLayerWithIdentifier: identifier, source: source)
+        return delegate?.navigationMapView(mapView, waypointSymbolStyleLayerWithIdentifier: identifier, source: source)
     }
 
     func navigationMapView(_ mapView: NavigationMapView, shapeFor waypoints: [Waypoint], legIndex: Int) -> MGLShape? {
-        return delegate?.navigationMapView?(mapView, shapeFor: waypoints, legIndex: legIndex)
+        return delegate?.navigationMapView(mapView, shapeFor: waypoints, legIndex: legIndex)
     }
 
     func navigationMapView(_ mapView: NavigationMapView, shapeFor routes: [Route]) -> MGLShape? {
-        return delegate?.navigationMapView?(mapView, shapeFor: routes)
+        return delegate?.navigationMapView(mapView, shapeFor: routes)
     }
 
     func navigationMapView(_ mapView: NavigationMapView, didSelect route: Route) {
-        delegate?.navigationMapView?(mapView, didSelect: route)
+        delegate?.navigationMapView(mapView, didSelect: route)
     }
 
     func navigationMapView(_ mapView: NavigationMapView, simplifiedShapeFor route: Route) -> MGLShape? {
-        return delegate?.navigationMapView?(mapView, simplifiedShapeFor: route)
+        return delegate?.navigationMapView(mapView, simplifiedShapeFor: route)
     }
 
     func navigationMapViewUserAnchorPoint(_ mapView: NavigationMapView) -> CGPoint {
@@ -586,7 +690,7 @@ extension RouteMapViewController: NavigationViewDelegate {
         }
 
         //otherwise, ask the delegate or return .zero
-        return delegate?.navigationMapViewUserAnchorPoint?(mapView) ?? .zero
+        return delegate?.navigationMapViewUserAnchorPoint(mapView) ?? .zero
     }
 
     /**
@@ -595,9 +699,8 @@ extension RouteMapViewController: NavigationViewDelegate {
      - parameter location: The user’s current location.
      */
     func labelCurrentRoad(at rawLocation: CLLocation, for snappedLocation: CLLocation? = nil) {
-
         guard navigationView.resumeButton.isHidden else {
-                return
+            return
         }
 
         let roadName = delegate?.mapViewController(self, roadNameAt: rawLocation)
@@ -626,16 +729,16 @@ extension RouteMapViewController: NavigationViewDelegate {
     }
 
     func labelCurrentRoadFeature(at location: CLLocation) {
-        guard let style = mapView.style, let stepCoordinates = router.routeProgress.currentLegProgress.currentStep.coordinates else {
-                return
+        guard let style = mapView.style, let stepShape = router.routeProgress.currentLegProgress.currentStep.shape, !stepShape.coordinates.isEmpty else {
+            return
         }
 
         let closestCoordinate = location.coordinate
-        let roadLabelLayerIdentifier = "roadLabelLayer"
+        let roadLabelStyleLayerIdentifier = "\(identifierNamespace).roadLabels"
         var streetsSources: [MGLVectorTileSource] = style.sources.compactMap {
             $0 as? MGLVectorTileSource
-            }.filter {
-                $0.isMapboxStreets
+        }.filter {
+            $0.isMapboxStreets
         }
 
         // Add Mapbox Streets if the map does not already have it
@@ -645,20 +748,29 @@ extension RouteMapViewController: NavigationViewDelegate {
             streetsSources.append(source)
         }
 
-        if let mapboxStreetsSource = streetsSources.first, style.layer(withIdentifier: roadLabelLayerIdentifier) == nil {
-            let streetLabelLayer = MGLLineStyleLayer(identifier: roadLabelLayerIdentifier, source: mapboxStreetsSource)
+        if let mapboxStreetsSource = streetsSources.first, style.layer(withIdentifier: roadLabelStyleLayerIdentifier) == nil {
+            let streetLabelLayer = MGLLineStyleLayer(identifier: roadLabelStyleLayerIdentifier, source: mapboxStreetsSource)
             streetLabelLayer.sourceLayerIdentifier = mapboxStreetsSource.roadLabelLayerIdentifier
             streetLabelLayer.lineOpacity = NSExpression(forConstantValue: 1)
             streetLabelLayer.lineWidth = NSExpression(forConstantValue: 20)
             streetLabelLayer.lineColor = NSExpression(forConstantValue: UIColor.white)
+
+            if ![DirectionsProfileIdentifier.walking, DirectionsProfileIdentifier.cycling].contains( router.routeProgress.routeOptions.profileIdentifier) {
+                // filter out to road classes valid for motor transport
+                let roadPredicates = ["motorway", "motorway_link", "trunk", "trunk_link", "primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "street", "street_limited", "roundabout"]
+
+                let compoundPredicate = NSPredicate(format: "class IN %@", roadPredicates)
+                streetLabelLayer.predicate = compoundPredicate
+            }
             style.insertLayer(streetLabelLayer, at: 0)
         }
 
         let userPuck = mapView.convert(closestCoordinate, toPointTo: mapView)
-        let features = mapView.visibleFeatures(at: userPuck, styleLayerIdentifiers: Set([roadLabelLayerIdentifier]))
+        let features = mapView.visibleFeatures(at: userPuck, styleLayerIdentifiers: Set([roadLabelStyleLayerIdentifier]))
         var smallestLabelDistance = Double.infinity
         var currentName: String?
         var currentShieldName: NSAttributedString?
+        let slicedLine = stepShape.sliced(from: closestCoordinate)!
 
         for feature in features {
             var allLines: [MGLPolyline] = []
@@ -670,14 +782,14 @@ extension RouteMapViewController: NavigationViewDelegate {
             }
 
             for line in allLines {
+                guard line.pointCount > 0 else { continue }
                 let featureCoordinates =  Array(UnsafeBufferPointer(start: line.coordinates, count: Int(line.pointCount)))
-                let featurePolyline = Polyline(featureCoordinates)
-                let slicedLine = Polyline(stepCoordinates).sliced(from: closestCoordinate)
+                let featurePolyline = LineString(featureCoordinates)
 
                 let lookAheadDistance: CLLocationDistance = 10
-                guard let pointAheadFeature = featurePolyline.sliced(from: closestCoordinate).coordinateFromStart(distance: lookAheadDistance) else { continue }
+                guard let pointAheadFeature = featurePolyline.sliced(from: closestCoordinate)!.coordinateFromStart(distance: lookAheadDistance) else { continue }
                 guard let pointAheadUser = slicedLine.coordinateFromStart(distance: lookAheadDistance) else { continue }
-                guard let reversedPoint = Polyline(featureCoordinates.reversed()).sliced(from: closestCoordinate).coordinateFromStart(distance: lookAheadDistance) else { continue }
+                guard let reversedPoint = LineString(featureCoordinates.reversed()).sliced(from: closestCoordinate)!.coordinateFromStart(distance: lookAheadDistance) else { continue }
 
                 let distanceBetweenPointsAhead = pointAheadFeature.distance(to: pointAheadUser)
                 let distanceBetweenReversedPoint = reversedPoint.distance(to: pointAheadUser)
@@ -712,32 +824,18 @@ extension RouteMapViewController: NavigationViewDelegate {
         }
     }
 
-    private func roadFeature(for line: MGLPolylineFeature) -> (roadName: String?, shieldName: NSAttributedString?) {
-        let roadNameRecord = roadFeatureHelper(ref: line.attribute(forKey: "ref"),
-                                            shield: line.attribute(forKey: "shield"),
-                                            reflen: line.attribute(forKey: "reflen"),
-                                              name: line.attribute(forKey: "name"))
-
-        return (roadName: roadNameRecord.roadName, shieldName: roadNameRecord.shieldName)
-    }
-
-    private func roadFeature(for line: MGLMultiPolylineFeature) -> (roadName: String?, shieldName: NSAttributedString?) {
-        let roadNameRecord = roadFeatureHelper(ref: line.attribute(forKey: "ref"),
-                                            shield: line.attribute(forKey: "shield"),
-                                            reflen: line.attribute(forKey: "reflen"),
-                                              name: line.attribute(forKey: "name"))
-
-        return (roadName: roadNameRecord.roadName, shieldName: roadNameRecord.shieldName)
-    }
-
-    private func roadFeatureHelper(ref: Any?, shield: Any?, reflen: Any?, name: Any?) -> (roadName: String?, shieldName: NSAttributedString?) {
+    private func roadFeature(for line: MGLFeature) -> (roadName: String?, shieldName: NSAttributedString?) {
         var currentShieldName: NSAttributedString?, currentRoadName: String?
 
-        if let text = ref as? String, let shieldID = shield as? String, let reflenDigit = reflen as? Int {
-            currentShieldName = roadShieldName(for: text, shield: shieldID, reflen: reflenDigit)
+        if let ref = line.attribute(forKey: "ref") as? String,
+           let shield = line.attribute(forKey: "shield") as? String,
+           let reflen = line.attribute(forKey: "reflen") as? Int {
+            let textColor = roadShieldTextColor(line: line) ?? .black
+            let imageName = "\(shield)-\(reflen)"
+            currentShieldName = roadShieldAttributedText(for: ref, textColor: textColor, imageName: imageName)
         }
 
-        if let roadName = name as? String {
+        if let roadName = line.attribute(forKey: "name") as? String {
             currentRoadName = roadName
         }
 
@@ -749,27 +847,49 @@ extension RouteMapViewController: NavigationViewDelegate {
 
         return (roadName: currentRoadName, shieldName: currentShieldName)
     }
+    
+    func roadShieldTextColor(line: MGLFeature) -> UIColor? {
+        guard let shield = line.attribute(forKey: "shield") as? String else {
+            return nil
+        }
+        
+        // shield_text_color is present in Mapbox Streets source v8 but not v7.
+        guard let shieldTextColor = line.attribute(forKey: "shield_text_color") as? String else {
+            let currentShield = HighwayShield.RoadType(rawValue: shield)
+            return currentShield?.textColor
+        }
+        
+        switch shieldTextColor {
+        case "black":
+            return .black
+        case "blue":
+            return .blue
+        case "white":
+            return .white
+        case "yellow":
+            return .yellow
+        case "orange":
+            return .orange
+        default:
+            return .black
+        }
+    }
 
-    private func roadShieldName(for text: String?, shield: String?, reflen: Int?) -> NSAttributedString? {
-        guard let text = text, let shield = shield, let reflen = reflen else { return nil }
-
-        let currentShield = HighwayShield.RoadType(rawValue: shield)
-        let textColor = currentShield?.textColor ?? .black
-        let imageName = "\(shield)-\(reflen)"
-
+    private func roadShieldAttributedText(for text: String, textColor: UIColor, imageName: String) -> NSAttributedString? {
         guard let image = mapView.style?.image(forName: imageName) else {
             return nil
         }
 
-        let attachment = RoadNameLabelAttachment(image: image, text: text, color: textColor, font: UIFont.boldSystemFont(ofSize: UIFont.systemFontSize), scale: UIScreen.main.scale)
+        let attachment = ShieldAttachment()
+        attachment.image = image.withCenteredText(text, color: textColor, font: UIFont.boldSystemFont(ofSize: UIFont.systemFontSize), scale: UIScreen.main.scale)
         return NSAttributedString(attachment: attachment)
     }
 
     func showRouteIfNeeded() {
         guard isViewLoaded && view.window != nil else { return }
         guard !mapView.showsRoute else { return }
-        mapView.showRoutes([router.route], legIndex: router.routeProgress.legIndex)
-        mapView.showWaypoints(router.route, legIndex: router.routeProgress.legIndex)
+        mapView.show([router.route], legIndex: router.routeProgress.legIndex)
+        mapView.showWaypoints(on: router.route, legIndex: router.routeProgress.legIndex)
         
         let currentLegProgress = router.routeProgress.currentLegProgress
         let nextStepIndex = currentLegProgress.stepIndex + 1
@@ -782,9 +902,6 @@ extension RouteMapViewController: NavigationViewDelegate {
             mapView.showVoiceInstructionsOnMap(route: router.route)
         }
     }
-    
-
-
 }
 
 // MARK: - Keyboard Handling
@@ -793,7 +910,6 @@ extension RouteMapViewController {
     fileprivate func subscribeToKeyboardNotifications() {
         NotificationCenter.default.addObserver(self, selector: #selector(RouteMapViewController.keyboardWillShow(notification:)), name:UIResponder.keyboardWillShowNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(RouteMapViewController.keyboardWillHide(notification:)), name:UIResponder.keyboardWillHideNotification, object: nil)
-
     }
     fileprivate func unsubscribeFromKeyboardNotifications() {
         NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
@@ -850,7 +966,7 @@ internal extension UIView.AnimationOptions {
         }
     }
 }
-@objc protocol RouteMapViewControllerDelegate: NavigationMapViewDelegate, VisualInstructionDelegate {
+protocol RouteMapViewControllerDelegate: NavigationMapViewDelegate, VisualInstructionDelegate {
     func mapViewControllerDidDismiss(_ mapViewController: RouteMapViewController, byCanceling canceled: Bool)
     func mapViewControllerShouldAnnotateSpokenInstructions(_ routeMapViewController: RouteMapViewController) -> Bool
 
@@ -863,8 +979,7 @@ internal extension UIView.AnimationOptions {
      - parameter location: The user’s current location.
      - return: The road name to display in the label, or the empty string to hide the label, or nil to query the map’s vector tiles for the road name.
      */
-    @objc func mapViewController(_ mapViewController: RouteMapViewController, roadNameAt location: CLLocation) -> String?
+    func mapViewController(_ mapViewController: RouteMapViewController, roadNameAt location: CLLocation) -> String?
     
-    
-    @objc func mapViewController(_ mapViewController: RouteMapViewController, didCenterOn location: CLLocation)
+    func mapViewController(_ mapViewController: RouteMapViewController, didCenterOn location: CLLocation)
 }

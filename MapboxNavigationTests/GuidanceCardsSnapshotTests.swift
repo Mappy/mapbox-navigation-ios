@@ -8,6 +8,10 @@ import Foundation
 @available(iOS 11.0, *)
 /// :nodoc:
 class GuidanceCardsSnapshotTests: SnapshotTest {
+    let tertiaryRouteOptions = NavigationRouteOptions(coordinates: [
+        CLLocationCoordinate2D(latitude: 39.749216, longitude: -105.008272),
+        CLLocationCoordinate2D(latitude: 39.694833, longitude: -104.976949),
+    ])
     
     override func setUp() {
         super.setUp()
@@ -15,7 +19,7 @@ class GuidanceCardsSnapshotTests: SnapshotTest {
     }
     
     func testRegularManeuver() {
-        let route = Fixture.route(from: "route-with-tertiary")
+        let route = Fixture.route(from: "route-with-tertiary", options: tertiaryRouteOptions)
         
         let host = UIViewController(nibName: nil, bundle: nil)
         let container = UIView.forAutoLayout()
@@ -29,15 +33,15 @@ class GuidanceCardsSnapshotTests: SnapshotTest {
             return cards.view.constraintsForPinning(to: container)
         }
         
-        let progress = RouteProgress(route: route, legIndex: 0, spokenInstructionIndex: 0)
+        let progress = RouteProgress(route: route, routeIndex: 0, options: tertiaryRouteOptions, legIndex: 0, spokenInstructionIndex: 0)
         
         subject.routeProgress = progress
         
-        verify(host, for: Device.iPhone6Plus.portrait)
+        verify(host, for: Device.iPhone8Plus.portrait)
     }
     
     func testLanesManeuver() {
-        let route = Fixture.route(from: "route-with-tertiary")
+        let route = Fixture.route(from: "route-with-tertiary", options: tertiaryRouteOptions)
         
         let host = UIViewController(nibName: nil, bundle: nil)
         let container = UIView.forAutoLayout()
@@ -51,16 +55,16 @@ class GuidanceCardsSnapshotTests: SnapshotTest {
             return cards.view.constraintsForPinning(to: container)
         }
         
-        let progress = RouteProgress(route: route, legIndex: 0, spokenInstructionIndex: 0)
+        let progress = RouteProgress(route: route, routeIndex: 0, options: tertiaryRouteOptions, legIndex: 0, spokenInstructionIndex: 0)
         progress.currentLegProgress.stepIndex = 1
         
         subject.routeProgress = progress
         
-        verify(host, for: Device.iPhone6Plus.portrait)
+        verify(host, for: Device.iPhone8Plus.portrait)
     }
     
     func testTertiaryManeuver() {
-        let route = Fixture.route(from: "route-with-tertiary")
+        let route = Fixture.route(from: "route-with-tertiary", options: tertiaryRouteOptions)
         
         let host = UIViewController(nibName: nil, bundle: nil)
         let container = UIView.forAutoLayout()
@@ -74,12 +78,12 @@ class GuidanceCardsSnapshotTests: SnapshotTest {
             return cards.view.constraintsForPinning(to: container)
         }
         
-        let progress = RouteProgress(route: route, legIndex: 0, spokenInstructionIndex: 0)
+        let progress = RouteProgress(route: route, routeIndex: 0, options: tertiaryRouteOptions, legIndex: 0, spokenInstructionIndex: 0)
         progress.currentLegProgress.stepIndex = 5
         
         subject.routeProgress = progress
         subject.view.setNeedsDisplay()
         
-        verify(host, for: Device.iPhone6Plus.portrait)
+        verify(host, for: Device.iPhone8Plus.portrait)
     }
 }

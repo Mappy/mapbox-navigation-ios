@@ -1,5 +1,4 @@
 struct HighwayShield {
-    
     enum RoadClass: String {
         case alternate, duplex, business, truck, bypass, b
         case oneB = "1b", twoA = "2a", twoB = "2b"

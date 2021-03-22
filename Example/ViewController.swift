@@ -2,14 +2,11 @@ import UIKit
 import MapboxCoreNavigation
 import MapboxNavigation
 import MapboxDirections
-import UserNotifications
 
-
-private typealias RouteRequestSuccess = (([Route]) -> Void)
-private typealias RouteRequestFailure = ((NSError) -> Void)
+private typealias RouteRequestSuccess = ((RouteResponse) -> Void)
+private typealias RouteRequestFailure = ((Error) -> Void)
 
 class ViewController: UIViewController {
-    
     // MARK: - IBOutlets
     @IBOutlet weak var longPressHintView: UIView!
     @IBOutlet weak var simulationButton: UIButton!
@@ -18,10 +15,15 @@ class ViewController: UIViewController {
     @IBOutlet weak var clearMap: UIButton!
     @IBOutlet weak var bottomBarBackground: UIView!
     
+    var trackPolyline: MGLPolyline?
+    var rawTrackPolyline: MGLPolyline?
+    
     // MARK: Properties
     var mapView: NavigationMapView? {
         didSet {
-            oldValue?.removeFromSuperview()
+            if let mapView = oldValue {
+                uninstall(mapView)
+            }
             if let mapView = mapView {
                 configureMapView(mapView)
                 view.insertSubview(mapView, belowSubview: longPressHintView)
@@ -36,44 +38,79 @@ class ViewController: UIViewController {
         }
     }
 
-    var routes: [Route]? {
+    var response: RouteResponse? {
         didSet {
-            startButton.isEnabled = (routes?.count ?? 0 > 0)
-            guard let routes = routes,
-                  let current = routes.first else { mapView?.removeRoutes(); return }
-
-            mapView?.showRoutes(routes)
-            mapView?.showWaypoints(current)
+            guard let routes = response?.routes, let currentRoute = routes.first else {
+                clearMapView()
+                return
+            }
+            
+            startButton.isEnabled = true
+            mapView?.show(routes)
+            mapView?.showWaypoints(on: currentRoute)
         }
     }
     
     weak var activeNavigationViewController: NavigationViewController?
 
-    var directions: Directions!
-    
-    enum directionHost {
-        case mapbox, mappyRecette, mappySnap
+    enum API {
+        case mapbox, mappyProd, mappyRecette, mappySnap
+
+        var directions: Directions {
+            switch self {
+            case .mapbox:
+                return Directions.shared
+            case .mappyProd, .mappyRecette, .mappySnap:
+                return Directions(credentials: DirectionsCredentials(accessToken: "", host: self.host))
+            }
+        }
+
+        private var host: URL? {
+            switch self {
+            case .mapbox:
+                return nil
+            case .mappyProd:
+                return URL(string: "https://routemm.mappy.net")!
+            case .mappyRecette:
+                return URL(string: "https://routemm.mappyrecette.net")!
+            case .mappySnap:
+                return URL(string: "https://routemm.mappysnap.net")!
+            }
+        }
     }
-    var hostChoice: directionHost = .mapbox
+
+    private var directions: Directions!
+    private var apiChoice: API = .mapbox {
+        didSet {
+            self.directions = apiChoice.directions
+        }
+    }
 
     // MARK: Directions Request Handlers
 
-    fileprivate lazy var defaultSuccess: RouteRequestSuccess = { [weak self] (routes) in
-        guard let current = routes.first else { return }
+    fileprivate lazy var defaultSuccess: RouteRequestSuccess = { [weak self] (response) in
+        guard let routes = response.routes, !routes.isEmpty, case let .route(options) = response.options else { return }
         self?.mapView?.removeWaypoints()
-        self?.routes = routes
-        self?.waypoints = current.routeOptions.waypoints
+        self?.response = response
+        
+        // Waypoints which were placed by the user are rewritten by slightly changed waypoints
+        // which are returned in response with routes.
+        if let waypoints = response.waypoints {
+            self?.waypoints = waypoints
+        }
+        
         self?.clearMap.isHidden = false
         self?.longPressHintView.isHidden = true
     }
 
     fileprivate lazy var defaultFailure: RouteRequestFailure = { [weak self] (error) in
-        self?.routes = nil //clear routes from the map
+        self?.response = nil //clear routes from the map
         print(error.localizedDescription)
         self?.presentAlert(message: error.localizedDescription)
     }
+    
+    private var foundAllBuildings = false
 
-    var alertController: UIAlertController!
     // MARK: - Init
     
     override init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) {
@@ -92,42 +129,20 @@ class ViewController: UIViewController {
         }
     }
     
+    deinit {
+        if let mapView = mapView {
+            uninstall(mapView)
+        }
+    }
     
     // MARK: - Lifecycle Methods
 
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        alertController = UIAlertController(title: "Start Navigation", message: "Select the navigation type", preferredStyle: .actionSheet)
-        
-        typealias ActionHandler = (UIAlertAction) -> Void
-        
-        let basic: ActionHandler = {_ in self.startBasicNavigation() }
-        let day: ActionHandler = {_ in self.startNavigation(styles: [DayStyle()]) }
-        let night: ActionHandler = {_ in self.startNavigation(styles: [NightStyle()]) }
-        let custom: ActionHandler = {_ in self.startCustomNavigation() }
-        let styled: ActionHandler = {_ in self.startStyledNavigation() }
-        let guidanceCards: ActionHandler = {_ in self.startGuidanceCardsNavigation() }
-        
-        let actionPayloads: [(String, UIAlertAction.Style, ActionHandler?)] = [
-            ("Default UI", .default, basic),
-            ("DayStyle UI", .default, day),
-            ("NightStyle UI", .default, night),
-            ("Custom UI", .default, custom),
-            ("Guidance Card UI", .default, guidanceCards),
-            ("Styled UI", .default, styled),
-            ("Cancel", .cancel, nil)
-        ]
-        
-        actionPayloads
-            .map { payload in UIAlertAction(title: payload.0, style: payload.1, handler: payload.2)}
-            .forEach(alertController.addAction(_:))
-
-        if let popoverController = alertController.popoverPresentationController {
-            popoverController.sourceView = self.startButton
-        }
-        
         navigationItem.rightBarButtonItem = UIBarButtonItem(image: UIImage(named: "settings"), style: .plain, target: self, action: #selector(openSettings))
+
+        navigationItem.rightBarButtonItem?.isEnabled = SettingsViewController.numberOfSections > 0
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -171,14 +186,19 @@ class ViewController: UIViewController {
             waypoints = Array(waypoints.dropFirst())
         }
         
-        let coordinates = mapView.convert(tap.location(in: mapView), toCoordinateFrom: mapView)
+        let destinationCoord = mapView.convert(tap.location(in: mapView), toCoordinateFrom: mapView)
         // Note: The destination name can be modified. The value is used in the top banner when arriving at a destination.
-        let waypoint = Waypoint(coordinate: coordinates, name: "Dropped Pin #\(waypoints.endIndex + 1)")
+        let waypoint = Waypoint(coordinate: destinationCoord, name: "Dropped Pin #\(waypoints.endIndex + 1)")
+        // Example of building highlighting. `targetCoordinate`, in this example, is used implicitly by NavigationViewController to determine which buildings to highlight.
+        waypoint.targetCoordinate = destinationCoord
         waypoints.append(waypoint)
+    
+        // Example of highlighting buildings in 2d and directly using the API on NavigationMapView.
+        let buildingHighlightCoordinates = waypoints.compactMap { $0.targetCoordinate }
+        foundAllBuildings = mapView.highlightBuildings(at: buildingHighlightCoordinates, in3D: false)
 
         requestRoute()
     }
-
 
     // MARK: - IBActions
 
@@ -187,14 +207,55 @@ class ViewController: UIViewController {
     }
 
     @IBAction func clearMapPressed(_ sender: Any) {
-        clearMap.isHidden = true
-        mapView?.removeRoutes()
-        mapView?.removeWaypoints()
-        waypoints.removeAll()
-        longPressHintView.isHidden = false
+        clearMapView()
     }
 
     @IBAction func startButtonPressed(_ sender: Any) {
+        presentActionsAlertController()
+    }
+    
+    private func clearMapView() {
+        startButton.isEnabled = false
+        clearMap.isHidden = true
+        longPressHintView.isHidden = false
+        
+        mapView?.unhighlightBuildings()
+        mapView?.removeRoutes()
+        mapView?.removeWaypoints()
+        waypoints.removeAll()
+    }
+    
+    private func presentActionsAlertController() {
+        let alertController = UIAlertController(title: "Start Navigation", message: "Select the navigation type", preferredStyle: .actionSheet)
+        
+        typealias ActionHandler = (UIAlertAction) -> Void
+        
+        let basic: ActionHandler = { _ in self.startBasicNavigation() }
+        let day: ActionHandler = { _ in self.startNavigation(styles: [DayStyle()]) }
+        let night: ActionHandler = { _ in self.startNavigation(styles: [NightStyle()]) }
+        let custom: ActionHandler = { _ in self.startCustomNavigation() }
+        let styled: ActionHandler = { _ in self.startStyledNavigation() }
+        let guidanceCards: ActionHandler = { _ in self.startGuidanceCardsNavigation() }
+        
+        let actionPayloads: [(String, UIAlertAction.Style, ActionHandler?)] = [
+            ("Default UI", .default, basic),
+            ("DayStyle UI", .default, day),
+            ("NightStyle UI", .default, night),
+            ("Custom UI", .default, custom),
+            ("Guidance Card UI", .default, guidanceCards),
+            ("Styled UI", .default, styled),
+            ("Cancel", .cancel, nil)
+        ]
+        
+        actionPayloads
+            .map { payload in UIAlertAction(title: payload.0, style: payload.1, handler: payload.2) }
+            .forEach(alertController.addAction(_:))
+        
+        if let popoverController = alertController.popoverPresentationController {
+            popoverController.sourceView = self.startButton
+            popoverController.sourceRect = self.startButton.bounds
+        }
+        
         present(alertController, animated: true, completion: nil)
     }
 
@@ -203,100 +264,109 @@ class ViewController: UIViewController {
     func requestRoute() {
         guard waypoints.count > 0 else { return }
         guard let mapView = mapView else { return }
-
-        let userWaypoint = Waypoint(location: mapView.userLocation!.location!, heading: mapView.userLocation?.heading, name: "User location")
+        guard let userLocation = mapView.userLocation?.location else {
+            print("User location is not valid. Make sure to enable Location Services.")
+            return
+        }
+        
+        let userWaypoint = Waypoint(location: userLocation, heading: mapView.userLocation?.heading, name: "User location")
         waypoints.insert(userWaypoint, at: 0)
 
 //        let options = NavigationRouteOptions(waypoints: waypoints)
         let options = MappyNavigationRouteOptions(waypoints: waypoints, provider: "car", routeCalculationType: "fastest", qid: "1ad02a47-0e87-48f4-d190-a794fbbb6aac")
-        options.shapeFormat = .polyline6
         options.carVehicle = "comcar"
         options.walkSpeed = .normal
         options.bikeSpeed = .fast
+        
+        // Get periodic updates regarding changes in estimated arrival time and traffic congestion segments along the route line.
+        RouteControllerProactiveReroutingInterval = 40
 
         requestRoute(with: options, success: defaultSuccess, failure: defaultFailure)
     }
 
     fileprivate func requestRoute(with options: RouteOptions, success: @escaping RouteRequestSuccess, failure: RouteRequestFailure?) {
-
-        let handler: Directions.RouteCompletionHandler = { (waypoints, routes, error) in
-            if let error = error { failure?(error) }
-            guard let routes = routes else { return }
-            return success(routes)
+//        Directions.shared.calculate(options) { (session, result) in
+        apiChoice = .mappyProd
+        self.directions.calculate(options) { (session, result) in
+            switch result {
+            case let .success(response):
+                success(response)
+            case let .failure(error):
+                failure?(error)
+            }
         }
-
-        self.hostChoice = .mappyRecette
-        switch hostChoice {
-        case .mapbox:
-            self.directions = Directions.shared
-        case .mappyRecette:
-            self.directions = Directions(accessToken: "", host: "routemm.mappyrecette.net")
-        case .mappySnap:
-            self.directions = Directions(accessToken: "", host: "routemm.mappysnap.net")
-        }
-        self.directions.calculate(options, completionHandler: handler)
-
-        // Calculate route offline if an offline version is selected
-//        let shouldUseOfflineRouting = Settings.selectedOfflineVersion != nil
-//        Settings.directions.calculate(options, offline: shouldUseOfflineRouting, completionHandler: handler)
     }
 
     // MARK: Basic Navigation
 
     func startBasicNavigation() {
-        guard let route = routes?.first else { return }
+        guard let response = response, let route = response.routes?.first, case let .route(routeOptions) = response.options else { return }
         
-        let service = navigationService(route: route)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 20) {
-//            (service.locationManager as? SimulatedLocationManager)?.shouldDeviateRoute = true
+        let service = navigationService(route: route, routeIndex: 0, options: routeOptions)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+//            debugPrint("Forcing route refresh with forced alternative route at next update")
+//            (service.router as? RouteController)?.forceMappyRouteRefreshAtNextUpdate = true
+//            (service.routeProgress.routeOptions as? MappyRouteOptions)?.forceBetterRoute = true
+
 //            debugPrint("Starting offroute deviation")
+//            (service.locationManager as? SimulatedLocationManager)?.shouldDeviateRoute = true
         }
         let navigationViewController = self.navigationViewController(navigationService: service)
+        
+        // Render part of the route that has been traversed with full transparency, to give the illusion of a disappearing route.
+        navigationViewController.routeLineTracksTraversal = true
+        
+        // Example of building highlighting in 3D.
+        navigationViewController.waypointStyle = .extrudedBuilding
+        
+        // Show second level of detail for feedback items.
+        navigationViewController.detailedFeedbackEnabled = true
         
         presentAndRemoveMapview(navigationViewController, completion: beginCarPlayNavigation)
     }
     
     func startNavigation(styles: [Style]) {
-        guard let route = routes?.first else { return }
+        guard let response = response, let route = response.routes?.first, case let .route(routeOptions) = response.options else { return }
         
-        let options = NavigationOptions(styles: styles, navigationService: navigationService(route: route))
-        let navigationViewController = NavigationViewController(for: route, options: options)
+        let options = NavigationOptions(styles: styles, navigationService: navigationService(route: route, routeIndex: 0, options: routeOptions))
+        let navigationViewController = NavigationViewController(for: route, routeIndex: 0, routeOptions: routeOptions, navigationOptions: options)
         navigationViewController.delegate = self
+        
+        // Example of building highlighting in 2D.
+        navigationViewController.waypointStyle = .building
         
         presentAndRemoveMapview(navigationViewController, completion: beginCarPlayNavigation)
     }
     
     func navigationViewController(navigationService: NavigationService) -> NavigationViewController {
-        let route = navigationService.route
-        let options = NavigationOptions( navigationService: navigationService)
+        let options = NavigationOptions(navigationService: navigationService)
         
-        let navigationViewController = NavigationViewController(for: route, options: options)
+        let navigationViewController = NavigationViewController(for: navigationService.route, routeIndex: navigationService.indexedRoute.1, routeOptions: navigationService.routeProgress.routeOptions, navigationOptions: options)
         navigationViewController.delegate = self
         navigationViewController.mapView?.delegate = self
         return navigationViewController
     }
     
     public func beginNavigationWithCarplay(navigationService: NavigationService) {
-        self.routes = [navigationService.route]
-        
         let navigationViewController = activeNavigationViewController ?? self.navigationViewController(navigationService: navigationService)
         navigationViewController.didConnectToCarPlay()
-        
+
         guard activeNavigationViewController == nil else { return }
-        
+
         presentAndRemoveMapview(navigationViewController, completion: nil)
     }
     
     // MARK: Custom Navigation UI
     func startCustomNavigation() {
-        guard let route = routes?.first else { return }
+        guard let route = response?.routes?.first, let responseOptions = response?.options, case let .route(routeOptions) = responseOptions else { return }
 
         guard let customViewController = storyboard?.instantiateViewController(withIdentifier: "custom") as? CustomViewController else { return }
 
-        customViewController.userRoute = route
+        customViewController.userIndexedRoute = (route, 0)
+        customViewController.userRouteOptions = routeOptions
 
         let destination = MGLPointAnnotation()
-        destination.coordinate = route.coordinates!.last!
+        destination.coordinate = route.shape!.coordinates.last!
         customViewController.destination = destination
         customViewController.simulateLocation = simulationButton.isSelected
 
@@ -306,11 +376,11 @@ class ViewController: UIViewController {
     // MARK: Styling the default UI
 
     func startStyledNavigation() {
-        guard let route = routes?.first else { return }
+        guard let response = response, let route = response.routes?.first, case let .route(routeOptions) = response.options else { return }
 
         let styles = [CustomDayStyle(), CustomNightStyle()]
-        let options = NavigationOptions(styles:styles, navigationService: navigationService(route: route))
-        let navigationViewController = NavigationViewController(for: route, options: options)
+        let options = NavigationOptions(styles: styles, navigationService: navigationService(route: route, routeIndex: 0, options: routeOptions))
+        let navigationViewController = NavigationViewController(for: route, routeIndex: 0, routeOptions: routeOptions, navigationOptions: options)
         navigationViewController.delegate = self
 
         presentAndRemoveMapview(navigationViewController, completion: beginCarPlayNavigation)
@@ -318,24 +388,22 @@ class ViewController: UIViewController {
     
     // MARK: Guidance Cards
     func startGuidanceCardsNavigation() {
-        guard let route = routes?.first else { return }
+        guard let response = response, let route = response.routes?.first, case let .route(routeOptions) = response.options else { return }
         
         let instructionsCardCollection = InstructionsCardViewController()
         instructionsCardCollection.cardCollectionDelegate = self
         
-        let options = NavigationOptions(navigationService: navigationService(route: route), topBanner: instructionsCardCollection)
-        let navigationViewController = NavigationViewController(for: route, options: options)
+        let options = NavigationOptions(navigationService: navigationService(route: route, routeIndex: 0, options: routeOptions), topBanner: instructionsCardCollection)
+        let navigationViewController = NavigationViewController(for: route, routeIndex: 0, routeOptions: routeOptions, navigationOptions: options)
         navigationViewController.delegate = self
         
         presentAndRemoveMapview(navigationViewController, completion: beginCarPlayNavigation)
     }
     
-
-    func navigationService(route: Route) -> NavigationService {
+    func navigationService(route: Route, routeIndex: Int, options: RouteOptions) -> NavigationService {
         let simulate = simulationButton.isSelected
-        let mode: SimulationMode = simulate ? .always : .never//.onPoorGPS
-        let routerType: Router.Type? = (self.hostChoice == .mapbox) ? nil : LegacyRouteController.self
-        return MapboxNavigationService(route: route, directions: self.directions, simulating: mode, routerType: routerType)
+        let mode: SimulationMode = simulate ? .always : .onPoorGPS
+        return MapboxNavigationService(route: route, routeIndex: routeIndex, routeOptions: options, directions: self.directions, simulating: mode)
     }
 
     func presentAndRemoveMapview(_ navigationViewController: NavigationViewController, completion: CompletionHandler?) {
@@ -345,7 +413,6 @@ class ViewController: UIViewController {
         present(navigationViewController, animated: true) { [weak self] in
             completion?()
             
-            self?.mapView?.removeFromSuperview()
             self?.mapView = nil
         }
     }
@@ -377,12 +444,21 @@ class ViewController: UIViewController {
         mapView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         mapView.delegate = self
         mapView.navigationMapViewDelegate = self
-        mapView.userTrackingMode = .follow
         mapView.logoView.isHidden = true
 
         let singleTap = UILongPressGestureRecognizer(target: self, action: #selector(didLongPress(tap:)))
         mapView.gestureRecognizers?.filter({ $0 is UILongPressGestureRecognizer }).forEach(singleTap.require(toFail:))
         mapView.addGestureRecognizer(singleTap)
+        
+        trackLocations(mapView: mapView)
+        mapView.showsUserLocation = true
+        mapView.userTrackingMode = .follow
+        mapView.showsUserHeadingIndicator = true
+    }
+    
+    func uninstall(_ mapView: NavigationMapView) {
+        NotificationCenter.default.removeObserver(self, name: .passiveLocationDataSourceDidUpdate, object: nil)
+        mapView.removeFromSuperview()
     }
 }
 
@@ -394,10 +470,33 @@ extension ViewController: MGLMapViewDelegate {
         
         self.mapView?.localizeLabels()
         
-        if let routes = routes, let currentRoute = routes.first, let coords = currentRoute.coordinates {
-            mapView.setVisibleCoordinateBounds(MGLPolygon(coordinates: coords, count: currentRoute.coordinateCount).overlayBounds, animated: false)
-            self.mapView?.showRoutes(routes)
-            self.mapView?.showWaypoints(currentRoute)
+        if let routes = response?.routes, let currentRoute = routes.first, let coords = currentRoute.shape?.coordinates {
+            mapView.setVisibleCoordinateBounds(MGLPolygon(coordinates: coords, count: UInt(coords.count)).overlayBounds, animated: false)
+            self.mapView?.show(routes)
+            self.mapView?.showWaypoints(on: currentRoute)
+        }
+    }
+    
+    func mapView(_ mapView: MGLMapView, strokeColorForShapeAnnotation annotation: MGLShape) -> UIColor {
+        if annotation == trackPolyline {
+            return .darkGray
+        }
+        if annotation == rawTrackPolyline {
+            return .lightGray
+        }
+        return .black
+    }
+    
+    func mapView(_ mapView: MGLMapView, lineWidthForPolylineAnnotation annotation: MGLPolyline) -> CGFloat {
+        return annotation == trackPolyline || annotation == rawTrackPolyline ? 4 : 1
+    }
+    
+    func mapViewRegionIsChanging(_ mapView: MGLMapView) {
+        if activeNavigationViewController == nil, foundAllBuildings == false, let navMapView = mapView as? NavigationMapView {
+            let buildingHighlightCoordinates = waypoints.compactMap { $0.targetCoordinate }
+            if buildingHighlightCoordinates.count > 0 {
+                foundAllBuildings = navMapView.highlightBuildings(at: buildingHighlightCoordinates, in3D: false)
+            }
         }
     }
 }
@@ -405,50 +504,42 @@ extension ViewController: MGLMapViewDelegate {
 // MARK: - NavigationMapViewDelegate
 extension ViewController: NavigationMapViewDelegate {
     func navigationMapView(_ mapView: NavigationMapView, didSelect waypoint: Waypoint) {
-        guard let routeOptions = routes?.first?.routeOptions else { return }
+        guard let responseOptions = response?.options, case let .route(routeOptions) = responseOptions else { return }
         let modifiedOptions = routeOptions.without(waypoint: waypoint)
 
-        presentWaypointRemovalActionSheet { _ in
+        presentWaypointRemovalAlert { _ in
             self.requestRoute(with:modifiedOptions, success: self.defaultSuccess, failure: self.defaultFailure)
         }
     }
 
     func navigationMapView(_ mapView: NavigationMapView, didSelect route: Route) {
-        guard let routes = routes else { return }
-        guard let index = routes.firstIndex(where: { $0 == route }) else { return }
-        self.routes!.remove(at: index)
-        self.routes!.insert(route, at: 0)
+        guard let routes = response?.routes else { return }
+        guard let index = routes.firstIndex(where: { $0 === route }) else { return }
+        self.response?.routes?.swapAt(index, 0)
     }
 
-    private func presentWaypointRemovalActionSheet(completionHandler approve: @escaping ((UIAlertAction) -> Void)) {
-        let title = NSLocalizedString("REMOVE_WAYPOINT_CONFIRM_TITLE", value: "Remove Waypoint?", comment: "Title of sheet confirming waypoint removal")
-        let message = NSLocalizedString("REMOVE_WAYPOINT_CONFIRM_MSG", value: "Do you want to remove this waypoint?", comment: "Message of sheet confirming waypoint removal")
-        let removeTitle = NSLocalizedString("REMOVE_WAYPOINT_CONFIRM_REMOVE", value: "Remove Waypoint", comment: "Title of alert sheet action for removing a waypoint")
+    private func presentWaypointRemovalAlert(completionHandler approve: @escaping ((UIAlertAction) -> Void)) {
+        let title = NSLocalizedString("REMOVE_WAYPOINT_CONFIRM_TITLE", value: "Remove Waypoint?", comment: "Title of alert confirming waypoint removal")
+        let message = NSLocalizedString("REMOVE_WAYPOINT_CONFIRM_MSG", value: "Do you want to remove this waypoint?", comment: "Message of alert confirming waypoint removal")
+        let removeTitle = NSLocalizedString("REMOVE_WAYPOINT_CONFIRM_REMOVE", value: "Remove Waypoint", comment: "Title of alert action for removing a waypoint")
         let cancelTitle = NSLocalizedString("REMOVE_WAYPOINT_CONFIRM_CANCEL", value: "Cancel", comment: "Title of action for dismissing waypoint removal confirmation sheet")
-
-        let actionSheet = UIAlertController(title: title, message: message, preferredStyle: .actionSheet)
-        let remove = UIAlertAction(title: removeTitle, style: .destructive, handler: approve)
-        let cancel = UIAlertAction(title: cancelTitle, style: .cancel, handler: nil)
-        [remove, cancel].forEach(actionSheet.addAction(_:))
-
-        self.present(actionSheet, animated: true, completion: nil)
+        
+        let waypointRemovalAlertController = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        let removeAction = UIAlertAction(title: removeTitle, style: .destructive, handler: approve)
+        let cancelAction = UIAlertAction(title: cancelTitle, style: .cancel, handler: nil)
+        [removeAction, cancelAction].forEach(waypointRemovalAlertController.addAction(_:))
+        
+        self.present(waypointRemovalAlertController, animated: true, completion: nil)
     }
 }
 
-// MARK: VoiceControllerDelegate methods
-// To use these delegate methods, set the `VoiceControllerDelegate` on your `VoiceController`.
-extension ViewController: VoiceControllerDelegate {
-    // Called when there is an error with speaking a voice instruction.
-    func voiceController(_ voiceController: RouteVoiceController, spokenInstructionsDidFailWith error: Error) {
-        print(error.localizedDescription)
-    }
-    // Called when an instruction is interrupted by a new voice instruction.
-    func voiceController(_ voiceController: RouteVoiceController, didInterrupt interruptedInstruction: SpokenInstruction, with interruptingInstruction: SpokenInstruction) {
-        print(interruptedInstruction.text, interruptingInstruction.text)
-    }
-    
-    func voiceController(_ voiceController: RouteVoiceController, willSpeak instruction: SpokenInstruction, routeProgress: RouteProgress) -> SpokenInstruction? {
-        return SpokenInstruction(distanceAlongStep: instruction.distanceAlongStep, text: "New Instruction!", ssmlText: "<speak>New Instruction!</speak>")
+// MARK: RouteVoiceControllerDelegate methods
+// To use these delegate methods, set the `routeVoiceControllerDelegate` on your `VoiceController`.
+extension ViewController: RouteVoiceControllerDelegate {
+    // Called when there is an error with instructions vocalization
+    func routeVoiceController(_ routeVoiceController: RouteVoiceController, encountered error: SpeechError) {
+        print(error)
+
     }
     
     // By default, the navigation service will attempt to filter out unqualified locations.
@@ -460,29 +551,7 @@ extension ViewController: VoiceControllerDelegate {
     }
     
     func navigationViewController(_ navigationViewController: NavigationViewController, shouldRerouteFrom location: CLLocation) -> Bool {
-        
-        let shouldUseOfflineRouting = Settings.selectedOfflineVersion != nil
-        
-        guard shouldUseOfflineRouting == true else {
-            return true
-        }
-        
-        let currentRoute = navigationViewController.route
-        let profileIdentifier = currentRoute.routeOptions.profileIdentifier
-        
-        var waypoints: [Waypoint] = [Waypoint(location: location)]
-        var remainingWaypoints = currentRoute.routeOptions.waypoints
-        remainingWaypoints.removeFirst()
-        waypoints.append(contentsOf: remainingWaypoints)
-        
-        let options = NavigationRouteOptions(waypoints: waypoints, profileIdentifier: profileIdentifier)
-        
-        Settings.directions.calculate(options, offline: true) { (waypoints, routes, error) in
-            guard let route = routes?.first else { return }
-            navigationViewController.navigationService.route = route
-        }
-        
-        return false
+        return true
     }
 }
 
@@ -491,13 +560,12 @@ extension ViewController: WaypointConfirmationViewControllerDelegate {
     func confirmationControllerDidConfirm(_ confirmationController: WaypointConfirmationViewController) {
         confirmationController.dismiss(animated: true, completion: {
             guard let navigationViewController = self.presentedViewController as? NavigationViewController,
-                  let navService = navigationViewController.navigationService else { return }
+                let navService = navigationViewController.navigationService else { return }
 
-            let router = navService.router!
-            guard router.route.legs.count > router.routeProgress.legIndex + 1 else { return }
-            
-            router.routeProgress.legIndex += 1
+            navService.router?.advanceLegIndex()
             navService.start()
+
+            navigationViewController.mapView?.unhighlightBuildings()
         })
     }
 }
@@ -539,11 +607,9 @@ extension ViewController: NavigationViewControllerDelegate {
     }
 }
 
-
-// Mark: VisualInstructionDelegate
+// MARK: VisualInstructionDelegate
 extension ViewController: VisualInstructionDelegate {
     func label(_ label: InstructionLabel, willPresent instruction: VisualInstruction, as presented: NSAttributedString) -> NSAttributedString? {
-        
         // Uncomment to mutate the instruction shown in the top instruction banner
         // let range = NSRange(location: 0, length: presented.length)
         // let mutable = NSMutableAttributedString(attributedString: presented)
@@ -551,5 +617,45 @@ extension ViewController: VisualInstructionDelegate {
         // return mutable
         
         return presented
+    }
+}
+
+// MARK: Free driving
+extension ViewController {
+    func trackLocations(mapView: NavigationMapView) {
+        let dataSource = PassiveLocationDataSource()
+        let locationManager = PassiveLocationManager(dataSource: dataSource)
+        mapView.locationManager = locationManager
+        
+        NotificationCenter.default.addObserver(self, selector: #selector(didUpdatePassiveLocation), name: .passiveLocationDataSourceDidUpdate, object: dataSource)
+        
+        trackPolyline = nil
+        rawTrackPolyline = nil
+    }
+    
+    @objc func didUpdatePassiveLocation(_ notification: Notification) {
+        if let roadName = notification.userInfo?[PassiveLocationDataSource.NotificationUserInfoKey.roadNameKey] as? String {
+            title = roadName
+        }
+        
+        if let location = notification.userInfo?[PassiveLocationDataSource.NotificationUserInfoKey.locationKey] as? CLLocation {
+            if trackPolyline == nil {
+                trackPolyline = MGLPolyline()
+            }
+            
+            var coordinates: [CLLocationCoordinate2D] = [location.coordinate]
+            trackPolyline?.appendCoordinates(&coordinates, count: UInt(coordinates.count))
+        }
+        
+        if let rawLocation = notification.userInfo?[PassiveLocationDataSource.NotificationUserInfoKey.rawLocationKey] as? CLLocation {
+            if rawTrackPolyline == nil {
+                rawTrackPolyline = MGLPolyline()
+            }
+            
+            var coordinates: [CLLocationCoordinate2D] = [rawLocation.coordinate]
+            rawTrackPolyline?.appendCoordinates(&coordinates, count: UInt(coordinates.count))
+        }
+        
+        mapView?.addAnnotations([rawTrackPolyline!, trackPolyline!])
     }
 }

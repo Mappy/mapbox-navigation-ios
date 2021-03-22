@@ -1,11 +1,11 @@
 import Foundation
 import CoreLocation
+import MapboxCommon
 import MapboxNavigationNative
 import MapboxMobileEvents
 import MapboxDirections
 import Polyline
 import Turf
-
 
 /**
  A `RouteController` tracks the user’s progress along a route, posting notifications as the user reaches significant points along the route. On every location update, the route controller evaluates the user’s location, determining whether the user remains on the route. If not, the route controller calculates a new route.
@@ -13,9 +13,7 @@ import Turf
  `RouteController` is responsible for the core navigation logic whereas
  `NavigationViewController` is responsible for displaying a default drop-in navigation UI.
  */
-@objc(MBRouteController)
 open class RouteController: NSObject {
-    
     public enum DefaultBehavior {
         public static let shouldRerouteFromLocation: Bool = true
         public static let shouldDiscardLocation: Bool = true
@@ -23,28 +21,36 @@ open class RouteController: NSObject {
         public static let shouldPreventReroutesWhenArrivingAtWaypoint: Bool = true
         public static let shouldDisableBatteryMonitoring: Bool = true
     }
+
+    lazy var navigator: Navigator = {
+        let settingsProfile = SettingsProfile(application: ProfileApplication.kMobile, platform: ProfilePlatform.KIOS)
+        return Navigator(profile: settingsProfile, config: NavigatorConfig(), customConfig: "", tilesConfig: TilesConfig())
+    }()
     
-    let navigator = MBNavigator()
-    
-    public var route: Route {
+    public var indexedRoute: IndexedRoute {
         get {
-            return routeProgress.route
+            return routeProgress.indexedRoute
         }
         set {
-            routeProgress = RouteProgress(route: newValue)
+            routeProgress = RouteProgress(route: newValue.0, routeIndex: newValue.1, options: routeProgress.routeOptions)
             updateNavigator(with: routeProgress)
         }
     }
     
+    public var route: Route {
+        return indexedRoute.0
+    }
+    
     private var _routeProgress: RouteProgress {
+        willSet {
+            resetObservation(for: _routeProgress)
+        }
         didSet {
             movementsAwayFromRoute = 0
             updateNavigator(with: _routeProgress)
             updateObservation(for: _routeProgress)
         }
     }
-    
-    private var progressObservation: NSKeyValueObservation?
     
     var movementsAwayFromRoute = 0
     
@@ -56,31 +62,26 @@ open class RouteController: NSObject {
     
     var isRerouting = false
     
+    var isRefreshing = false
+
+    var isRefreshingMappyRoute = false
+    
     var userSnapToStepDistanceFromManeuver: CLLocationDistance?
     
-    var previousArrivalWaypoint: Waypoint?
+    var previousArrivalWaypoint: MapboxDirections.Waypoint?
     
     var isFirstLocation: Bool = true
-    
-    @objc public var config: MBNavigatorConfig? {
-        get {
-            return navigator.getConfig()
-        }
-        set {
-            navigator.setConfigFor(newValue)
-        }
-    }
     
     /**
      Details about the user’s progress along the current route, leg, and step.
      */
-    @objc public var routeProgress: RouteProgress {
+    public var routeProgress: RouteProgress {
         get {
             return _routeProgress
         }
         set {
             if let location = self.location {
-                delegate?.router?(self, willRerouteFrom: location)
+                delegate?.router(self, willRerouteFrom: location)
             }
             _routeProgress = newValue
             announce(reroute: routeProgress.route, at: rawLocation, proactive: didFindFasterRoute)
@@ -92,15 +93,23 @@ open class RouteController: NSObject {
      - important: If the rawLocation is outside of the route snapping tolerances, this value is nil.
      */
     var snappedLocation: CLLocation? {
-        let status = navigator.getStatusForTimestamp(Date())
+        guard let locationUpdateDate = lastLocationUpdateDate else {
+            return nil
+        }
+
+        let status = navigator.status(at: locationUpdateDate)
         guard status.routeState == .tracking || status.routeState == .complete else {
             return nil
         }
         return CLLocation(status.location)
     }
-    
+
+    private var lastLocationUpdateDate: Date? {
+        return rawLocation?.timestamp
+    }
+
     var heading: CLHeading?
-    
+
     /**
      The most recently received user location.
      - note: This is a raw location received from `locationManager`. To obtain an idealized location, use the `location` property.
@@ -113,42 +122,48 @@ open class RouteController: NSObject {
         }
     }
     
-    @objc public var reroutesProactively: Bool = true
-
-    /**
-     - note: NOT implemented for `RouteController`.
-     */
-    @objc public var forceProactiveReroutingAtNextUpdate = false
+    public var reroutesProactively: Bool = true
     
     var lastProactiveRerouteDate: Date?
+    
+    var lastRouteRefresh: Date?
+    
+    public var refreshesRoute: Bool = true
+
+    public var refreshesMappyRoute: Bool = true
+
+    var lastMappyRouteRefresh: Date?
+
+    public var forceMappyRouteRefreshAtNextUpdate = false
     
     /**
      The route controller’s delegate.
      */
-    @objc public weak var delegate: RouterDelegate?
+    public weak var delegate: RouterDelegate?
     
     /**
      The route controller’s associated location manager.
      */
-    @objc public unowned var dataSource: RouterDataSource
+    public unowned var dataSource: RouterDataSource
     
     /**
      The Directions object used to create the route.
      */
-    @objc public var directions: Directions
+    public var directions: Directions
     
     /**
      The idealized user location. Snapped to the route line, if applicable, otherwise raw.
      - seeAlso: snappedLocation, rawLocation
      */
-    @objc public var location: CLLocation? {
+    public var location: CLLocation? {
         return snappedLocation ?? rawLocation
     }
     
-    required public init(along route: Route, directions: Directions = Directions.shared, dataSource source: RouterDataSource) {
+    required public init(along route: Route, routeIndex: Int, options: RouteOptions, directions: Directions = Directions.shared, dataSource source: RouterDataSource) {
         self.directions = directions
-        self._routeProgress = RouteProgress(route: route)
+        self._routeProgress = RouteProgress(route: route, routeIndex: routeIndex, options: options)
         self.dataSource = source
+        self.refreshesRoute = options.profileIdentifier == .automobileAvoidingTraffic && options.refreshingEnabled
         UIDevice.current.isBatteryMonitoringEnabled = true
         
         super.init()
@@ -157,53 +172,93 @@ open class RouteController: NSObject {
         updateObservation(for: _routeProgress)
     }
     
+    deinit {
+        resetObservation(for: _routeProgress)
+    }
+    
+    func resetObservation(for progress: RouteProgress) {
+        progress.legIndexHandler = nil
+    }
+    
     func updateObservation(for progress: RouteProgress) {
-        progressObservation = progress.observe(\.legIndex, options: [.old, .new]) { [weak self] (progress, change) in
-            guard change.newValue != change.oldValue, let legIndex = change.newValue else {
+        progress.legIndexHandler = { [weak self] (oldValue, newValue) in
+            guard newValue != oldValue else {
                 return
             }
-            self?.updateRouteLeg(to: legIndex)
+            self?.updateRouteLeg(to: newValue)
+        }
+    }
+    
+    func geometryEncoding(_ routeShapeFormat: RouteShapeFormat) -> ActiveGuidanceGeometryEncoding {
+        switch routeShapeFormat {
+        case .geoJSON:
+            return .kGeoJSON
+        case .polyline:
+            return .kPolyline5
+        case .polyline6:
+            return .kPolyline6
+        }
+    }
+    
+    func mode(_ profileIdentifier: DirectionsProfileIdentifier) -> ActiveGuidanceMode {
+        switch profileIdentifier {
+        case .automobile:
+            return .kDriving
+        case .automobileAvoidingTraffic:
+            return .kDriving
+        case .cycling:
+            return .kCycling
+        case .walking:
+            return .kWalking
+        default:
+            return .kDriving
         }
     }
     
     /// updateNavigator is used to pass the new progress model onto nav-native.
     private func updateNavigator(with progress: RouteProgress) {
-        assert(route.json != nil, "route.json missing, please verify the version of MapboxDirections.swift")
-        
-        let data = try! JSONSerialization.data(withJSONObject: route.json!, options: [])
-        let jsonString = String(data: data, encoding: .utf8)!
-        
+        let encoder = JSONEncoder()
+        encoder.userInfo[.options] = progress.routeOptions
+        guard let routeData = try? encoder.encode(progress.route),
+            let routeJSONString = String(data: routeData, encoding: .utf8) else {
+            return
+        }
+        let waypoints = progress.routeOptions.waypoints.map {
+            MapboxNavigationNative.Waypoint(coordinate: $0.coordinate, isSilent: !$0.separatesLegs)
+        }
         // TODO: Add support for alternative route
-        navigator.setRouteForRouteResponse(jsonString, route: 0, leg: UInt32(routeProgress.legIndex))
+        let activeGuidanceOptions = ActiveGuidanceOptions(mode: mode(progress.routeOptions.profileIdentifier),
+                                                          geometryEncoding: geometryEncoding(progress.routeOptions.shapeFormat),
+                                                          waypoints: waypoints)
+        navigator.setRouteForRouteResponse(routeJSONString, route: 0, leg: UInt32(routeProgress.legIndex), options: activeGuidanceOptions)
     }
     
     /// updateRouteLeg is used to notify nav-native of the developer changing the active route-leg.
     private func updateRouteLeg(to value: Int) {
         let legIndex = UInt32(value)
-        navigator.changeRouteLeg(forRoute: 0, leg: legIndex)
-        let newStatus = navigator.changeRouteLeg(forRoute: 0, leg: legIndex)
-        updateIndexes(status: newStatus, progress: routeProgress)
+        if navigator.changeRouteLeg(forRoute: 0, leg: legIndex), let timestamp = location?.timestamp {
+            updateIndexes(status: navigator.status(at: timestamp), progress: routeProgress)
+        }
     }
     
     public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        
         guard let location = locations.last else { return }
         
-        guard delegate?.router?(self, shouldDiscard: location) ?? DefaultBehavior.shouldDiscardLocation else {
+        guard delegate?.router(self, shouldDiscard: location) ?? DefaultBehavior.shouldDiscardLocation else {
             return
         }
         
-        rawLocation = locations.last
+        rawLocation = location
         
-        locations.forEach { navigator.updateLocation(for: MBFixLocation($0)) }
-        
-        let status = navigator.getStatusForTimestamp(location.timestamp)
+        locations.forEach { navigator.updateLocation(for: FixLocation($0)) }
+
+        let status = navigator.status(at: location.timestamp)
         
         // Notify observers if the step’s remaining distance has changed.
-        update(progress: routeProgress, with: CLLocation(status.location), rawLocation: location)
+        update(progress: routeProgress, with: CLLocation(status.location), rawLocation: location, upcomingRouteAlerts: status.upcomingRouteAlerts)
         
-        let willReroute = !userIsOnRoute(location) && delegate?.router?(self, shouldRerouteFrom: location)
-                          ?? DefaultBehavior.shouldRerouteFromLocation
+        let willReroute = !userIsOnRoute(location, status: status) && delegate?.router(self, shouldRerouteFrom: location)
+            ?? DefaultBehavior.shouldRerouteFromLocation
         
         updateIndexes(status: status, progress: routeProgress)
         updateRouteLegProgress(status: status)
@@ -215,10 +270,10 @@ open class RouteController: NSObject {
         }
         
         // Check for faster route proactively (if reroutesProactively is enabled)
-        checkForFasterRoute(from: location, routeProgress: routeProgress)
+        refreshAndCheckForFasterRoute(from: location, routeProgress: routeProgress)
     }
     
-    func updateIndexes(status: MBNavigationStatus, progress: RouteProgress) {
+    func updateIndexes(status: NavigationStatus, progress: RouteProgress) {
         let newLegIndex = Int(status.legIndex)
         let newStepIndex = Int(status.stepIndex)
         let newIntersectionIndex = Int(status.intersectionIndex)
@@ -244,7 +299,7 @@ open class RouteController: NSObject {
         }
     }
     
-    func updateSpokenInstructionProgress(status: MBNavigationStatus, willReRoute: Bool) {
+    func updateSpokenInstructionProgress(status: NavigationStatus, willReRoute: Bool) {
         let didUpdate = status.voiceInstruction?.index != nil
 
         // Announce voice instruction if it was updated and we are not going to reroute
@@ -254,7 +309,7 @@ open class RouteController: NSObject {
         }
     }
     
-    func updateVisualInstructionProgress(status: MBNavigationStatus) {
+    func updateVisualInstructionProgress(status: NavigationStatus) {
         let didUpdate = status.bannerInstruction != nil
         
         // Announce visual instruction if it was updated or it is the first location being reported
@@ -265,28 +320,26 @@ open class RouteController: NSObject {
         }
     }
     
-    func updateRouteLegProgress(status: MBNavigationStatus) {
-        
+    func updateRouteLegProgress(status: NavigationStatus) {
         let legProgress = routeProgress.currentLegProgress
-        let currentDestination = routeProgress.currentLeg.destination
-        guard let remainingVoiceInstructions = legProgress.currentStepProgress.remainingSpokenInstructions else { return }
+        
+        guard let currentDestination = legProgress.leg.destination else {
+            preconditionFailure("Route legs used for navigation must have destinations")
+        }
+        let remainingVoiceInstructions = legProgress.currentStepProgress.remainingSpokenInstructions ?? []
         
         // We are at least at the "You will arrive" instruction
         if legProgress.remainingSteps.count <= 2 && remainingVoiceInstructions.count <= 2 {
-            
             let willArrive = status.routeState == .tracking
             let didArrive = status.routeState == .complete && currentDestination != previousArrivalWaypoint
             
             if willArrive {
-                
-                delegate?.router?(self, willArriveAt: currentDestination, after: legProgress.durationRemaining, distance: legProgress.distanceRemaining)
-                
+                delegate?.router(self, willArriveAt: currentDestination, after: legProgress.durationRemaining, distance: legProgress.distanceRemaining)
             } else if didArrive {
-                
                 previousArrivalWaypoint = currentDestination
                 legProgress.userHasArrivedAtWaypoint = true
                 
-                let advancesToNextLeg = delegate?.router?(self, didArriveAt: currentDestination) ?? DefaultBehavior.didArriveAtWaypoint
+                let advancesToNextLeg = delegate?.router(self, didArriveAt: currentDestination) ?? DefaultBehavior.didArriveAtWaypoint
                 guard !routeProgress.isFinalLeg && advancesToNextLeg else {
                     return
                 }
@@ -296,65 +349,45 @@ open class RouteController: NSObject {
         }
     }
     
-    private func update(progress: RouteProgress, with location: CLLocation, rawLocation: CLLocation) {
+    private func update(progress: RouteProgress, with location: CLLocation, rawLocation: CLLocation, upcomingRouteAlerts routeAlerts: [UpcomingRouteAlert]) {
+        progress.updateDistanceTraveled(with: rawLocation)
+        progress.upcomingRouteAlerts = routeAlerts.map { RouteAlert($0) }
         
-        let stepProgress = progress.currentLegProgress.currentStepProgress
-        let step = stepProgress.step
+        //Fire the delegate method
+        delegate?.router(self, didUpdate: progress, with: location, rawLocation: rawLocation)
         
-        //Increment the progress model
-        let polyline = Polyline(step.coordinates!)
-        if let closestCoordinate = polyline.closestCoordinate(to: rawLocation.coordinate) {
-            let remainingDistance = polyline.distance(from: closestCoordinate.coordinate)
-            let distanceTraveled = step.distance - remainingDistance
-            stepProgress.distanceTraveled = distanceTraveled
-            
-            //Fire the delegate method
-            delegate?.router?(self, didUpdate: progress, with: location, rawLocation: rawLocation)
-            
-            //Fire the notification (for now)
-            NotificationCenter.default.post(name: .routeControllerProgressDidChange, object: self, userInfo: [
-                RouteControllerNotificationUserInfoKey.routeProgressKey: progress,
-                RouteControllerNotificationUserInfoKey.locationKey: location, //guaranteed value
-                RouteControllerNotificationUserInfoKey.rawLocationKey: rawLocation //raw
-                ])
-        }
+        //Fire the notification (for now)
+        NotificationCenter.default.post(name: .routeControllerProgressDidChange, object: self, userInfo: [
+            NotificationUserInfoKey.routeProgressKey: progress,
+            NotificationUserInfoKey.locationKey: location, //guaranteed value
+            NotificationUserInfoKey.rawLocationKey: rawLocation, //raw
+        ])
     }
     
     private func announcePassage(of spokenInstructionPoint: SpokenInstruction, routeProgress: RouteProgress) {
+        delegate?.router(self, didPassSpokenInstructionPoint: spokenInstructionPoint, routeProgress: routeProgress)
         
-        delegate?.router?(self, didPassSpokenInstructionPoint: spokenInstructionPoint, routeProgress: routeProgress)
-        
-        let info: [RouteControllerNotificationUserInfoKey: Any] = [
+        let info: [NotificationUserInfoKey: Any] = [
             .routeProgressKey: routeProgress,
-            .spokenInstructionKey: spokenInstructionPoint
+            .spokenInstructionKey: spokenInstructionPoint,
         ]
         
         NotificationCenter.default.post(name: .routeControllerDidPassSpokenInstructionPoint, object: self, userInfo: info)
     }
     
     private func announcePassage(of visualInstructionPoint: VisualInstructionBanner, routeProgress: RouteProgress) {
+        delegate?.router(self, didPassVisualInstructionPoint: visualInstructionPoint, routeProgress: routeProgress)
         
-        delegate?.router?(self, didPassVisualInstructionPoint: visualInstructionPoint, routeProgress: routeProgress)
-        
-        let info: [RouteControllerNotificationUserInfoKey: Any] = [
+        let info: [NotificationUserInfoKey: Any] = [
             .routeProgressKey: routeProgress,
-            .visualInstructionKey: visualInstructionPoint
+            .visualInstructionKey: visualInstructionPoint,
         ]
         
         NotificationCenter.default.post(name: .routeControllerDidPassVisualInstructionPoint, object: self, userInfo: info)
     }
     
-    /**
-     Returns an estimated location at a given timestamp. The timestamp must be
-     a future timestamp compared to the last location received by the location manager.
-     */
-    public func projectedLocation(for timestamp: Date) -> CLLocation {
-        return CLLocation(navigator.getStatusForTimestamp(timestamp).location)
-    }
-    
-    public func advanceLegIndex(location: CLLocation) {
-        let status = navigator.getStatusForTimestamp(location.timestamp)
-        routeProgress.legIndex = Int(status.legIndex)
+    public func advanceLegIndex() {
+        updateRouteLeg(to: routeProgress.legIndex + 1)
     }
     
     public func enableLocationRecording() {
@@ -365,24 +398,35 @@ open class RouteController: NSObject {
         navigator.toggleHistoryFor(onOff: false)
     }
     
-    public func locationHistory() -> String {
+    public func locationHistory() -> String? {
         return navigator.getHistory()
+    }
+
+    func updatePrivateRouteProgress(_ routeProgress: RouteProgress) {
+        _routeProgress = routeProgress
     }
 }
 
 extension RouteController: Router {
-    
     public func userIsOnRoute(_ location: CLLocation) -> Bool {
+        return userIsOnRoute(location, status: nil)
+    }
+    
+    public func userIsOnRoute(_ location: CLLocation, status: NavigationStatus?) -> Bool {
+        
+        guard let destination = routeProgress.currentLeg.destination else {
+            preconditionFailure("Route legs used for navigation must have destinations")
+        }
         
         // If the user has arrived, do not continue monitor reroutes, step progress, etc
         if routeProgress.currentLegProgress.userHasArrivedAtWaypoint &&
-            (delegate?.router?(self, shouldPreventReroutesWhenArrivingAt: routeProgress.currentLeg.destination) ??
+            (delegate?.router(self, shouldPreventReroutesWhenArrivingAt: destination) ??
                 DefaultBehavior.shouldPreventReroutesWhenArrivingAtWaypoint) {
             return true
         }
         
-        let status = navigator.getStatusForTimestamp(location.timestamp)
-        let offRoute = status.routeState == .offRoute
+        let status = status ?? navigator.status(at: location.timestamp)
+        let offRoute = status.routeState == .offRoute || status.routeState == .invalid
         return !offRoute
     }
     
@@ -393,36 +437,39 @@ extension RouteController: Router {
             }
         }
         
-        delegate?.router?(self, willRerouteFrom: location)
+        delegate?.router(self, willRerouteFrom: location)
         NotificationCenter.default.post(name: .routeControllerWillReroute, object: self, userInfo: [
-            RouteControllerNotificationUserInfoKey.locationKey: location
-            ])
+            NotificationUserInfoKey.locationKey: location,
+        ])
         
         self.lastRerouteLocation = location
         
         // Avoid interrupting an ongoing reroute
         if isRerouting { return }
         isRerouting = true
-        
-        getDirections(from: location, along: progress) { [weak self] (route, mappyRoutes, error) in
+
+        getDirections(from: location, along: progress) { [weak self] (session, result) in
             self?.isRerouting = false
             
             guard let strongSelf: RouteController = self else {
                 return
             }
             
-            if let error = error {
-                strongSelf.delegate?.router?(strongSelf, didFailToRerouteWith: error)
+            switch result {
+            case let .success(response):
+                guard let route = response.routes?.first else { return }
+                guard case let .route(routeOptions) = response.options else { return } //TODO: Can a match hit this codepoint?
+                strongSelf._routeProgress = RouteProgress(route: route, routeIndex: 0, options: routeOptions, legIndex: 0)
+                strongSelf._routeProgress.currentLegProgress.stepIndex = 0
+                strongSelf.announce(reroute: route, at: location, proactive: false)
+                
+            case let .failure(error):
+                strongSelf.delegate?.router(strongSelf, didFailToRerouteWith: error)
                 NotificationCenter.default.post(name: .routeControllerDidFailToReroute, object: self, userInfo: [
-                    RouteControllerNotificationUserInfoKey.routingErrorKey: error
-                    ])
+                    NotificationUserInfoKey.routingErrorKey: error,
+                ])
                 return
             }
-            
-            guard let route = route else { return }
-            strongSelf._routeProgress = RouteProgress(route: route, legIndex: 0)
-            strongSelf._routeProgress.currentLegProgress.stepIndex = 0
-            strongSelf.announce(reroute: route, at: location, proactive: false)
         }
     }
 }
