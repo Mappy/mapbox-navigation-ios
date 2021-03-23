@@ -352,8 +352,8 @@ extension InternalRouter where Self: Router {
         
         routeTask = directions.calculate(options) {(session, result) in
 
-            // Automatically disable debug flag "forceBetterRoute" once request as been performed
-            if let mappyRouteOptions = progress.routeOptions as? MappyRouteOptions {
+            // Automatically disable debug flag "forceBetterRoute" on route options attached to the RouteResponse
+            if let mappyRouteOptions = options as? MappyRouteOptions {
                 mappyRouteOptions.forceBetterRoute = false
             }
             
