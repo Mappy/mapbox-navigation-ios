@@ -28,7 +28,6 @@
 		29D4D17C25F774C800D0829A /* MappyReplayLocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29D4D17B25F774C800D0829A /* MappyReplayLocationManager.swift */; };
 		29D4D18525F7780400D0829A /* MappyEventLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29D4D18425F7780400D0829A /* MappyEventLogger.swift */; };
 		29D4D18E25F77A5F00D0829A /* NavigationServiceDebugDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29D4D18D25F77A5F00D0829A /* NavigationServiceDebugDelegate.swift */; };
-		29D4D2002600D5FC00D0829A /* MappyNavigationRouteOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29D4D1FF2600D5FC00D0829A /* MappyNavigationRouteOptions.swift */; };
 		2B07444124B4832400615E87 /* TokenTestViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B07444024B4832400615E87 /* TokenTestViewController.swift */; };
 		2B2B1EEE2424E55800FA18A6 /* SKUIDTestable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B2B1EED2424E55800FA18A6 /* SKUIDTestable.swift */; };
 		2B5407EB24470B0A006C820B /* AVAudioSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B5407EA24470B0A006C820B /* AVAudioSession.swift */; };
@@ -599,7 +598,6 @@
 		29D4D17B25F774C800D0829A /* MappyReplayLocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MappyReplayLocationManager.swift; sourceTree = "<group>"; };
 		29D4D18425F7780400D0829A /* MappyEventLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MappyEventLogger.swift; sourceTree = "<group>"; };
 		29D4D18D25F77A5F00D0829A /* NavigationServiceDebugDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationServiceDebugDelegate.swift; sourceTree = "<group>"; };
-		29D4D1FF2600D5FC00D0829A /* MappyNavigationRouteOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MappyNavigationRouteOptions.swift; sourceTree = "<group>"; };
 		2B07444024B4832400615E87 /* TokenTestViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenTestViewController.swift; sourceTree = "<group>"; };
 		2B2B1EED2424E55800FA18A6 /* SKUIDTestable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SKUIDTestable.swift; sourceTree = "<group>"; };
 		2B5407EA24470B0A006C820B /* AVAudioSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AVAudioSession.swift; sourceTree = "<group>"; };
@@ -1829,7 +1827,6 @@
 				29D4D17B25F774C800D0829A /* MappyReplayLocationManager.swift */,
 				29D4D18425F7780400D0829A /* MappyEventLogger.swift */,
 				29D4D18D25F77A5F00D0829A /* NavigationServiceDebugDelegate.swift */,
-				29D4D1FF2600D5FC00D0829A /* MappyNavigationRouteOptions.swift */,
 			);
 			path = MapboxCoreNavigation;
 			sourceTree = "<group>";
@@ -2790,7 +2787,6 @@
 				353E68FC1EF0B7F8007B2AE5 /* NavigationLocationManager.swift in Sources */,
 				2BE7013D25359C7B00F46E4E /* RouteAlert.swift in Sources */,
 				353E68FE1EF0B985007B2AE5 /* BundleAdditions.swift in Sources */,
-				29D4D2002600D5FC00D0829A /* MappyNavigationRouteOptions.swift in Sources */,
 				354A9BCD20EA9C8100F03325 /* CoreFeedbackEvent.swift in Sources */,
 				2BE70189253734A000F46E4E /* TollCollection.swift in Sources */,
 				DA754E1923AC56E5007E16B5 /* MBXAccounts+CoreNavigationAdditions.m in Sources */,
