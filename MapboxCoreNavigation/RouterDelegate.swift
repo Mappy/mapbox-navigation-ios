@@ -174,6 +174,10 @@ public extension RouterDelegate {
         logUnimplemented(protocolType: RouterDelegate.self, level: .debug)
     }
 
+    func router(_ router: Router, didRefresh routeProgress: RouteProgress) {
+        logUnimplemented(protocolType: RouterDelegate.self, level: .info)
+    }
+
     func router(_ router: Router, didReceiveFasterRoute route: Route) {
         logUnimplemented(protocolType: RouterDelegate.self, level: .info)
     }
