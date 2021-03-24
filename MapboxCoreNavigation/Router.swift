@@ -176,6 +176,11 @@ extension InternalRouter where Self: Router {
             return
         }
         isRefreshing = true
+
+        var userInfo = [RouteController.NotificationUserInfoKey: Any]()
+        userInfo[.routeProgressKey] = self.routeProgress
+        NotificationCenter.default.post(name: .routeControllerWillRefreshRoute, object: self, userInfo: userInfo)
+        self.delegate?.router(self, willRefresh: self.routeProgress)
         
         directions.refreshRoute(responseIdentifier: routeIdentifier, routeIndex: indexedRoute.1, fromLegAtIndex: legIndex) { [weak self] (session, result) in
             defer {
@@ -283,6 +288,11 @@ extension InternalRouter where Self: Router {
             forceMappyRouteRefreshAtNextUpdate = false
             forceApplyRefreshedRoute = true
         }
+
+        var userInfo = [RouteController.NotificationUserInfoKey: Any]()
+        userInfo[.routeProgressKey] = self.routeProgress
+        NotificationCenter.default.post(name: .routeControllerWillRefreshRoute, object: self, userInfo: userInfo)
+        self.delegate?.router(self, willRefresh: self.routeProgress)
 
         getDirections(from: location, along: routeProgress, mappyRouteSignature: mappyRoute.signature) { [weak self] (session, result) in
             defer {
