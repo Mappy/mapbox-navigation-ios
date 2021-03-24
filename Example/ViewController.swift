@@ -447,7 +447,8 @@ class ViewController: UIViewController {
         mapView.logoView.isHidden = true
 
         let singleTap = UILongPressGestureRecognizer(target: self, action: #selector(didLongPress(tap:)))
-        mapView.gestureRecognizers?.filter({ $0 is UILongPressGestureRecognizer }).forEach(singleTap.require(toFail:))
+        // Disable require(toFail:) because Mappy's Mapbox GL fork adds a UILongPressGestureRecognizer that won't fail
+//        mapView.gestureRecognizers?.filter({ $0 is UILongPressGestureRecognizer }).forEach(singleTap.require(toFail:))
         mapView.addGestureRecognizer(singleTap)
         
         trackLocations(mapView: mapView)
