@@ -176,6 +176,11 @@ extension InternalRouter where Self: Router {
             return
         }
         isRefreshing = true
+
+        var userInfo = [RouteController.NotificationUserInfoKey: Any]()
+        userInfo[.routeProgressKey] = self.routeProgress
+        NotificationCenter.default.post(name: .routeControllerWillRefreshRoute, object: self, userInfo: userInfo)
+        self.delegate?.router(self, willRefresh: self.routeProgress)
         
         directions.refreshRoute(responseIdentifier: routeIdentifier, routeIndex: indexedRoute.1, fromLegAtIndex: legIndex) { [weak self] (session, result) in
             defer {
@@ -284,6 +289,11 @@ extension InternalRouter where Self: Router {
             forceApplyRefreshedRoute = true
         }
 
+        var userInfo = [RouteController.NotificationUserInfoKey: Any]()
+        userInfo[.routeProgressKey] = self.routeProgress
+        NotificationCenter.default.post(name: .routeControllerWillRefreshRoute, object: self, userInfo: userInfo)
+        self.delegate?.router(self, willRefresh: self.routeProgress)
+
         getDirections(from: location, along: routeProgress, mappyRouteSignature: mappyRoute.signature) { [weak self] (session, result) in
             defer {
                 self?.isRefreshingMappyRoute = false
@@ -352,8 +362,8 @@ extension InternalRouter where Self: Router {
         
         routeTask = directions.calculate(options) {(session, result) in
 
-            // Automatically disable debug flag "forceBetterRoute" once request as been performed
-            if let mappyRouteOptions = progress.routeOptions as? MappyRouteOptions {
+            // Automatically disable debug flag "forceBetterRoute" on route options attached to the RouteResponse
+            if let mappyRouteOptions = options as? MappyRouteOptions {
                 mappyRouteOptions.forceBetterRoute = false
             }
             

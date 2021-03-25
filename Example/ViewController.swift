@@ -273,7 +273,7 @@ class ViewController: UIViewController {
         waypoints.insert(userWaypoint, at: 0)
 
 //        let options = NavigationRouteOptions(waypoints: waypoints)
-        let options = MappyNavigationRouteOptions(waypoints: waypoints, provider: "car", routeCalculationType: "fastest", qid: "1ad02a47-0e87-48f4-d190-a794fbbb6aac")
+        let options = MappyRouteOptions(waypoints: waypoints, provider: "car", routeCalculationType: "fastest", qid: "1ad02a47-0e87-48f4-d190-a794fbbb6aac")
         options.carVehicle = "comcar"
         options.walkSpeed = .normal
         options.bikeSpeed = .fast
