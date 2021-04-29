@@ -3699,6 +3699,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_SERIALIZE_DEBUGGING_OPTIONS = YES;
 				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
@@ -3727,6 +3728,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.mapbox.MapboxCoreNavigation;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
+				SWIFT_SERIALIZE_DEBUGGING_OPTIONS = NO;
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
