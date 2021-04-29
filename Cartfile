@@ -2,8 +2,8 @@ binary "https://www.mapbox.com/ios-sdk/MapboxAccounts.json" ~> 2.3.0
 binary "https://api.mapbox.com/downloads/v2/carthage/mobile-navigation-native/MapboxNavigationNative.json" ~> 30.0
 binary "https://sdkios.mappy.net/Mapbox/Mapbox.json" ~> 6.3
 binary "https://api.mapbox.com/downloads/v2/carthage/mapbox-common/MapboxCommon-ios.json" == 9.2.0
-git "git@gitlab.mappy.priv:dt.mobile/MapboxDirections-swift.git" "v1.2.0-mappy.1"
-github "Mappy/turf-swift" "v1.2.0-mappy.0"
+git "git@gitlab.mappy.priv:dt.mobile/MapboxDirections-swift.git" "v1.2.0-mappy.2"
+github "Mappy/turf-swift" "v1.2.0-mappy.1"
 github "mapbox/mapbox-events-ios" ~> 0.10.2
 github "ceeK/Solar" ~> 2.1.0
 github "mapbox/mapbox-speech-swift" ~> 1.0
