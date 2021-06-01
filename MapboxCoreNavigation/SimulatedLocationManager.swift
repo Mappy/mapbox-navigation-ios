@@ -51,7 +51,7 @@ open class SimulatedLocationManager: NavigationLocationManager {
         }
     }
     
-    var route: Route? {
+    public var route: Route? {
         didSet {
             reset()
         }
