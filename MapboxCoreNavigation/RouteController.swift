@@ -402,7 +402,7 @@ open class RouteController: NSObject {
         return navigator.getHistory()
     }
 
-    func updatePrivateRouteProgress(_ routeProgress: RouteProgress) {
+    public func updatePrivateRouteProgress(_ routeProgress: RouteProgress) {
         _routeProgress = routeProgress
     }
 }

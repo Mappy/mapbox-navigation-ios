@@ -539,7 +539,7 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
         }
     }
 
-    func updatePrivateRouteProgress(_ routeProgress: RouteProgress) {
+    public func updatePrivateRouteProgress(_ routeProgress: RouteProgress) {
         fatalError("Not implemented")
     }
     
