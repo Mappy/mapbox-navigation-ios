@@ -44,6 +44,7 @@ class RouteMapViewController: UIViewController {
         static let mute: Selector = #selector(RouteMapViewController.toggleMute(_:))
         static let feedback: Selector = #selector(RouteMapViewController.feedback(_:))
         static let recenter: Selector = #selector(RouteMapViewController.recenter(_:))
+        static let advanceLeg: Selector = #selector(RouteMapViewController.advanceLeg(_:))
     }
 
     var route: Route { return navService.router.route }
@@ -186,6 +187,7 @@ class RouteMapViewController: UIViewController {
         navigationView.muteButton.addTarget(self, action: Actions.mute, for: .touchUpInside)
         navigationView.reportButton.addTarget(self, action: Actions.feedback, for: .touchUpInside)
         navigationView.resumeButton.addTarget(self, action: Actions.recenter, for: .touchUpInside)
+        navigationView.advanceLegButton.addTarget(self, action: Actions.advanceLeg, for: .touchUpInside)
         resumeNotifications()
     }
 
@@ -293,6 +295,18 @@ class RouteMapViewController: UIViewController {
 
     @objc func feedback(_ sender: Any) {
         showFeedback()
+    }
+
+    @objc func advanceLeg(_ sender: Any) {
+        let alert = UIAlertController(title: "Confirmation", message: "Confirmez-vous le passage à la leg suivante ?", preferredStyle: .alert)
+        let cancel = UIAlertAction(title: "Annuler", style: .cancel, handler: nil)
+        let confirm = UIAlertAction(title: "Confirmer", style: .default, handler: { _ in
+            MappyLogger.logUserInterfaceEvent("did tap advanceLegIndex")
+            self.navService.router.advanceLegIndex()
+        })
+        alert.addAction(confirm)
+        alert.addAction(cancel)
+        present(alert, animated: true)
     }
 
     func showFeedback(source: FeedbackSource = .user) {

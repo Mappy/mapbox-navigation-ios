@@ -550,12 +550,12 @@ extension NavigationViewController: RouteMapViewControllerDelegate {
 //MARK: - NavigationServiceDelegate
 extension NavigationViewController: NavigationServiceDelegate {
     public func navigationService(_ service: NavigationService, shouldRerouteFrom location: CLLocation) -> Bool {
-        let defaultBehavior = RouteController.DefaultBehavior.shouldRerouteFromLocation
-        let componentsWantReroute = navigationComponents.allSatisfy { $0.navigationService(service, shouldRerouteFrom: location) }
-        return componentsWantReroute && (delegate?.navigationViewController(self, shouldRerouteFrom: location) ?? defaultBehavior)
+        return true
     }
     
     public func navigationService(_ service: NavigationService, willRerouteFrom location: CLLocation) {
+        MappyLogger.logNavServiceEvent("willRerouteFrom location lat = \(location.coordinate.latitude), lng = \(location.coordinate.longitude)")
+
         for component in navigationComponents {
             component.navigationService(service, willRerouteFrom: location)
         }
@@ -564,6 +564,10 @@ extension NavigationViewController: NavigationServiceDelegate {
     }
     
     public func navigationService(_ service: NavigationService, didRerouteAlong route: Route, at location: CLLocation?, proactive: Bool) {
+        let waypoints: [Waypoint] = service.routeProgress.routeOptions.waypoints
+        let waypointsLog: [String] = waypoints.map { return "lat = \($0.coordinate.latitude), lng = \($0.coordinate.longitude)" }
+        MappyLogger.logNavServiceEvent("didRerouteAlong at location lat = \(location!.coordinate.latitude), lng = \(location!.coordinate.longitude) proactive = \(proactive) new route = \"\(String(describing: route))\" current waypoints = \(String.init(describing: waypointsLog))")
+
         for component in navigationComponents {
             component.navigationService(service, didRerouteAlong: route, at: location, proactive: proactive)
         }
@@ -572,6 +576,8 @@ extension NavigationViewController: NavigationServiceDelegate {
     }
     
     public func navigationService(_ service: NavigationService, didFailToRerouteWith error: Error) {
+        MappyLogger.logNavServiceEvent("didFailToRerouteWith error = \(String(describing: error))")
+
         for component in navigationComponents {
             component.navigationService(service, didFailToRerouteWith: error)
         }
@@ -602,6 +608,26 @@ extension NavigationViewController: NavigationServiceDelegate {
     }
     
     public func navigationService(_ service: NavigationService, didUpdate progress: RouteProgress, with location: CLLocation, rawLocation: CLLocation) {
+        let distanceRemaining = progress.currentLegProgress.distanceRemaining
+        if distanceRemaining < 15 {
+            MappyLogger.logDistanceEvent("distanceRemaining < 15 actual distance remaining on leg = \(distanceRemaining)")
+        }
+        else if distanceRemaining < 25 {
+            MappyLogger.logDistanceEvent("distanceRemaining < 25 actual distance remaining on leg = \(distanceRemaining)")
+        }
+        else if distanceRemaining < 50 {
+            MappyLogger.logDistanceEvent("distanceRemaining < 50 actual distance remaining on leg = \(distanceRemaining)")
+        }
+        else if distanceRemaining < 75 {
+            MappyLogger.logDistanceEvent("distanceRemaining < 75 actual distance remaining on leg = \(distanceRemaining)")
+        }
+        else if distanceRemaining < 100 {
+            MappyLogger.logDistanceEvent("distanceRemaining < 100 actual distance remaining on leg = \(distanceRemaining)")
+        }
+        else if distanceRemaining < 150 {
+            MappyLogger.logDistanceEvent("distanceRemaining < 150 actual distance remaining on leg = \(distanceRemaining)")
+        }
+
         //Check to see if we're in a tunnel.
         checkTunnelState(at: location, along: progress)
         
@@ -661,6 +687,8 @@ extension NavigationViewController: NavigationServiceDelegate {
     }
     
     public func navigationService(_ service: NavigationService, willArriveAt waypoint: Waypoint, after remainingTimeInterval: TimeInterval, distance: CLLocationDistance) {
+        MappyLogger.logNavServiceEvent("willArriveAtWaypoint remainingTimeInterval = \(remainingTimeInterval) distance = \(distance)")
+
         for component in navigationComponents {
             component.navigationService(service, willArriveAt: waypoint, after: remainingTimeInterval, distance: distance)
         }
@@ -669,6 +697,9 @@ extension NavigationViewController: NavigationServiceDelegate {
     }
     
     public func navigationService(_ service: NavigationService, didArriveAt waypoint: Waypoint) -> Bool {
+        let distanceRemaining = service.routeProgress.currentLegProgress.distanceRemaining
+        MappyLogger.logNavServiceEvent("didArriveAt waypoint.name = \(String(describing: waypoint.name)) distanceRemaining = \(distanceRemaining)")
+
         let defaultBehavior = RouteController.DefaultBehavior.didArriveAtWaypoint
         let componentsWantAdvance = navigationComponents.allSatisfy { $0.navigationService(service, didArriveAt: waypoint) }
         let advancesToNextLeg = componentsWantAdvance && (delegate?.navigationViewController(self, didArriveAt: waypoint) ?? defaultBehavior)
@@ -678,6 +709,13 @@ extension NavigationViewController: NavigationServiceDelegate {
             showEndOfRouteFeedback { [weak self] _ in
                 self?.frameDestinationArrival(for: service.router.location)
             }
+        }
+
+        if advancesToNextLeg {
+        	MappyLogger.logNavServiceEvent("Automatically advancing to next leg")
+        }
+        else {
+            MappyLogger.logNavServiceEvent("User chose NOT to advance to next leg")
         }
         return advancesToNextLeg
     }
@@ -694,6 +732,8 @@ extension NavigationViewController: NavigationServiceDelegate {
     }
     
     public func navigationService(_ service: NavigationService, didBeginSimulating progress: RouteProgress, becauseOf reason: SimulationIntent) {
+        MappyLogger.logNavServiceEvent("didBeginSimulating becauseOf \(String(describing: reason))")
+
         for component in navigationComponents {
             component.navigationService(service, didBeginSimulating: progress, becauseOf: reason)
         }
@@ -706,6 +746,8 @@ extension NavigationViewController: NavigationServiceDelegate {
     }
     
     public func navigationService(_ service: NavigationService, didEndSimulating progress: RouteProgress, becauseOf reason: SimulationIntent) {
+        MappyLogger.logNavServiceEvent("didEndSimulating becauseOf \(String(describing: reason))")
+
         for component in navigationComponents {
             component.navigationService(service, didEndSimulating: progress, becauseOf: reason)
         }
@@ -726,7 +768,7 @@ extension NavigationViewController: NavigationServiceDelegate {
     }
     
     public func navigationService(_ service: NavigationService, shouldPreventReroutesWhenArrivingAt waypoint: Waypoint) -> Bool {
-        return navigationComponents.allSatisfy { $0.navigationService(service, shouldPreventReroutesWhenArrivingAt: waypoint) }
+        return true
     }
     
     public func navigationServiceShouldDisableBatteryMonitoring(_ service: NavigationService) -> Bool {

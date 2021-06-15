@@ -2,6 +2,7 @@ import UIKit
 import MapboxCoreNavigation
 import MapboxNavigation
 import MapboxDirections
+import os.log
 
 private typealias RouteRequestSuccess = ((RouteResponse) -> Void)
 private typealias RouteRequestFailure = ((Error) -> Void)
@@ -14,6 +15,7 @@ class ViewController: UIViewController {
     @IBOutlet weak var bottomBar: UIView!
     @IBOutlet weak var clearMap: UIButton!
     @IBOutlet weak var bottomBarBackground: UIView!
+	@IBOutlet weak var autoAdvanceLegSwitch: UISwitch!
     
     var trackPolyline: MGLPolyline?
     var rawTrackPolyline: MGLPolyline?
@@ -143,6 +145,7 @@ class ViewController: UIViewController {
         navigationItem.rightBarButtonItem = UIBarButtonItem(image: UIImage(named: "settings"), style: .plain, target: self, action: #selector(openSettings))
 
         navigationItem.rightBarButtonItem?.isEnabled = SettingsViewController.numberOfSections > 0
+        simulationButton.isSelected = false
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -225,25 +228,32 @@ class ViewController: UIViewController {
         waypoints.removeAll()
     }
     
+	@IBAction func autoAdvanceLegSwitchToggled(_ sender: Any) {
+	}
+
     private func presentActionsAlertController() {
         let alertController = UIAlertController(title: "Start Navigation", message: "Select the navigation type", preferredStyle: .actionSheet)
         
         typealias ActionHandler = (UIAlertAction) -> Void
         
+        let testMappy: ActionHandler = { _ in self.startTestNavigation() }
+        /*
         let basic: ActionHandler = { _ in self.startBasicNavigation() }
         let day: ActionHandler = { _ in self.startNavigation(styles: [DayStyle()]) }
         let night: ActionHandler = { _ in self.startNavigation(styles: [NightStyle()]) }
         let custom: ActionHandler = { _ in self.startCustomNavigation() }
         let styled: ActionHandler = { _ in self.startStyledNavigation() }
         let guidanceCards: ActionHandler = { _ in self.startGuidanceCardsNavigation() }
+         */
         
         let actionPayloads: [(String, UIAlertAction.Style, ActionHandler?)] = [
-            ("Default UI", .default, basic),
-            ("DayStyle UI", .default, day),
+            ("Test Mappy", .default, testMappy),
+            /*
             ("NightStyle UI", .default, night),
             ("Custom UI", .default, custom),
             ("Guidance Card UI", .default, guidanceCards),
             ("Styled UI", .default, styled),
+             */
             ("Cancel", .cancel, nil)
         ]
         
@@ -272,21 +282,17 @@ class ViewController: UIViewController {
         let userWaypoint = Waypoint(location: userLocation, heading: mapView.userLocation?.heading, name: "User location")
         waypoints.insert(userWaypoint, at: 0)
 
-//        let options = NavigationRouteOptions(waypoints: waypoints)
-        let options = MappyRouteOptions(waypoints: waypoints, provider: "car", routeCalculationType: "fastest", qid: "1ad02a47-0e87-48f4-d190-a794fbbb6aac")
-        options.carVehicle = "comcar"
-        options.walkSpeed = .normal
-        options.bikeSpeed = .fast
-        
-        // Get periodic updates regarding changes in estimated arrival time and traffic congestion segments along the route line.
-        RouteControllerProactiveReroutingInterval = 40
+        let options = NavigationRouteOptions(waypoints: waypoints, profileIdentifier: .walking)
+        options.includesAlternativeRoutes = false
+        options.refreshingEnabled = false
+        options.locale = Locale(identifier: "fr_FR")
+        options.distanceMeasurementSystem = .metric
 
         requestRoute(with: options, success: defaultSuccess, failure: defaultFailure)
     }
 
     fileprivate func requestRoute(with options: RouteOptions, success: @escaping RouteRequestSuccess, failure: RouteRequestFailure?) {
-//        Directions.shared.calculate(options) { (session, result) in
-        apiChoice = .mappyProd
+        apiChoice = .mapbox
         self.directions.calculate(options) { (session, result) in
             switch result {
             case let .success(response):
@@ -298,6 +304,24 @@ class ViewController: UIViewController {
     }
 
     // MARK: Basic Navigation
+
+    func startTestNavigation() {
+        guard let response = response, let route = response.routes?.first, case let .route(routeOptions) = response.options else { return }
+
+        MappyLogger.logUserInterfaceEvent("STARTING NAVIGATION SESSION")
+
+        let service = navigationService(route: route, routeIndex: 0, options: routeOptions)
+        let navigationViewController = self.navigationViewController(navigationService: service)
+
+        navigationViewController.routeLineTracksTraversal = false
+        navigationViewController.waypointStyle = .annotation
+
+        navigationViewController.detailedFeedbackEnabled = false
+        navigationViewController.showsReportFeedback = false
+        navigationViewController.showsEndOfRouteFeedback = false
+
+        presentAndRemoveMapview(navigationViewController, completion: beginCarPlayNavigation)
+    }
 
     func startBasicNavigation() {
         guard let response = response, let route = response.routes?.first, case let .route(routeOptions) = response.options else { return }
@@ -402,7 +426,7 @@ class ViewController: UIViewController {
     
     func navigationService(route: Route, routeIndex: Int, options: RouteOptions) -> NavigationService {
         let simulate = simulationButton.isSelected
-        let mode: SimulationMode = simulate ? .always : .onPoorGPS
+        let mode: SimulationMode = simulate ? .always : .never
         return MapboxNavigationService(route: route, routeIndex: routeIndex, routeOptions: options, directions: self.directions, simulating: mode)
     }
 
@@ -453,7 +477,8 @@ class ViewController: UIViewController {
         
         trackLocations(mapView: mapView)
         mapView.showsUserLocation = true
-        mapView.userTrackingMode = .follow
+        mapView.setZoomLevel(14, animated: false)
+        mapView.setUserTrackingMode(.follow, animated: false, completionHandler: nil)
         mapView.showsUserHeadingIndicator = true
     }
     
@@ -586,6 +611,10 @@ extension ViewController: NavigationViewControllerDelegate {
             endCarPlayNavigation(canceled: false)
             return true
         }
+
+        if autoAdvanceLegSwitch.isOn {
+            return true
+        }
         
         guard let confirmationController = self.storyboard?.instantiateViewController(withIdentifier: "waypointConfirmation") as? WaypointConfirmationViewController else {
             return true
@@ -600,6 +629,7 @@ extension ViewController: NavigationViewControllerDelegate {
     // Called when the user hits the exit button.
     // If implemented, you are responsible for also dismissing the UI.
     func navigationViewControllerDidDismiss(_ navigationViewController: NavigationViewController, byCanceling canceled: Bool) {
+        MappyLogger.logUserInterfaceEvent("ENDING NAVIGATION SESSION")
         endCarPlayNavigation(canceled: canceled)
         dismissActiveNavigationViewController()
         if mapView == nil {

@@ -53,6 +53,7 @@ open class NavigationView: UIView {
         static let volumeUp = UIImage(named: "volume_up", in: .mapboxNavigation, compatibleWith: nil)!.withRenderingMode(.alwaysTemplate)
         static let volumeOff =  UIImage(named: "volume_off", in: .mapboxNavigation, compatibleWith: nil)!.withRenderingMode(.alwaysTemplate)
         static let feedback = UIImage(named: "feedback", in: .mapboxNavigation, compatibleWith: nil)!.withRenderingMode(.alwaysTemplate)
+        static let advanceLeg = UIImage(named: "plus", in: .mapboxNavigation, compatibleWith: nil)!.withRenderingMode(.alwaysTemplate)
     }
     
     lazy var mapView: NavigationMapView = {
@@ -73,6 +74,7 @@ open class NavigationView: UIView {
     lazy var overviewButton = FloatingButton.rounded(image: Images.overview)
     lazy var muteButton = FloatingButton.rounded(image: Images.volumeUp, selectedImage: Images.volumeOff)
     lazy var reportButton = FloatingButton.rounded(image: Images.feedback)
+    lazy var advanceLegButton = FloatingButton.rounded(image: Images.advanceLeg)
     
     func reinstallConstraints() {
         if let activeFloatingStackView = self.constraints(affecting: self.floatingStackView) {
@@ -150,7 +152,7 @@ open class NavigationView: UIView {
     }
     
     func commonInit() {
-        floatingButtons = [overviewButton, muteButton, reportButton]
+        floatingButtons = [overviewButton, muteButton, reportButton, advanceLegButton]
         setupViews()
         setupConstraints()
     }

@@ -25,6 +25,7 @@
 		16EF6C1E21193A9600AA580B /* CarPlayManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16EF6C1D21193A9600AA580B /* CarPlayManagerTests.swift */; };
 		16EF6C22211BA4B300AA580B /* CarPlayMapViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16EF6C21211BA4B300AA580B /* CarPlayMapViewController.swift */; };
 		1FFDFD92249C1AA80091746A /* JunctionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FFDFD91249C1AA70091746A /* JunctionView.swift */; };
+		299C98E126790EA0003FF969 /* MappyLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 299C98E026790EA0003FF969 /* MappyLogger.swift */; };
 		29D4D17C25F774C800D0829A /* MappyReplayLocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29D4D17B25F774C800D0829A /* MappyReplayLocationManager.swift */; };
 		29D4D18525F7780400D0829A /* MappyEventLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29D4D18425F7780400D0829A /* MappyEventLogger.swift */; };
 		29D4D18E25F77A5F00D0829A /* NavigationServiceDebugDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29D4D18D25F77A5F00D0829A /* NavigationServiceDebugDelegate.swift */; };
@@ -595,6 +596,7 @@
 		16EF6C1D21193A9600AA580B /* CarPlayManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlayManagerTests.swift; sourceTree = "<group>"; };
 		16EF6C21211BA4B300AA580B /* CarPlayMapViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlayMapViewController.swift; sourceTree = "<group>"; };
 		1FFDFD91249C1AA70091746A /* JunctionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JunctionView.swift; sourceTree = "<group>"; };
+		299C98E026790EA0003FF969 /* MappyLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MappyLogger.swift; sourceTree = "<group>"; };
 		29D4D17B25F774C800D0829A /* MappyReplayLocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MappyReplayLocationManager.swift; sourceTree = "<group>"; };
 		29D4D18425F7780400D0829A /* MappyEventLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MappyEventLogger.swift; sourceTree = "<group>"; };
 		29D4D18D25F77A5F00D0829A /* NavigationServiceDebugDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationServiceDebugDelegate.swift; sourceTree = "<group>"; };
@@ -1311,6 +1313,7 @@
 				C54C655120336F2600D338E0 /* Constants.swift */,
 				356B7D8A1EE166E100FE5B89 /* scripts */,
 				351BEC201E5BD4DC006FE110 /* Supporting files */,
+				299C98E026790EA0003FF969 /* MappyLogger.swift */,
 			);
 			path = MapboxNavigation;
 			sourceTree = "<group>";
@@ -2101,7 +2104,6 @@
 					};
 					358D14621E5E3B7700ADE590 = {
 						CreatedOnToolsVersion = 8.2.1;
-						DevelopmentTeam = GJZR2MEM28;
 						LastSwiftMigration = 1030;
 						ProvisioningStyle = Automatic;
 					};
@@ -2601,6 +2603,7 @@
 				2B8098432411447E00FED452 /* MultiplexedSpeechSynthesizer.swift in Sources */,
 				35DA85791FC45787004092EC /* StatusView.swift in Sources */,
 				AE46F95520EA735B00537AC2 /* VisualInstruction.swift in Sources */,
+				299C98E126790EA0003FF969 /* MappyLogger.swift in Sources */,
 				35025F3F1F051DD2002BA3EA /* DialogViewController.swift in Sources */,
 				359A8AEF1FA7B25B00BDB486 /* LanesStyleKit.swift in Sources */,
 				355ED3701FAB724F00BCE1B8 /* BottomBannerViewLayout.swift in Sources */,
@@ -3164,6 +3167,7 @@
 				);
 				INFOPLIST_FILE = MapboxNavigation/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 14.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -3190,6 +3194,7 @@
 				);
 				INFOPLIST_FILE = MapboxNavigation/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 14.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -3209,17 +3214,18 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = GJZR2MEM28;
+				DEVELOPMENT_TEAM = ZVLNL85Y2A;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/Carthage/Build/iOS",
 				);
 				INFOPLIST_FILE = Example/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.mapbox.Example;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jbq.Example;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Example/Example-Swift-BridgingHeader.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -3232,17 +3238,18 @@
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
-				DEVELOPMENT_TEAM = GJZR2MEM28;
+				DEVELOPMENT_TEAM = ZVLNL85Y2A;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/Carthage/Build/iOS",
 				);
 				INFOPLIST_FILE = Example/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.mapbox.Example;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jbq.Example;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Example/Example-Swift-BridgingHeader.h";
 			};
@@ -3508,6 +3515,7 @@
 					"$(PROJECT_DIR)/Carthage/Build/iOS",
 				);
 				INFOPLIST_FILE = Example/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -3537,6 +3545,7 @@
 					"$(PROJECT_DIR)/Carthage/Build/iOS",
 				);
 				INFOPLIST_FILE = Example/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -3690,6 +3699,7 @@
 				);
 				INFOPLIST_FILE = MapboxCoreNavigation/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 14.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -3720,6 +3730,7 @@
 				);
 				INFOPLIST_FILE = MapboxCoreNavigation/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 14.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

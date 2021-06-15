@@ -391,11 +391,7 @@ extension TopBannerViewController: NavigationComponent {
         instructionsBannerView.updateDistance(for: service.routeProgress.currentLegProgress.currentStepProgress)
         
         dismissStepsTable()
-        if service.simulationMode == .always {
-            statusView.showSimulationStatus(speed: Int(service.simulationSpeedMultiplier))
-        } else {
-            statusView.hide(delay: 2, animated: true)
-        }
+        statusView.hide(delay: 5, animated: true)
         
         if (proactive) {
             let title = NSLocalizedString("FASTER_ROUTE_FOUND", bundle: .mapboxNavigation, value: "Faster Route Found", comment: "Indicates a faster route was found")
