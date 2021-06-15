@@ -110,6 +110,7 @@ public protocol Router: class, CLLocationManagerDelegate {
     func enableLocationRecording()
     func disableLocationRecording()
     func locationHistory() -> String?
+    func updatePrivateRouteProgress(_ routeProgress: RouteProgress)
 }
 
 protocol InternalRouter: class {
@@ -136,8 +137,6 @@ protocol InternalRouter: class {
     var directions: Directions { get }
     
     var routeProgress: RouteProgress { get set }
-
-    func updatePrivateRouteProgress(_ routeProgress: RouteProgress)
 }
 
 extension InternalRouter where Self: Router {
