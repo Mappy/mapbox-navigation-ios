@@ -2,7 +2,7 @@ binary "https://api.mapbox.com/downloads/v2/carthage/mapbox-common/MapboxCommon-
 binary "https://api.mapbox.com/downloads/v2/carthage/mobile-navigation-native/MapboxNavigationNative.json" "30.0.0"
 binary "https://sdkios.mappy.net/Mapbox/Mapbox.json" "6.3.0"
 binary "https://www.mapbox.com/ios-sdk/MapboxAccounts.json" "2.3.1"
-git "git@gitlab.mappy.priv:dt.mobile/MapboxDirections-swift.git" "v1.2.0-mappy.3"
+git "git@gitlab.mappy.priv:dt.mobile/MapboxDirections-swift.git" "v1.2.0-mappy.4"
 github "CedarBDD/Cedar" "v1.0"
 github "Mappy/turf-swift" "v1.2.0-mappy.1"
 github "Quick/Nimble" "v8.1.2"
