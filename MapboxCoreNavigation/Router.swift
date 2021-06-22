@@ -94,7 +94,7 @@ public protocol Router: class, CLLocationManagerDelegate {
      Force the `RouteController` to update ETA and route congestion from the server at reception of the next location update.
 
      This is a Mappy debug feature. This works by bypassing all usual checks that determine if a refresh should occur.
-     `refreshesRoute` must be set to true otherwise this parameter is ignored.
+     `refreshesMappyRoute` must be set to true otherwise this parameter is ignored.
      This property reverts to false once forced request has been sent.
      - note: Unimplemented for `LegacyRouteController`.
      */
@@ -256,7 +256,8 @@ extension InternalRouter where Self: Router {
     func refreshMappyRouteAndCheckForFasterRoute(from location: CLLocation, routeProgress: RouteProgress) {
         guard refreshesMappyRoute,
               routeProgress.routeOptions is MappyRouteOptions,
-              let mappyRoute = routeProgress.route as? MappyRoute else {
+              let mappyRoute = routeProgress.route as? MappyRoute,
+              let routeSignature = mappyRoute.signature else {
             return
         }
 
@@ -293,7 +294,7 @@ extension InternalRouter where Self: Router {
         NotificationCenter.default.post(name: .routeControllerWillRefreshRoute, object: self, userInfo: userInfo)
         self.delegate?.router(self, willRefresh: self.routeProgress)
 
-        getDirections(from: location, along: routeProgress, mappyRouteSignature: mappyRoute.signature) { [weak self] (session, result) in
+        getDirections(from: location, along: routeProgress, mappyRouteSignature: routeSignature) { [weak self] (session, result) in
             defer {
                 self?.isRefreshingMappyRoute = false
                 self?.lastMappyRouteRefresh = nil

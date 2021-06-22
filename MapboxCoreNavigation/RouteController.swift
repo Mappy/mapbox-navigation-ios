@@ -164,6 +164,7 @@ open class RouteController: NSObject {
         self._routeProgress = RouteProgress(route: route, routeIndex: routeIndex, options: options)
         self.dataSource = source
         self.refreshesRoute = options.profileIdentifier == .automobileAvoidingTraffic && options.refreshingEnabled
+        self.refreshesMappyRoute = (options is MappyRouteOptions) && options.refreshingEnabled
         UIDevice.current.isBatteryMonitoringEnabled = true
         
         super.init()

@@ -338,7 +338,7 @@ open class NavigationViewController: UIViewController, NavigationStatusPresenter
         mapViewController.view.pinInSuperview()
         mapViewController.reportButton.isHidden = !showsReportFeedback
         
-        if !(routeOptions is NavigationRouteOptions) {
+        if !(routeOptions is NavigationRouteOptions || routeOptions is MappyRouteOptions) {
             print("`Route` was created using `RouteOptions` and not `NavigationRouteOptions`. Although not required, this may lead to a suboptimal navigation experience. Without `NavigationRouteOptions`, it is not guaranteed you will get congestion along the route line, better ETAs and ETA label color dependent on congestion.")
         }
     }

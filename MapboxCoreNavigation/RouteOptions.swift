@@ -2,12 +2,12 @@ import MapboxDirections
 
 extension MappyRouteOptions {
     internal var mappyActivityType: CLActivityType {
-        switch self.provider {
-        case "car", "motorbike":
+        if providers.contains(where: {
+            ["car", "motorbike"].contains($0)
+        }) {
             return .automotiveNavigation
-        default:
-            return .fitness
         }
+        return .fitness
     }
 }
 
