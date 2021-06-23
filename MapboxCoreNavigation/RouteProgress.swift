@@ -250,6 +250,8 @@ open class RouteProgress: Codable {
         newOptions.waypoints = newWaypoints
 
         if let mappyRouteOptions = newOptions as? MappyRouteOptions {
+            mappyRouteOptions.providers = mappyRouteOptions.providers.suffix(newWaypoints.count - 1)
+            mappyRouteOptions.routeTypes = mappyRouteOptions.routeTypes.suffix(newWaypoints.count - 1)
             mappyRouteOptions.routeSignature = mappyRouteSignature
         }
 

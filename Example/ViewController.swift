@@ -54,13 +54,13 @@ class ViewController: UIViewController {
     weak var activeNavigationViewController: NavigationViewController?
 
     enum API {
-        case mapbox, mappyProd, mappyRecette, mappySnap
+        case mapbox, mappyProd, mappyRecette, mappySnap, mappyK8S
 
         var directions: Directions {
             switch self {
             case .mapbox:
                 return Directions.shared
-            case .mappyProd, .mappyRecette, .mappySnap:
+            case .mappyProd, .mappyRecette, .mappySnap, .mappyK8S:
                 return Directions(credentials: DirectionsCredentials(accessToken: "", host: self.host))
             }
         }
@@ -75,6 +75,8 @@ class ViewController: UIViewController {
                 return URL(string: "https://routemm.mappyrecette.net")!
             case .mappySnap:
                 return URL(string: "https://routemm.mappysnap.net")!
+            case .mappyK8S:
+                return URL(string: "https://routemm-route-2439.k8s.mappysnap.com")!
             }
         }
     }
@@ -273,10 +275,14 @@ class ViewController: UIViewController {
         waypoints.insert(userWaypoint, at: 0)
 
 //        let options = NavigationRouteOptions(waypoints: waypoints)
-        let options = MappyRouteOptions(waypoints: waypoints, provider: "car", routeCalculationType: "fastest", qid: "1ad02a47-0e87-48f4-d190-a794fbbb6aac")
+        let options = MappyRouteOptions(waypoints: waypoints,
+                                        providers: waypoints.dropFirst().map { _ in "bike" },
+                                        routeTypes: waypoints.dropFirst().map { _ in "shortest" },
+                                        qid: "1ad02a47-0e87-48f4-d190-a794fbbb6aac")
         options.carVehicle = "comcar"
         options.walkSpeed = .normal
         options.bikeSpeed = .fast
+        options.refreshingEnabled = false
         
         // Get periodic updates regarding changes in estimated arrival time and traffic congestion segments along the route line.
         RouteControllerProactiveReroutingInterval = 40
@@ -286,7 +292,7 @@ class ViewController: UIViewController {
 
     fileprivate func requestRoute(with options: RouteOptions, success: @escaping RouteRequestSuccess, failure: RouteRequestFailure?) {
 //        Directions.shared.calculate(options) { (session, result) in
-        apiChoice = .mappyProd
+        apiChoice = .mappyK8S
         self.directions.calculate(options) { (session, result) in
             switch result {
             case let .success(response):
@@ -565,6 +571,11 @@ extension ViewController: WaypointConfirmationViewControllerDelegate {
 
             navService.router?.advanceLegIndex()
             navService.start()
+
+//            DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+//                debugPrint("Starting offroute deviation")
+//                (navService.locationManager as? SimulatedLocationManager)?.shouldDeviateRoute = true
+//            }
 
             navigationViewController.mapView?.unhighlightBuildings()
         })
